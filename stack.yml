@@ -42,6 +42,13 @@ services:
       --include-stopped
       --revive-stopped
       --schedule ${WATCHTOWER_SCHEDULE}
-
+  
+  pi-monitor:
+    image: carlosedp/rpi-monitoring
+    container_name: pi-monitor
+    restart: always
+    privileged: true
+    ports:
+      - "8888:8888"
 volumes:
   earnapp_data:
