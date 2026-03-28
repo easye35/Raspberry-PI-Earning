@@ -97,6 +97,28 @@ If you ever need to change:
 Just edit .env and redeploy the stack in Portainer.
 EarnApp token stays unless you reinstall.
 
+---
+
+# 🌡️ Raspberry Pi Temperature & Health Monitoring
+
+Your Pi now includes a **full hardware monitoring dashboard** powered by the `rpi-monitoring` container.
+
+This gives you real‑time visibility into:
+
+- CPU temperature  
+- Voltage & throttling warnings  
+- CPU load  
+- Memory usage  
+- Disk usage  
+- Uptime  
+- System health indicators  
+
+### 🔍 Access the Monitoring Dashboard
+
+Once your stack is running, open:
+```bash
+http://<PI-IP>:8888
+```
 # 🔄 Auto‑Healing & Auto‑Updating
 The unified Watchtower container:
 - Updates all containers
