@@ -17,8 +17,9 @@ source .env
 sudo apt update && sudo apt upgrade -y
 
 # Install Docker
-echo "Installing Docker..."
-curl -fsSL https://get.docker.com | sudo sh
+echo "Installing Docker (Trixie-compatible method)..."
+curl -fsSL https://get.docker.com | sh
+
 sudo usermod -aG docker $USER
 
 # Install Docker Compose plugin
