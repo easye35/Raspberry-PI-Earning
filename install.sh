@@ -75,7 +75,14 @@ source .env
 sudo apt update && sudo apt upgrade -y
 
 ###############################################
-# 4. INSTALL DOCKER (BOOKWORM REPO WORKAROUND)
+# 4. INSTALL jq (REQUIRED FOR PORTAINER API)
+###############################################
+
+echo "Installing jq..."
+sudo apt install -y jq
+
+###############################################
+# 5. INSTALL DOCKER (BOOKWORM REPO WORKAROUND)
 ###############################################
 
 echo "Installing Docker (Bookworm repo workaround)..."
@@ -103,7 +110,7 @@ sudo usermod -aG docker $USER
 echo "Docker installed and running."
 
 ###############################################
-# 5. INSTALL PORTAINER
+# 6. INSTALL PORTAINER
 ###############################################
 
 echo "Installing Portainer..."
@@ -122,7 +129,7 @@ echo "Waiting for Portainer to initialize..."
 sleep 20
 
 ###############################################
-# 6. SET PORTAINER ADMIN PASSWORD
+# 7. SET PORTAINER ADMIN PASSWORD
 ###############################################
 
 PORTAINER_URL="https://localhost:9443"
@@ -143,7 +150,7 @@ if [ "$JWT" == "null" ]; then
 fi
 
 ###############################################
-# 7. INSTALL EARNAPP
+# 8. INSTALL EARNAPP
 ###############################################
 
 echo "Running EarnApp installer..."
@@ -151,7 +158,7 @@ wget -qO- https://brightdata.com/static/earnapp/install.sh > /tmp/earnapp.sh
 sudo bash /tmp/earnapp.sh
 
 ###############################################
-# 8. WAIT FOR EARNAPP TOKEN
+# 9. WAIT FOR EARNAPP TOKEN
 ###############################################
 
 echo "Waiting for EarnApp to generate token..."
@@ -186,7 +193,7 @@ sudo systemctl stop earnapp
 sudo systemctl disable earnapp
 
 ###############################################
-# 9. DEPLOY STACK
+# 10. DEPLOY STACK
 ###############################################
 
 STACK_FILE="/tmp/stack.yml"
