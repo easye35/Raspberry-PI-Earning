@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+
+  earnapp:
+    image: earnapp/earnapp:latest
+    container_name: earnapp
+    restart: always
+    environment:
+      - EARNAPP_DEVICE_TOKEN=REPLACE_EARNAPP_TOKEN
+    volumes:
+      - earnapp_data:/data
+
+  honeygain:
+    image: honeygain/honeygain:latest
+    container_name: honeygain
+    restart: always
+    command: -tou-accept -email YOUR_EMAIL -pass YOUR_PASSWORD -device PI1
+
+  pawns:
+    image: iproyal/pawns-cli:latest
+    container_name: pawns
+    restart: always
+    command: -email=YOUR_EMAIL -password=YOUR_PASSWORD -device-name=PI1
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --cleanup --schedule "0 */6 * * *"
+
+  watchdog:
+    image: containrrr/watchtower:latest
+    container_name: watchdog
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --monitor-only --interval 60
+
+volumes:
+  earnapp_data:
