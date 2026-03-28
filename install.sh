@@ -13,16 +13,18 @@ fi
 
 source .env
 
+# Remove broken Docker repo if it exists
+sudo rm /etc/apt/sources.list.d/docker.list 2>/dev/null
+sudo rm /etc/apt/sources.list.d/docker.list.save 2>/dev/null
+sudo rm /etc/apt/keyrings/docker.asc 2>/dev/null
+
 # Update system
 sudo apt update && sudo apt upgrade -y
 
-# Install Docker
+# Install Docker (Trixie-safe)
 echo "Installing Docker (Trixie-compatible method)..."
 curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker $USER
-
-# Install Docker Compose plugin
-sudo apt install docker-compose-plugin -y
 
 # Install Portainer
 echo "Installing Portainer..."
