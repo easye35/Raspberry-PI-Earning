@@ -5,7 +5,46 @@ echo " Raspberry Pi Passive-Income Appliance"
 echo " Full Auto-Deploy Version (Unified Watchtower)"
 echo "----------------------------------------"
 
-# Load config
+###############################################
+# 0. CLEANUP ANY PARTIAL OR BROKEN INSTALLS
+###############################################
+
+echo "Cleaning up previous installs..."
+
+# Stop services
+sudo systemctl stop docker 2>/dev/null
+sudo systemctl stop earnapp 2>/dev/null
+
+# Remove Portainer container + volume
+sudo docker stop portainer 2>/dev/null
+sudo docker rm portainer 2>/dev/null
+sudo docker volume rm portainer_data 2>/dev/null
+
+# Remove Docker packages
+sudo apt remove -y docker docker.io docker-ce docker-ce-cli containerd.io 2>/dev/null
+sudo apt autoremove -y
+
+# Remove Docker data
+sudo rm -rf /var/lib/docker
+sudo rm -rf /var/lib/containerd
+sudo rm -rf /etc/docker
+
+# Remove broken Docker repo
+sudo rm /etc/apt/sources.list.d/docker.list 2>/dev/null
+sudo rm /etc/apt/sources.list.d/docker.list.save 2>/dev/null
+sudo rm /etc/apt/keyrings/docker.asc 2>/dev/null
+
+# Remove EarnApp native install
+sudo rm -rf /etc/earnapp
+sudo rm -rf /var/log/earnapp
+
+echo "Cleanup complete."
+sleep 2
+
+###############################################
+# 1. LOAD CONFIG
+###############################################
+
 if [ ! -f .env ]; then
   echo ".env file not found! Please create it before running installer."
   exit 1
@@ -13,21 +52,41 @@ fi
 
 source .env
 
-# Remove broken Docker repo if it exists
-sudo rm /etc/apt/sources.list.d/docker.list 2>/dev/null
-sudo rm /etc/apt/sources.list.d/docker.list.save 2>/dev/null
-sudo rm /etc/apt/keyrings/docker.asc 2>/dev/null
+###############################################
+# 2. UPDATE SYSTEM
+###############################################
 
-# Update system
 sudo apt update && sudo apt upgrade -y
 
-# Install Docker (Trixie-safe)
-echo "Installing Docker (Trixie-compatible method)..."
-curl -fsSL https://get.docker.com | sh
+###############################################
+# 3. INSTALL DOCKER (PATCHED FOR TRIXIE)
+###############################################
+
+echo "Installing Docker (patched for Trixie)..."
+
+# Install dependencies manually
+sudo apt install -y ca-certificates curl gnupg lsb-release
+
+# Install Docker using static binaries (bypasses broken repo)
+curl -fsSL https://download.docker.com/linux/static/stable/aarch64/docker-26.1.0.tgz -o docker.tgz
+sudo tar xzvf docker.tgz --strip 1 -C /usr/local/bin
+rm docker.tgz
+
+# Enable Docker service
+sudo mkdir -p /etc/docker
+sudo systemctl enable docker
+sudo systemctl start docker
+
+# Add user to docker group
+sudo groupadd docker 2>/dev/null
 sudo usermod -aG docker $USER
 
-# Install Portainer
+###############################################
+# 4. INSTALL PORTAINER
+###############################################
+
 echo "Installing Portainer..."
+
 sudo docker volume create portainer_data
 sudo docker run -d \
   -p 8000:8000 \
@@ -41,7 +100,10 @@ sudo docker run -d \
 echo "Waiting for Portainer to initialize..."
 sleep 20
 
-# Set Portainer admin password
+###############################################
+# 5. SET PORTAINER ADMIN PASSWORD
+###############################################
+
 PORTAINER_URL="https://localhost:9443"
 
 echo "Setting Portainer admin password..."
@@ -49,7 +111,6 @@ curl -k -X POST "$PORTAINER_URL/api/users/admin/init" \
   -H "Content-Type: application/json" \
   -d "{\"Username\": \"admin\", \"Password\": \"$PORTAINER_PASSWORD\"}"
 
-# Authenticate to Portainer API
 echo "Authenticating to Portainer API..."
 JWT=$(curl -k -s -X POST "$PORTAINER_URL/api/auth" \
   -H "Content-Type: application/json" \
@@ -60,13 +121,13 @@ if [ "$JWT" == "null" ]; then
   exit 1
 fi
 
-echo "Portainer authentication successful."
+###############################################
+# 6. INSTALL EARNAPP
+###############################################
 
-# Run EarnApp installer
 echo "Running EarnApp installer..."
 wget -qO- https://brightdata.com/static/earnapp/install.sh > /tmp/earnapp.sh && sudo bash /tmp/earnapp.sh
 
-# Extract EarnApp token
 echo "Extracting EarnApp token..."
 TOKEN=$(sudo grep device_token /etc/earnapp/earnapp.json | awk -F '"' '{print $4}')
 
@@ -77,20 +138,18 @@ fi
 
 echo "EarnApp Token: $TOKEN"
 
-# Write token back into .env
 sed -i "s/EARNAPP_TOKEN=.*/EARNAPP_TOKEN=$TOKEN/" .env
 
-# Disable native EarnApp service
 sudo systemctl stop earnapp
 sudo systemctl disable earnapp
 
-# Build stack file with env vars
+###############################################
+# 7. DEPLOY STACK
+###############################################
+
 STACK_FILE="/tmp/stack.yml"
 envsubst < stack.yml > $STACK_FILE
 
-echo "Stack file prepared."
-
-# Deploy stack via Portainer API
 echo "Deploying stack into Portainer..."
 
 curl -k -X POST "$PORTAINER_URL/api/stacks" \
