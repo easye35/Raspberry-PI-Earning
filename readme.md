@@ -151,3 +151,31 @@ This keeps your Pi earning with zero maintenance.
 - Everything runs in Docker for isolation and stability
 - Works on any Raspberry Pi with 64‑bit OS
 - Designed for long‑term unattended operation
+
+## 🔐 How to Set a Pawns Password if You Signed Up with Google Login
+Some users sign up for Pawns.app using the “Continue with Google” button.
+When you do this, Pawns does NOT create a password for your account — Google handles the login for you.
+But your Docker container cannot use Google login, so you need to create a password manually.
+Here’s how to do it:
+✅ Step‑by‑step
+- Go to the Pawns login page:
+<https://pawns.app/login>
+- Click “Forgot password?”
+- Enter the same email you used when signing in with Google.
+- Pawns will send you a password reset email.
+- Create a new password — this becomes your Docker login password.
+- Update your .env file:
+```bash
+PAWNS_EMAIL=your_google_email@example.com
+PAWNS_PASSWORD=the_password_you_just_created
+PAWNS_DEVICE=PI1
+```
+
+- Redeploy your stack in Portainer.
+🎉 Done!
+You now have a real password that works with:
+- Your Docker container
+- API logins
+- Manual logins
+- Anything outside Google OAuth
+This is the official and correct way to use Pawns with Docker.
