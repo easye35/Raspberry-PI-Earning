@@ -46,8 +46,12 @@ bash <(curl -s https://raw.githubusercontent.com/easye35/Raspberry-PI-docker-Ear
 # 🛠️ Setup Instructions
 1️⃣ Clone the repository
 ```bash
-git clone https://github.com/easye35/Raspberry-PI-docker-Earning
+cd ~
+rm -rf Raspberry-PI-docker-Earning
+git clone https://github.com/easye35/Raspberry-PI-docker-Earning.git
 cd Raspberry-PI-docker-Earning
+chmod +x install.sh
+./install.sh
 ```
 # 2️⃣ Edit the .env file
 This file controls all configuration.
