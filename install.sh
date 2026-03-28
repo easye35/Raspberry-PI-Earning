@@ -62,24 +62,52 @@ sudo apt update && sudo apt upgrade -y
 # 3. INSTALL DOCKER (PATCHED FOR TRIXIE)
 ###############################################
 
-echo "Installing Docker (patched for Trixie)..."
+echo "Installing Docker (static binaries with systemd service)..."
 
-# Install dependencies manually
+# Install dependencies
 sudo apt install -y ca-certificates curl gnupg lsb-release
 
-# Install Docker using static binaries (bypasses broken repo)
+# Download Docker static binaries
 curl -fsSL https://download.docker.com/linux/static/stable/aarch64/docker-26.1.0.tgz -o docker.tgz
+
+# Extract to /usr/local/bin
 sudo tar xzvf docker.tgz --strip 1 -C /usr/local/bin
 rm docker.tgz
 
-# Enable Docker service
-sudo mkdir -p /etc/docker
+# Create systemd service
+sudo tee /etc/systemd/system/docker.service > /dev/null << 'EOF'
+[Unit]
+Description=Docker Application Container Engine
+Documentation=https://docs.docker.com
+After=network-online.target firewalld.service containerd.service
+Wants=network-online.target
+
+[Service]
+Type=notify
+ExecStart=/usr/local/bin/dockerd
+ExecReload=/bin/kill -s HUP $MAINPID
+LimitNOFILE=infinity
+LimitNPROC=infinity
+LimitCORE=infinity
+TimeoutStartSec=0
+Delegate=yes
+KillMode=process
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Reload systemd and start Docker
+sudo systemctl daemon-reload
 sudo systemctl enable docker
 sudo systemctl start docker
 
 # Add user to docker group
 sudo groupadd docker 2>/dev/null
 sudo usermod -aG docker $USER
+
+echo "Docker installed and running."
 
 ###############################################
 # 4. INSTALL PORTAINER
