@@ -1,217 +1,114 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -e
 
-echo "----------------------------------------"
-echo " Raspberry Pi Passive-Income Appliance"
-echo " Full Auto-Deploy Version (Unified Watchtower)"
-echo "----------------------------------------"
+echo "=============================================="
+echo "     Raspberry-PI-docker-Earning Installer"
+echo "=============================================="
+echo ""
 
-###############################################
-# 0. SELF-UPDATE FEATURE
-###############################################
+# --- Detect architecture -----------------------------------------------------
 
-if [ "$1" != "--no-update" ]; then
-    echo "Checking for script updates..."
-    git fetch origin main >/dev/null 2>&1
+ARCH=$(uname -m)
 
-    LOCAL=$(git rev-parse HEAD)
-    REMOTE=$(git rev-parse origin/main)
+echo "Detected architecture: $ARCH"
 
-    if [ "$LOCAL" != "$REMOTE" ]; then
-        echo "Update found! Pulling latest version..."
-        git pull --rebase
-        echo "Re-running updated installer..."
-        exec ./install.sh --no-update
+if [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
+    echo ""
+    echo "⚠ EarnApp's official Docker image does NOT support ARM64."
+    echo "  If you continue with Docker mode, the container will fail to pull."
+    echo ""
+    echo "You can:"
+    echo "  1) Install EarnApp natively on ARM (recommended)"
+    echo "  2) Abort"
+    echo ""
+
+    read -p "Choose option (1 or 2): " ARM_CHOICE
+
+    if [[ "$ARM_CHOICE" == "1" ]]; then
+        echo ""
+        echo "Installing EarnApp natively for ARM64..."
+        curl -s https://earnapp.com/install.sh | bash
+        echo ""
+        echo "✔ Native EarnApp installation complete."
         exit 0
     else
-        echo "Installer is up to date."
+        echo "Aborted by user."
+        exit 1
     fi
 fi
 
-###############################################
-# 1. CLEANUP ANY PARTIAL OR BROKEN INSTALLS
-###############################################
+# --- Ask for EarnApp link ----------------------------------------------------
 
-echo "Cleaning up previous installs..."
+echo ""
+read -p "Paste your EarnApp registration link: " EARNAPP_LINK
 
-sudo systemctl stop docker 2>/dev/null
-sudo systemctl stop earnapp 2>/dev/null
-
-sudo docker stop portainer 2>/dev/null
-sudo docker rm portainer 2>/dev/null
-sudo docker volume rm portainer_data 2>/dev/null
-
-sudo apt remove -y docker docker.io docker-ce docker-ce-cli containerd.io 2>/dev/null
-sudo apt autoremove -y
-
-sudo rm -rf /var/lib/docker
-sudo rm -rf /var/lib/containerd
-sudo rm -rf /etc/docker
-
-sudo rm /etc/apt/sources.list.d/docker.list 2>/dev/null
-sudo rm /etc/apt/keyrings/docker.asc 2>/dev/null
-sudo rm /etc/apt/keyrings/docker.gpg 2>/dev/null
-
-sudo rm -rf /etc/earnapp
-sudo rm -rf /var/log/earnapp
-
-echo "Cleanup complete."
-sleep 2
-
-###############################################
-# 2. LOAD CONFIG
-###############################################
-
-if [ ! -f .env ]; then
-  echo ".env file not found! Please create it before running installer."
-  exit 1
-fi
-
-source .env
-
-###############################################
-# 3. UPDATE SYSTEM
-###############################################
-
-sudo apt update && sudo apt upgrade -y
-
-###############################################
-# 4. INSTALL jq (REQUIRED FOR PORTAINER API)
-###############################################
-
-echo "Installing jq..."
-sudo apt install -y jq
-
-###############################################
-# 5. INSTALL DOCKER (BOOKWORM REPO WORKAROUND)
-###############################################
-
-echo "Installing Docker (Bookworm repo workaround)..."
-
-sudo apt install -y ca-certificates curl gnupg
-
-sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/debian/gpg \
-    | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-sudo chmod a+r /etc/apt/keyrings/docker.gpg
-
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
-  https://download.docker.com/linux/debian bookworm stable" \
-  | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-sudo apt update
-sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-
-sudo systemctl enable docker
-sudo systemctl start docker
-
-sudo usermod -aG docker $USER
-
-echo "Docker installed and running."
-
-###############################################
-# 6. INSTALL PORTAINER
-###############################################
-
-echo "Installing Portainer..."
-
-sudo docker volume create portainer_data
-sudo docker run -d \
-  -p 8000:8000 \
-  -p 9443:9443 \
-  --name portainer \
-  --restart=always \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v portainer_data:/data \
-  portainer/portainer-ce:latest
-
-echo "Waiting for Portainer to initialize..."
-sleep 20
-
-###############################################
-# 7. SET PORTAINER ADMIN PASSWORD
-###############################################
-
-PORTAINER_URL="https://localhost:9443"
-
-echo "Setting Portainer admin password..."
-curl -k -X POST "$PORTAINER_URL/api/users/admin/init" \
-  -H "Content-Type: application/json" \
-  -d "{\"Username\": \"admin\", \"Password\": \"$PORTAINER_PASSWORD\"}"
-
-echo "Authenticating to Portainer API..."
-JWT=$(curl -k -s -X POST "$PORTAINER_URL/api/auth" \
-  -H "Content-Type: application/json" \
-  -d "{\"username\": \"admin\", \"password\": \"$PORTAINER_PASSWORD\"}" | jq -r '.jwt')
-
-if [ "$JWT" == "null" ]; then
-  echo "ERROR: Could not authenticate to Portainer."
-  exit 1
-fi
-
-###############################################
-# 8. INSTALL EARNAPP
-###############################################
-
-echo "Running EarnApp installer..."
-wget -qO- https://brightdata.com/static/earnapp/install.sh > /tmp/earnapp.sh
-sudo bash /tmp/earnapp.sh
-
-###############################################
-# 9. WAIT FOR EARNAPP TOKEN
-###############################################
-
-echo "Waiting for EarnApp to generate token..."
-
-for i in {1..30}; do
-    if [ -f /etc/earnapp/earnapp.json ]; then
-        echo "EarnApp token file detected."
-        break
-    fi
-    sleep 2
-done
-
-if [ ! -f /etc/earnapp/earnapp.json ]; then
-    echo "ERROR: EarnApp did not generate a token file within the expected time."
-    echo "Please register the device using the URL shown above, then re-run the installer."
+if [[ -z "$EARNAPP_LINK" ]]; then
+    echo "❌ No link provided. Cannot continue."
     exit 1
 fi
 
-echo "Extracting EarnApp token..."
-TOKEN=$(sudo grep device_token /etc/earnapp/earnapp.json | awk -F '"' '{print $4}')
+# --- Extract token -----------------------------------------------------------
 
-if [ -z "$TOKEN" ]; then
-    echo "ERROR: Token file found, but token is empty."
+TOKEN=""
+
+# Case 1: URL ends with token
+if [[ "$EARNAPP_LINK" =~ /([A-Za-z0-9]+)$ ]]; then
+    TOKEN="${BASH_REMATCH[1]}"
+fi
+
+# Case 2: URL contains ?token=
+if [[ "$EARNAPP_LINK" =~ token=([A-Za-z0-9]+) ]]; then
+    TOKEN="${BASH_REMATCH[1]}"
+fi
+
+if [[ -z "$TOKEN" ]]; then
+    echo "❌ Could not extract token from the link."
+    echo "Make sure the link looks like:"
+    echo "  https://earnapp.com/r/abcdef123456"
+    echo "or:"
+    echo "  https://earnapp.com/dashboard?token=abcdef123456"
     exit 1
 fi
 
-echo "EarnApp Token: $TOKEN"
+# --- Validate token ----------------------------------------------------------
 
-sed -i "s/EARNAPP_TOKEN=.*/EARNAPP_TOKEN=$TOKEN/" .env
+if [[ ${#TOKEN} -lt 10 ]]; then
+    echo "❌ Extracted token looks too short: $TOKEN"
+    exit 1
+fi
 
-sudo systemctl stop earnapp
-sudo systemctl disable earnapp
+echo ""
+echo "✔ Token extracted: $TOKEN"
 
-###############################################
-# 10. DEPLOY STACK
-###############################################
+# --- Write .env --------------------------------------------------------------
 
-STACK_FILE="/tmp/stack.yml"
-envsubst < stack.yml > $STACK_FILE
+echo "EARNAPP_TOKEN=\"$TOKEN\"" > .env
 
-echo "Deploying stack into Portainer..."
+echo "✔ .env updated."
 
-curl -k -X POST "$PORTAINER_URL/api/stacks" \
-  -H "Authorization: Bearer $JWT" \
-  -H "Content-Type: multipart/form-data" \
-  -F "Name=pi-passive-income" \
-  -F "SwarmID=" \
-  -F "StackFile=@$STACK_FILE" \
-  -F "EndpointId=1" \
-  -F "method=string=string"
+# --- Show registration link --------------------------------------------------
 
-echo "----------------------------------------"
-echo " Deployment complete!"
-echo " Your Pi appliance is now fully running."
-echo "----------------------------------------"
-echo "Access Portainer at: https://<PI-IP>:9443"
+echo ""
+echo "👉 Follow this link to register your device:"
+echo "$EARNAPP_LINK"
+echo ""
+
+# --- Deploy Docker container -------------------------------------------------
+
+echo "Deploying EarnApp Docker container..."
+
+docker rm -f earnapp >/dev/null 2>&1 || true
+
+docker run -d \
+    --name earnapp \
+    --restart unless-stopped \
+    -e EARNAPP_TOKEN="$TOKEN" \
+    -v earnapp-data:/data \
+    --pull always \
+    fscarmen/earnapp
+
+echo ""
+echo "✔ EarnApp container deployed (if architecture supports it)."
+echo "Check Portainer to confirm."
+echo ""
+echo "Done."
