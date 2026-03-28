@@ -1,4 +1,22 @@
 <div align="center">
+---
+
+# 💰 Referral Links
+
+If you want to support this project (and get bonuses on signup), feel free to use my referral links below:
+
+### 🟦 EarnApp  
+👉 **Sign up with my referral link:**  
+(https://earnapp.com/i/pKq8kLVd)
+
+### 🟨 Honeygain  
+👉 **Get a $5 bonus using my link:**  
+(https://join.honeygain.com/EASYE2EE)
+
+### 🟧 Pawns.app  
+👉 **Earn more with my referral:**  
+(https://pawns.app/?r=19391092)
+---
 
 # ⚡ Raspberry‑PI‑docker‑Earning ⚡  
 ### Turn your Raspberry Pi into a fully automated, self‑healing passive‑income appliance.
