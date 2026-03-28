@@ -2,8 +2,16 @@
 
 echo "----------------------------------------"
 echo " Raspberry Pi Passive-Income Appliance"
-echo " Full Auto-Deploy Version"
+echo " Full Auto-Deploy Version (Unified Watchtower)"
 echo "----------------------------------------"
+
+# Load config
+if [ ! -f .env ]; then
+  echo ".env file not found! Please create it before running installer."
+  exit 1
+fi
+
+source .env
 
 # Update system
 sudo apt update && sudo apt upgrade -y
@@ -32,7 +40,6 @@ echo "Waiting for Portainer to initialize..."
 sleep 20
 
 # Set Portainer admin password
-PORTAINER_PASSWORD="YOUR_PORTAINER_PASSWORD"
 PORTAINER_URL="https://localhost:9443"
 
 echo "Setting Portainer admin password..."
@@ -68,16 +75,16 @@ fi
 
 echo "EarnApp Token: $TOKEN"
 
+# Write token back into .env
+sed -i "s/EARNAPP_TOKEN=.*/EARNAPP_TOKEN=$TOKEN/" .env
+
 # Disable native EarnApp service
 sudo systemctl stop earnapp
 sudo systemctl disable earnapp
 
-# Create stack file
+# Build stack file with env vars
 STACK_FILE="/tmp/stack.yml"
-
-cat <<EOF > $STACK_FILE
-$(cat stack.yml | sed "s/REPLACE_EARNAPP_TOKEN/$TOKEN/")
-EOF
+envsubst < stack.yml > $STACK_FILE
 
 echo "Stack file prepared."
 
