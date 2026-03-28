@@ -61,54 +61,38 @@ sudo apt update && sudo apt upgrade -y
 ###############################################
 # 3. INSTALL DOCKER (PATCHED FOR TRIXIE)
 ###############################################
+echo "Installing Docker (Bookworm repo workaround)..."
 
-echo "Installing Docker (static binaries with systemd service)..."
+# Remove any old Docker repo
+sudo rm /etc/apt/sources.list.d/docker.list 2>/dev/null
+sudo rm /etc/apt/keyrings/docker.asc 2>/dev/null
 
 # Install dependencies
-sudo apt install -y ca-certificates curl gnupg lsb-release
+sudo apt install -y ca-certificates curl gnupg
 
-# Download Docker static binaries
-curl -fsSL https://download.docker.com/linux/static/stable/aarch64/docker-26.1.0.tgz -o docker.tgz
+# Add Docker GPG key
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
 
-# Extract to /usr/local/bin
-sudo tar xzvf docker.tgz --strip 1 -C /usr/local/bin
-rm docker.tgz
+# Add Docker repo for Debian BOOKWORM (works on Trixie)
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \
+  https://download.docker.com/linux/debian bookworm stable" \
+  | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-# Create systemd service
-sudo tee /etc/systemd/system/docker.service > /dev/null << 'EOF'
-[Unit]
-Description=Docker Application Container Engine
-Documentation=https://docs.docker.com
-After=network-online.target firewalld.service containerd.service
-Wants=network-online.target
+# Update and install Docker
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-[Service]
-Type=notify
-ExecStart=/usr/local/bin/dockerd
-ExecReload=/bin/kill -s HUP $MAINPID
-LimitNOFILE=infinity
-LimitNPROC=infinity
-LimitCORE=infinity
-TimeoutStartSec=0
-Delegate=yes
-KillMode=process
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Reload systemd and start Docker
-sudo systemctl daemon-reload
+# Enable and start Docker
 sudo systemctl enable docker
 sudo systemctl start docker
 
 # Add user to docker group
-sudo groupadd docker 2>/dev/null
 sudo usermod -aG docker $USER
 
 echo "Docker installed and running."
-
 ###############################################
 # 4. INSTALL PORTAINER
 ###############################################
