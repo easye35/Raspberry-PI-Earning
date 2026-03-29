@@ -40,111 +40,120 @@ info "Project directory: $PROJECT_DIR"
 
 info "Running pre-flight checks..."
 
-# Ensure script is run from project directory
 if [ ! -f "stack.yml" ] && [ ! -f "compose.yml" ]; then
   err "No compose file found. Run this installer from the project root:"
   echo "  cd ~/Raspberry-PI-docker-Earning"
   exit 1
 fi
 
-# Normalize compose file name
 if [ -f "stack.yml" ] && [ ! -f "compose.yml" ]; then
-  warn "Renaming stack.yml → compose.yml for Docker Compose v2 compatibility"
+  warn "Renaming stack.yml → compose.yml"
   mv stack.yml compose.yml
-  ok "Compose file renamed to compose.yml"
+  ok "Renamed to compose.yml"
 fi
 
-# Ensure compose.yml exists
 if [ ! -f "compose.yml" ]; then
   err "compose.yml missing — cannot continue"
   exit 1
 fi
 
 ###############################################
-# FIXED: INSTALL DOCKER + COMPOSE V2 PROPERLY
+# DOCKER + COMPOSE
 ###############################################
 
-info "Checking Docker installation..."
+info "Checking Docker..."
 
-# Install Docker if missing
 if ! command -v docker >/dev/null 2>&1; then
-    warn "Docker not installed — installing now"
+    warn "Docker not installed — installing"
     curl -fsSL https://get.docker.com | sudo sh
-
-    ok "Docker installed successfully"
+    ok "Docker installed"
 else
-    ok "Docker is already installed"
+    ok "Docker already installed"
 fi
 
-# Ensure Docker service is running
 if ! systemctl is-active --quiet docker; then
-    warn "Docker service not running — starting it"
+    warn "Docker not running — starting"
     sudo systemctl start docker
 fi
 
-# Ensure user is in docker group
 if ! groups $USERNAME | grep -q docker; then
-    warn "User not in docker group — adding now"
+    warn "Adding user to docker group"
     sudo usermod -aG docker $USERNAME
-    info "You must log out and back in for group changes to apply"
+    info "Log out and back in for group changes"
 fi
-
-###############################################
-# Install Docker Compose v2
-###############################################
 
 info "Checking Docker Compose v2..."
 
 if ! docker compose version >/dev/null 2>&1; then
-    warn "Docker Compose v2 not found — installing plugin"
+    warn "Installing docker-compose-plugin"
     sudo apt update -y
     sudo apt install -y docker-compose-plugin
 fi
 
-# Verify Compose v2
-if docker compose version >/dev/null 2>&1; then
-    ok "Docker Compose v2 is ready"
-else
-    err "Docker Compose v2 still not available — something is blocking Docker"
-    echo "Try: sudo systemctl restart docker"
+docker compose version >/dev/null 2>&1 || {
+    err "Docker Compose v2 unavailable"
     exit 1
-fi
+}
 
-COMPOSE_CMD="docker compose"
+ok "Docker Compose v2 ready"
+
 ###############################################
-# Ensure dashboard directory exists
+# DASHBOARD DIRECTORY
 ###############################################
 
-if [ ! -d "dashboard" ]; then
-  warn "dashboard/ directory missing — creating it now"
-  mkdir -p dashboard
-fi
+mkdir -p dashboard
 
-# Ensure index.html exists
 if [ ! -f "dashboard/index.html" ]; then
   warn "dashboard/index.html missing — creating placeholder"
   echo "<h1>Dashboard Placeholder</h1>" > dashboard/index.html
 fi
 
-# Ensure Docker is installed
-if ! command -v docker >/dev/null 2>&1; then
-  warn "Docker not installed — will install during setup"
-else
-  ok "Docker is installed"
-fi
-
 ok "Pre-flight checks complete"
 
 ###############################################
-# 1. PROMPTS
+# 1. CREDENTIAL SETUP (MODERNIZED)
 ###############################################
 
 echo ""
-read -p "Enter Honeygain email: " HG_EMAIL
-read -s -p "Enter Honeygain password: " HG_PASSWORD
+info "Setting up service credentials..."
+
+require_input() {
+  local prompt="$1"
+  local varname="$2"
+  local value=""
+  while true; do
+    read -p "$prompt" value
+    if [ -n "$value" ]; then
+      eval "$varname=\"$value\""
+      break
+    else
+      warn "Value cannot be empty."
+    fi
+  done
+}
+
+require_password() {
+  local prompt="$1"
+  local varname="$2"
+  local value=""
+  while true; do
+    read -s -p "$prompt" value
+    echo ""
+    if [ -n "$value" ]; then
+      eval "$varname=\"$value\""
+      break
+    else
+      warn "Password cannot be empty."
+    fi
+  done
+}
+
 echo ""
-read -p "Enter Pawns email: " PAWNS_EMAIL
-read -s -p "Enter Pawns password: " PAWNS_PASSWORD
+require_input    "Enter Honeygain email: "      HONEYGAIN_EMAIL
+require_password "Enter Honeygain password: "   HONEYGAIN_PASSWORD
+echo ""
+require_input    "Enter Pawns email: "          PAWNS_EMAIL
+require_password "Enter Pawns password: "       PAWNS_PASSWORD
 echo ""
 read -p "Install Tailscale for remote access? (y/N): " INSTALL_TAILSCALE
 echo ""
@@ -155,32 +164,23 @@ echo ""
 # 2. SYSTEM PREP
 ###############################################
 
-info "Updating system packages..."
+info "Updating system..."
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y jq ca-certificates curl gnupg netcat-openbsd
+sudo apt install -y jq ca-certificates curl gnupg busybox
 ok "System updated"
 
 ###############################################
-# 3. INSTALL DOCKER
-###############################################
-
-info "Installing Docker..."
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker "$USERNAME"
-ok "Docker installed"
-
-###############################################
-# 4. OPTIONAL: INSTALL TAILSCALE
+# 3. OPTIONAL: TAILSCALE
 ###############################################
 
 if [[ "$INSTALL_TAILSCALE" =~ ^[Yy]$ ]]; then
   info "Installing Tailscale..."
   curl -fsSL https://tailscale.com/install.sh | sh
-  ok "Tailscale installed (run 'sudo tailscale up' to authenticate)"
+  ok "Tailscale installed"
 fi
 
 ###############################################
-# 5. ENABLE X86 EMULATION
+# 4. ENABLE X86 EMULATION
 ###############################################
 
 info "Enabling x86 emulation..."
@@ -188,67 +188,49 @@ sudo docker run --privileged --rm tonistiigi/binfmt --install all
 ok "x86 emulation enabled"
 
 ###############################################
-# 6. WRITE .env FILE
+# 5. WRITE .env FILE
 ###############################################
 
-info "Writing .env file..."
+info "Writing .env..."
 cat > .env <<EOF
-HG_EMAIL=$HG_EMAIL
-HG_PASSWORD=$HG_PASSWORD
+HONEYGAIN_EMAIL=$HONEYGAIN_EMAIL
+HONEYGAIN_PASSWORD=$HONEYGAIN_PASSWORD
+
 PAWNS_EMAIL=$PAWNS_EMAIL
 PAWNS_PASSWORD=$PAWNS_PASSWORD
 EOF
 ok ".env created"
 
 ###############################################
-# 7. CREATE WATCHDOG SCRIPT
+# 6. CREATE DIAGNOSTICS CONTAINER FOLDER
 ###############################################
 
-info "Creating watchdog script..."
+info "Creating diagnostics container..."
 
-cat > watchdog.sh <<'EOF'
+mkdir -p diagnostics
+
+cat > diagnostics/diagnostics.sh <<'EOF'
 #!/bin/sh
 
-INTERVAL=60
-SERVICES="honeygain pawns watchtower dozzle glances dashboard diagnostics"
-
-echo "[watchdog] Starting watchdog loop..."
-
-while true; do
-  if ! docker ps >/dev/null 2>&1; then
-    echo "[watchdog] Docker daemon unhealthy."
-  else
-    for S in $SERVICES; do
-      if ! docker ps --format '{{.Names}}' | grep -q "^${S}$"; then
-        echo "[watchdog] Restarting ${S}..."
-        docker start "${S}" 2>/dev/null || docker restart "${S}" 2>/dev/null || true
-      fi
-    done
-  fi
-  sleep "${INTERVAL}"
-done
-EOF
-
-chmod +x watchdog.sh
-ok "watchdog.sh created"
-
-###############################################
-# 8. CREATE DIAGNOSTICS SERVER
-###############################################
-
-info "Creating diagnostics server..."
-
-cat > diagnostics-server.sh <<'EOF'
-#!/bin/sh
+PORT=7000
 
 while true; do
   {
-    echo -e "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{"
+    echo "HTTP/1.1 200 OK"
+    echo "Content-Type: application/json"
+    echo ""
 
+    CPU=$(uptime | awk -F'load average:' '{print $2}')
+    RAM=$(free -h | awk '/Mem:/ {print $3 "/" $2}')
+    DISK=$(df -h / | awk 'NR==2 {print $5}')
+    TEMP=$(vcgencmd measure_temp 2>/dev/null || echo "N/A")
+    UPTIME=$(uptime -p)
+
+    echo "{"
     echo "\"docker_running\": \"$(docker ps >/dev/null 2>&1 && echo yes || echo no)\","
 
     echo "\"containers\": {"
-    for S in honeygain pawns watchtower dozzle glances dashboard watchdog diagnostics; do
+    for S in honeygain pawns watchtower dozzle glances dashboard diagnostics; do
       RUNNING=$(docker ps --format '{{.Names}}' | grep -q "^${S}$" && echo running || echo stopped)
       echo "\"$S\": \"$RUNNING\","
     done
@@ -261,193 +243,70 @@ while true; do
     done
     echo "\"_end\": \"\"},"
 
-    CPU=$(uptime | awk -F'load average:' '{print $2}')
-    RAM=$(free -h | awk '/Mem:/ {print $3 "/" $2}')
-    DISK=$(df -h / | awk 'NR==2 {print $5}')
-    TEMP=$(vcgencmd measure_temp 2>/dev/null || echo "N/A")
-
     echo "\"system\": {"
     echo "\"cpu_load\": \"$CPU\","
     echo "\"ram\": \"$RAM\","
     echo "\"disk\": \"$DISK\","
-    echo "\"temp\": \"$TEMP\""
+    echo "\"temp\": \"$TEMP\","
+    echo "\"uptime\": \"$UPTIME\""
     echo "}"
 
     echo "}"
-  } | nc -l -p 7000 -q 1
+  } | /bin/busybox nc -l -p $PORT -k
 done
 EOF
 
-chmod +x diagnostics-server.sh
-ok "diagnostics-server.sh created"
+chmod +x diagnostics/diagnostics.sh
 
-###############################################
-# 9. CREATE DASHBOARD
-###############################################
-
-info "Ensuring dashboard directory exists..."
-mkdir -p dashboard
-
-info "Writing dashboard/index.html..."
-cat > dashboard/index.html <<'EOF'
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Pi Earning Appliance Dashboard</title>
-  <style>
-    body { font-family: system-ui, sans-serif; background: #050816; color: #f9fafb; padding: 24px; }
-    .card { background:#0b1020; padding:16px; border-radius:10px; margin-bottom:16px; }
-    button { padding:10px 18px; background:#2563eb; color:white; border:none; border-radius:6px; cursor:pointer; }
-    pre { background:#0b1020; padding:16px; border-radius:8px; white-space:pre-wrap; }
-  </style>
-</head>
-<body>
-
-<h1>Raspberry Pi Earning Appliance</h1>
-
-<button onclick="runDiagnostics()">Run Diagnostics</button>
-
-<pre id="diag-output" style="display:none;"></pre>
-
-<script>
-function runDiagnostics() {
-  const box = document.getElementById("diag-output");
-  box.style.display = "block";
-  box.textContent = "Running diagnostics...";
-
-  fetch("http://" + window.location.hostname + ":7000")
-    .then(r => r.json())
-    .then(data => box.textContent = JSON.stringify(data, null, 2))
-    .catch(err => box.textContent = "Error: " + err);
-}
-</script>
-
-<div class="card">
-  <h2>Quick Links</h2>
-  <p>Logs: <code>http://&lt;PI-IP&gt;:9999</code></p>
-  <p>System Monitor: <code>http://&lt;PI-IP&gt;:61208</code></p>
-</div>
-
-</body>
-</html>
+cat > diagnostics/Dockerfile <<'EOF'
+FROM alpine:latest
+RUN apk add --no-cache busybox docker-cli
+COPY diagnostics.sh /diagnostics.sh
+ENTRYPOINT ["/bin/sh", "/diagnostics.sh"]
 EOF
 
-ok "Dashboard created"
+ok "Diagnostics container created"
 
 ###############################################
-# REPAIR ROUTINES
+# 7. REPAIR COMPOSE.YML
 ###############################################
 
-info "Running repair routines..."
+info "Repairing compose.yml..."
 
-# Fix misplaced index.html
-if [ -f "index.html" ] && [ ! -f "dashboard/index.html" ]; then
-  warn "Found index.html in project root — moving to dashboard/"
-  mv index.html dashboard/
-fi
-
-# Fix missing dashboard block
-if ! grep -q "dashboard:" compose.yml; then
-  warn "Dashboard service missing — restoring it"
-
-  cat >> compose.yml <<EOF
-
-  dashboard:
-    image: nginx:alpine
-    container_name: dashboard
-    restart: unless-stopped
-    ports:
-      - "8088:80"
-    volumes:
-      - ./dashboard:/usr/share/nginx/html:ro
-EOF
-fi
-
-# Fix missing diagnostics block
 if ! grep -q "diagnostics:" compose.yml; then
-  warn "Diagnostics service missing — restoring it"
-
-  cat >> compose.yml <<EOF
+cat >> compose.yml <<EOF
 
   diagnostics:
-    image: alpine:latest
+    build: ./diagnostics
     container_name: diagnostics
     restart: unless-stopped
     ports:
       - "7000:7000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./diagnostics-server.sh:/diagnostics-server.sh:ro
-    entrypoint: ["/bin/sh", "/diagnostics-server.sh"]
 EOF
 fi
 
-ok "Repair routines complete"
+ok "compose.yml repaired"
 
 ###############################################
-# 10. HANDLE WATCHDOG MODE
+# 8. DEPLOY STACK
 ###############################################
 
-if [[ "$USE_SYSTEMD" =~ ^[Yy]$ ]]; then
-  info "Using systemd watchdog"
-
-  mkdir -p systemd
-
-  cat > systemd/pi-earning-watchdog.service <<EOF
-[Unit]
-Description=Raspberry Pi Earning Appliance Watchdog
-After=docker.service
-Requires=docker.service
-
-[Service]
-Type=simple
-WorkingDirectory=$PROJECT_DIR
-ExecStart=/usr/bin/docker start watchdog
-ExecStop=/usr/bin/docker stop watchdog
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-  sudo cp systemd/pi-earning-watchdog.service /etc/systemd/system/
-  sudo systemctl daemon-reload
-  sudo systemctl enable pi-earning-watchdog
-  sudo systemctl start pi-earning-watchdog
-
-  ok "Systemd watchdog installed"
-
-  sed -i '/watchdog:/,/entrypoint:/d' compose.yml
-else
-  info "Using Docker-based watchdog"
-fi
-
-###############################################
-# 11. DEPLOY STACK
-###############################################
-
-info "Deploying Docker stack..."
-$COMPOSE_CMD down || true
-$COMPOSE_CMD up -d
+info "Deploying stack..."
+docker compose down || true
+docker compose up -d
 ok "Stack deployed"
 
 ###############################################
-# 12. POST-INSTALL VERIFICATION
+# 9. POST-INSTALL VERIFICATION
 ###############################################
 
-info "Running post-install verification..."
+info "Verifying..."
 
-if docker ps >/dev/null 2>&1; then
-  ok "Docker is running"
-else
-  err "Docker is NOT running"
-fi
+docker ps >/dev/null 2>&1 && ok "Docker running"
 
-REQUIRED_CONTAINERS="honeygain pawns watchtower dozzle glances dashboard diagnostics"
-
-for C in $REQUIRED_CONTAINERS; do
+for C in honeygain pawns watchtower dozzle glances dashboard diagnostics; do
   if docker ps --format '{{.Names}}' | grep -q "^${C}$"; then
     ok "Container running: $C"
   else
@@ -455,32 +314,10 @@ for C in $REQUIRED_CONTAINERS; do
   fi
 done
 
-# Verify dashboard
-if docker ps --format '{{.Names}}' | grep -q "^dashboard$"; then
-  ok "Dashboard container running"
-else
-  err "Dashboard container NOT running — attempting repair"
-  $COMPOSE_CMD up -d dashboard || err "Dashboard failed to start even after repair"
-fi
-
-# Verify watchdog
-if [[ "$USE_SYSTEMD" =~ ^[Yy]$ ]]; then
-  if systemctl is-active --quiet pi-earning-watchdog; then
-    ok "Systemd watchdog active"
-  else
-    err "Systemd watchdog NOT running"
-  fi
-else
-  if docker ps --format '{{.Names}}' | grep -q "^watchdog$"; then
-    ok "Docker watchdog active"
-  else
-    err "Docker watchdog NOT running"
-  fi
-fi
-
 ok "Verification complete"
 
 echo "----------------------------------------"
 echo " Deployment complete!"
 echo " Dashboard: http://<PI-IP>:8088"
+echo " Diagnostics: http://<PI-IP>:7000"
 echo "----------------------------------------"
