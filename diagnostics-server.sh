@@ -1,37 +1,24 @@
 #!/bin/sh
 
+# Simple JSON diagnostics server for the Raspberry Pi Earning Appliance
+# Runs on port 7000 and responds with system status
+
+PORT=7000
+
+echo "Diagnostics server starting on port $PORT..."
+
 while true; do
   {
-    echo -e "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{"
-
-    echo "\"docker_running\": \"$(docker ps >/dev/null 2>&1 && echo yes || echo no)\","
-
-    echo "\"containers\": {"
-    for S in honeygain pawns watchtower dozzle glances dashboard watchdog diagnostics; do
-      RUNNING=$(docker ps --format '{{.Names}}' | grep -q "^${S}$" && echo running || echo stopped)
-      echo "\"$S\": \"$RUNNING\","
-    done
-    echo "\"_end\": \"\"},"
-
-    echo "\"healthchecks\": {"
-    for S in honeygain pawns; do
-      STATUS=$(docker inspect --format='{{.State.Health.Status}}' "$S" 2>/dev/null)
-      echo "\"$S\": \"$STATUS\","
-    done
-    echo "\"_end\": \"\"},"
-
-    CPU=$(uptime | awk -F'load average:' '{print $2}')
-    RAM=$(free -h | awk '/Mem:/ {print $3 "/" $2}')
-    DISK=$(df -h / | awk 'NR==2 {print $5}')
-    TEMP=$(vcgencmd measure_temp 2>/dev/null || echo "N/A")
-
-    echo "\"system\": {"
-    echo "\"cpu_load\": \"$CPU\","
-    echo "\"ram\": \"$RAM\","
-    echo "\"disk\": \"$DISK\","
-    echo "\"temp\": \"$TEMP\""
+    echo "HTTP/1.1 200 OK"
+    echo "Content-Type: application/json"
+    echo ""
+    echo "{"
+    echo "  \"status\": \"ok\","
+    echo "  \"timestamp\": \"$(date)\","
+    echo "  \"uptime\": \"$(uptime -p)\","
+    echo "  \"load\": \"$(cut -d ' ' -f1-3 /proc/loadavg)\","
+    echo "  \"disk\": \"$(df -h / | awk 'NR==2 {print $5}')\","
+    echo "  \"memory\": \"$(free -h | awk 'NR==2 {print $3 \"/\" $2}')\""
     echo "}"
-
-    echo "}"
-  } | nc -l -p 7000 -q 1
+  } | nc -l -p $PORT -q 1
 done
