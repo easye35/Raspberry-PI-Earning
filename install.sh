@@ -17,6 +17,8 @@ echo ""
 read -p "Enter Pawns email: " PAWNS_EMAIL
 read -s -p "Enter Pawns password: " PAWNS_PASSWORD
 echo ""
+read -p "Install Tailscale for remote access? (y/N): " INSTALL_TAILSCALE
+echo ""
 
 ###############################################
 # 1. SYSTEM PREP
@@ -33,13 +35,29 @@ curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker "$USER"
 
 ###############################################
-# 3. ENABLE X86 EMULATION
+# 3. OPTIONAL: INSTALL TAILSCALE
+###############################################
+
+if [[ "$INSTALL_TAILSCALE" =~ ^[Yy]$ ]]; then
+  echo "[*] Installing Tailscale..."
+  curl -fsSL https://tailscale.com/install.sh | sh
+  echo ""
+  echo "----------------------------------------"
+  echo " Tailscale installed."
+  echo " Run: sudo tailscale up"
+  echo " to authenticate and enable remote access."
+  echo "----------------------------------------"
+  echo ""
+fi
+
+###############################################
+# 4. ENABLE X86 EMULATION
 ###############################################
 
 sudo docker run --privileged --rm tonistiigi/binfmt --install all
 
 ###############################################
-# 4. WRITE .env FILE
+# 5. WRITE .env FILE
 ###############################################
 
 cat > .env <<EOF
@@ -50,7 +68,7 @@ PAWNS_PASSWORD=$PAWNS_PASSWORD
 EOF
 
 ###############################################
-# 5. CREATE WATCHDOG SCRIPT
+# 6. CREATE WATCHDOG SCRIPT
 ###############################################
 
 cat > watchdog.sh <<'EOF'
@@ -79,7 +97,7 @@ EOF
 chmod +x watchdog.sh
 
 ###############################################
-# 6. CREATE DASHBOARD HTML
+# 7. CREATE DASHBOARD HTML
 ###############################################
 
 mkdir -p dashboard
@@ -91,33 +109,39 @@ cat > dashboard/index.html <<'EOF'
   <meta charset="UTF-8">
   <title>Pi Earning Appliance Dashboard</title>
   <style>
-    body { font-family: system-ui, sans-serif; background: #0b1020; color: #f5f5f5; margin: 0; padding: 20px; }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #050816; color: #f9fafb; margin: 0; padding: 24px; }
     h1 { margin-top: 0; }
-    .card { background: #151a2c; border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 0 0 1px #222842; }
-    a { color: #61dafb; text-decoration: none; }
-    a:hover { text-decoration: underline; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
-    .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; background: #1f253a; margin-right: 6px; }
+    .card { background: #0b1020; border-radius: 10px; padding: 16px 20px; box-shadow: 0 0 0 1px #1f2937; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; background: #111827; margin-right: 6px; }
     .tag-ok { color: #4ade80; }
+    .tag-warn { color: #facc15; }
+    .tag-err { color: #f97373; }
+    code { background: #111827; padding: 2px 4px; border-radius: 4px; font-size: 13px; }
+    a { color: #60a5fa; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    ul { padding-left: 18px; }
   </style>
 </head>
 <body>
   <h1>Raspberry Pi Earning Appliance</h1>
-  <p>Honeygain • Pawns • Watchtower • Watchdog • Monitoring</p>
+  <p>Honeygain • Pawns • Watchtower • Watchdog • Dozzle • Glances</p>
 
   <div class="grid">
     <div class="card">
       <h2>Services</h2>
       <p><span class="tag tag-ok">●</span> Honeygain</p>
       <p><span class="tag tag-ok">●</span> Pawns</p>
-      <p><span class="tag tag-ok">●</span> Watchtower</p>
-      <p><span class="tag tag-ok">●</span> Watchdog</p>
-      <p><span class="tag tag-ok">●</span> Dozzle</p>
-      <p><span class="tag tag-ok">●</span> Glances</p>
+      <p><span class="tag tag-ok">●</span> Watchtower (auto-update)</p>
+      <p><span class="tag tag-ok">●</span> Watchdog (self-healing)</p>
+      <p><span class="tag tag-ok">●</span> Dozzle (logs)</p>
+      <p><span class="tag tag-ok">●</span> Glances (system metrics)</p>
     </div>
 
     <div class="card">
-      <h2>Monitoring</h2>
+      <h2>Monitoring & Logs</h2>
+      <p><strong>Dashboard (this page):</strong><br>
+        <code>http://&lt;PI-IP&gt;:8088</code></p>
       <p><strong>Logs (Dozzle):</strong><br>
         <code>http://&lt;PI-IP&gt;:9999</code></p>
       <p><strong>System Monitor (Glances):</strong><br>
@@ -125,11 +149,30 @@ cat > dashboard/index.html <<'EOF'
     </div>
 
     <div class="card">
-      <h2>Remote Access</h2>
-      <p>Install Tailscale:</p>
-      <p><code>curl -fsSL https://tailscale.com/install.sh | sh</code><br>
-         <code>sudo tailscale up</code></p>
-      <p>Then open:</p>
+      <h2>First‑Run Checklist</h2>
+      <ul>
+        <li>Open <code>http://&lt;PI-IP&gt;:8088</code> — see this dashboard.</li>
+        <li>Open <code>http://&lt;PI-IP&gt;:9999</code> — confirm Honeygain & Pawns logs show activity.</li>
+        <li>Open <code>http://&lt;PI-IP&gt;:61208</code> — confirm CPU, RAM, and temp look reasonable.</li>
+        <li>Run <code>docker ps</code> via SSH — all services should be <em>Up</em>.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Diagnostics</h2>
+      <ul>
+        <li>If a service stops, watchdog will attempt to restart it automatically.</li>
+        <li>Check Dozzle for errors in Honeygain or Pawns logs.</li>
+        <li>If Docker itself is unhealthy, reboot the Pi and re‑run <code>docker ps</code>.</li>
+        <li>Use <code>docker logs &lt;service&gt;</code> for deeper debugging.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Remote Access (Optional)</h2>
+      <p>With Tailscale installed on the Pi:</p>
+      <p><code>sudo tailscale up</code></p>
+      <p>Then use your Tailscale IP:</p>
       <p><code>http://100.x.x.x:8088</code> (Dashboard)<br>
          <code>http://100.x.x.x:9999</code> (Logs)<br>
          <code>http://100.x.x.x:61208</code> (System)</p>
@@ -140,7 +183,7 @@ cat > dashboard/index.html <<'EOF'
 EOF
 
 ###############################################
-# 7. DEPLOY DOCKER COMPOSE STACK
+# 8. DEPLOY DOCKER COMPOSE STACK
 ###############################################
 
 echo "[*] Deploying Docker Compose stack..."
