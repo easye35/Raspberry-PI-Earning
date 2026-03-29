@@ -36,8 +36,8 @@ sudo rm -rf /var/lib/containerd
 sudo apt remove -y docker docker.io docker-ce docker-ce-cli containerd.io
 sudo apt autoremove -y
 
-# Remove old repo clone
-rm -rf Raspberry-PI-docker-Earning
+# Remove ALL repo folders anywhere in your home directory
+find ~ -type d -iname "raspberry-pi-docker-earning*" -exec rm -rf {} +
 
 # Reboot to ensure a clean environment
 sudo reboot
