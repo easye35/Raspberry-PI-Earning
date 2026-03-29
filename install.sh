@@ -74,6 +74,33 @@ else
 fi
 
 ok "Pre-flight checks complete"
+###############################################
+# COMPOSE FILE NORMALIZATION (REQUIRED)
+###############################################
+
+info "Normalizing Docker Compose configuration..."
+
+# If stack.yml exists but compose.yml does not, rename it
+if [ -f "stack.yml" ] && [ ! -f "compose.yml" ]; then
+  warn "Renaming stack.yml → compose.yml for Docker Compose v2 compatibility"
+  mv stack.yml compose.yml
+  ok "Compose file renamed to compose.yml"
+fi
+
+# Ensure compose.yml now exists
+if [ ! -f "compose.yml" ]; then
+  err "compose.yml missing — cannot continue"
+  exit 1
+fi
+
+# Detect correct compose command
+if docker compose version >/dev/null 2>&1; then
+  COMPOSE_CMD="docker compose"
+  ok "Using Docker Compose v2"
+else
+  err "Docker Compose v2 not found — installer requires it"
+  exit 1
+fi
 
 ###############################################
 # 1. PROMPTS
