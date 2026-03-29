@@ -33,8 +33,8 @@ sudo reboot
 # 📦 Installation (New Interactive Installer)
 Clone the repo:
 ```bash
-git clone https://github.com/<your-repo>/raspberry-pi-passive-income.git
-cd raspberry-pi-passive-income
+git clone https://github.com/easye35/Raspberry-PI-docker-Earning
+cd Raspberry-PI-docker-Earning
 chmod +x install.sh
 ./install.sh
 ```
