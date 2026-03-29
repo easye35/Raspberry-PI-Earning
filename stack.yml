@@ -6,7 +6,7 @@ services:
   # EarnApp (auto-token via install.sh)
   ############################################################
   earnapp:
-    image: ghcr.io/earnapp/earnapp:latest
+    image: ghcr.io/techtanic/earnapp:latest
     container_name: earnapp
     restart: unless-stopped
     platform: linux/amd64
