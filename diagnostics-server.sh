@@ -1,25 +1,21 @@
 #!/bin/sh
 
-# Simple JSON diagnostics server for the Raspberry Pi Earning Appliance
-# Runs on port 7000 and responds with system status
-
 PORT=7000
-
 echo "Diagnostics server starting on port $PORT..."
 
 while true; do
   {
-    echo "HTTP/1.1 200 OK"
-    echo "Content-Type: application/json"
-    echo "Connection: close"
-    echo ""
-    echo "{"
-    echo "  \"status\": \"ok\","
-    echo "  \"timestamp\": \"$(date)\","
-    echo "  \"uptime\": \"$(uptime -p)\","
-    echo "  \"load\": \"$(cut -d ' ' -f1-3 /proc/loadavg)\","
-    echo "  \"disk\": \"$(df -h / | awk 'NR==2 {print $5}')\","
-    echo "  \"memory\": \"$(free -h | awk 'NR==2 {print $3 \"/\" $2}')\""
-    echo "}"
-  } | nc -l -p $PORT
+    printf "HTTP/1.1 200 OK\r\n"
+    printf "Content-Type: application/json\r\n"
+    printf "Connection: close\r\n\r\n"
+
+    printf "{\n"
+    printf "  \"status\": \"ok\",\n"
+    printf "  \"timestamp\": \"%s\",\n" "$(date)"
+    printf "  \"uptime\": \"%s\",\n" "$(uptime -p)"
+    printf "  \"load\": \"%s\",\n" "$(cut -d ' ' -f1-3 /proc/loadavg)"
+    printf "  \"disk\": \"%s\",\n" "$(df -h / | awk 'NR==2 {print $5}')"
+    printf "  \"memory\": \"%s\"\n" "$(free -h | awk 'NR==2 {print $3 \"/\" $2}')"
+    printf "}\n"
+  } | nc -lk $PORT
 done
