@@ -60,16 +60,35 @@ if [ ! -f "compose.yml" ]; then
   exit 1
 fi
 
-# Detect correct compose command
-if docker compose version >/dev/null 2>&1; then
-  COMPOSE_CMD="docker compose"
-  ok "Using Docker Compose v2"
+###############################################
+# FIXED: AUTO-INSTALL DOCKER COMPOSE V2
+###############################################
+
+info "Checking for Docker Compose v2..."
+
+if ! docker compose version >/dev/null 2>&1; then
+    warn "Docker Compose v2 not found — installing now"
+
+    sudo apt update -y
+    sudo apt install -y docker-compose-plugin
+
+    if docker compose version >/dev/null 2>&1; then
+        ok "Docker Compose v2 installed successfully"
+    else
+        err "Failed to install Docker Compose v2 — cannot continue"
+        exit 1
+    fi
 else
-  err "Docker Compose v2 not found — installer requires it"
-  exit 1
+    ok "Docker Compose v2 already installed"
 fi
 
+# Set compose command
+COMPOSE_CMD="docker compose"
+
+###############################################
 # Ensure dashboard directory exists
+###############################################
+
 if [ ! -d "dashboard" ]; then
   warn "dashboard/ directory missing — creating it now"
   mkdir -p dashboard
