@@ -29,3 +29,35 @@ sudo rm -rf /var/lib/containerd
 sudo apt remove -y docker docker.io docker-ce docker-ce-cli containerd.io
 sudo apt autoremove -y
 sudo reboot
+```
+# 📦 Installation (New Interactive Installer)
+Clone the repo:
+```bash
+git clone https://github.com/<your-repo>/raspberry-pi-passive-income.git
+cd raspberry-pi-passive-income
+chmod +x install.sh
+./install.sh
+```
+# The installer will now prompt you interactively for everything:
+### 🔐 Portainer
+- Admin password (no more .env entry)
+
+### 🐝 Honeygain
+- Email  
+- Password  
+
+### 🐾 Pawns.app
+- Email  
+- Password  
+
+### 💰 EarnApp
+- Paste your EarnApp registration link  
+- Installer auto‑extracts the token  
+- Only the token is stored in `.env`
+
+### 🐳 Docker + Emulation
+The installer automatically:
+- Installs Docker  
+- Enables x86 emulation for EarnApp  
+- Installs Portainer  
+- Deploys the full stack via Portainer API
