@@ -61,30 +61,43 @@ if [ ! -f "compose.yml" ]; then
 fi
 
 ###############################################
-# FIXED: AUTO-INSTALL DOCKER COMPOSE V2
+# FIXED: RELIABLE DOCKER COMPOSE V2 CHECK
 ###############################################
 
-info "Checking for Docker Compose v2..."
+info "Checking for Docker + Docker Compose v2..."
 
-if ! docker compose version >/dev/null 2>&1; then
-    warn "Docker Compose v2 not found — installing now"
+# Ensure Docker service is running
+if ! systemctl is-active --quiet docker; then
+    warn "Docker service is not running — starting it"
+    sudo systemctl start docker || true
+fi
 
+# Ensure user is in docker group
+if ! groups $USERNAME | grep -q docker; then
+    warn "User not in docker group — adding now"
+    sudo usermod -aG docker $USERNAME
+    info "You must log out and back in for group changes to apply"
+fi
+
+# Check Compose v2 availability
+if docker compose version >/dev/null 2>&1; then
+    ok "Docker Compose v2 detected"
+else
+    warn "Docker Compose v2 not detected — installing plugin"
     sudo apt update -y
     sudo apt install -y docker-compose-plugin
 
+    # Re-check after install
     if docker compose version >/dev/null 2>&1; then
         ok "Docker Compose v2 installed successfully"
     else
-        err "Failed to install Docker Compose v2 — cannot continue"
+        err "Docker Compose v2 still not available — Docker daemon may need a restart"
+        echo "Try: sudo systemctl restart docker"
         exit 1
     fi
-else
-    ok "Docker Compose v2 already installed"
 fi
 
-# Set compose command
 COMPOSE_CMD="docker compose"
-
 ###############################################
 # Ensure dashboard directory exists
 ###############################################
