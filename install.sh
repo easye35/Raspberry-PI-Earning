@@ -3,7 +3,7 @@ set -e
 
 echo "----------------------------------------"
 echo " Raspberry Pi Docker Earning Appliance"
-echo " Fully automated, Docker-only install"
+echo " Docker-only install (no Portainer)"
 echo "----------------------------------------"
 
 ###############################################
@@ -11,7 +11,6 @@ echo "----------------------------------------"
 ###############################################
 
 echo ""
-read -p "Enter Portainer admin password: " PORTAINER_PASSWORD
 read -p "Enter Honeygain email: " HG_EMAIL
 read -s -p "Enter Honeygain password: " HG_PASSWORD
 echo ""
@@ -40,7 +39,7 @@ sudo usermod -aG docker "$USER"
 sudo docker run --privileged --rm tonistiigi/binfmt --install all
 
 ###############################################
-# 4. BOOTSTRAP EARNAPP (TEMP CONTAINER, NO TOKEN)
+# 4. BOOTSTRAP EARNAPP (TEMP CONTAINER)
 ###############################################
 
 echo "[*] Starting temporary EarnApp container..."
@@ -80,11 +79,15 @@ if [ -z "$TOKEN" ]; then
 fi
 
 ###############################################
-# 5. WRITE TOKEN TO .env
+# 5. WRITE .env FILE
 ###############################################
 
 cat > .env <<EOF
 EARNAPP_TOKEN=$TOKEN
+HG_EMAIL=$HG_EMAIL
+HG_PASSWORD=$HG_PASSWORD
+PAWNS_EMAIL=$PAWNS_EMAIL
+PAWNS_PASSWORD=$PAWNS_PASSWORD
 EOF
 
 ###############################################
@@ -94,71 +97,16 @@ EOF
 sudo docker rm -f earnapp-temp || true
 
 ###############################################
-# 7. INSTALL PORTAINER
+# 7. DEPLOY DOCKER COMPOSE STACK
 ###############################################
 
-sudo docker volume create portainer_data >/dev/null
+echo "[*] Deploying Docker Compose stack..."
 
-sudo docker rm -f portainer 2>/dev/null || true
-
-sudo docker run -d \
-  -p 8000:8000 \
-  -p 9443:9443 \
-  --name portainer \
-  --restart=always \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v portainer_data:/data \
-  portainer/portainer-ce:latest
-
-echo "[*] Waiting for Portainer..."
-sleep 20
-
-###############################################
-# 8. INIT PORTAINER ADMIN + AUTH
-###############################################
-
-PORTAINER_URL="https://localhost:9443"
-
-curl -k -s -X POST "$PORTAINER_URL/api/users/admin/init" \
-  -H "Content-Type: application/json" \
-  -d "{\"Username\": \"admin\", \"Password\": \"$PORTAINER_PASSWORD\"}" >/dev/null || true
-
-JWT=$(curl -k -s -X POST "$PORTAINER_URL/api/auth" \
-  -H "Content-Type: application/json" \
-  -d "{\"username\": \"admin\", \"password\": \"$PORTAINER_PASSWORD\"}" | jq -r '.jwt')
-
-if [ "$JWT" == "null" ] || [ -z "$JWT" ]; then
-  echo "ERROR: Could not authenticate to Portainer."
-  exit 1
-fi
-
-###############################################
-# 9. PREP STACK FILE WITH RUNTIME VARS
-###############################################
-
-STACK_FILE="/tmp/stack.yml"
-
-export HG_EMAIL HG_PASSWORD PAWNS_EMAIL PAWNS_PASSWORD
-
-envsubst < stack.yml > "$STACK_FILE"
-
-###############################################
-# 10. DEPLOY FULL STACK VIA PORTAINER API
-###############################################
-
-curl -k -s -X POST "$PORTAINER_URL/api/stacks" \
-  -H "Authorization: Bearer $JWT" \
-  -H "Content-Type: multipart/form-data" \
-  -F "Name=pi-passive-income" \
-  -F "SwarmID=" \
-  -F "StackFile=@$STACK_FILE" \
-  -F "EndpointId=1" \
-  -F "method=string=string" >/dev/null
+sudo docker compose down || true
+sudo docker compose up -d
 
 echo "----------------------------------------"
 echo " Deployment complete!"
-echo " EarnApp, Honeygain, Pawns, Watchtower, Portainer are now running."
+echo " EarnApp, Honeygain, Pawns, Watchtower are now running."
 echo "----------------------------------------"
-echo "Access Portainer at: https://<PI-IP>:9443"
-echo "Login: admin / (your password)"
 echo "EarnApp token stored in .env: $TOKEN"
