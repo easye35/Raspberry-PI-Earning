@@ -11,6 +11,7 @@ while true; do
   {
     echo "HTTP/1.1 200 OK"
     echo "Content-Type: application/json"
+    echo "Connection: close"
     echo ""
     echo "{"
     echo "  \"status\": \"ok\","
@@ -20,5 +21,5 @@ while true; do
     echo "  \"disk\": \"$(df -h / | awk 'NR==2 {print $5}')\","
     echo "  \"memory\": \"$(free -h | awk 'NR==2 {print $3 \"/\" $2}')\""
     echo "}"
-  } | nc -l -p $PORT -q 1
+  } | nc -l -p $PORT
 done
