@@ -24,10 +24,22 @@ If you previously attempted an install or something failed halfway, **you MUST c
 Run:
 
 ```bash
+# Stop and remove all Docker containers
+sudo docker stop $(sudo docker ps -aq) 2>/dev/null
+sudo docker rm $(sudo docker ps -aq) 2>/dev/null
+
+# Remove Docker data directories
 sudo rm -rf /var/lib/docker
 sudo rm -rf /var/lib/containerd
+
+# Remove Docker packages
 sudo apt remove -y docker docker.io docker-ce docker-ce-cli containerd.io
 sudo apt autoremove -y
+
+# Remove old repo clone
+rm -rf Raspberry-PI-docker-Earning
+
+# Reboot to ensure a clean environment
 sudo reboot
 ```
 # 📦 Installation (New Interactive Installer)
