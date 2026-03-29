@@ -52,6 +52,31 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
 
+  glances:
+    image: nicolargo/glances:latest-full
+    container_name: glances
+    restart: unless-stopped
+    ports:
+      - "61208:61208"
+    pid: "host"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /dev/disk:/dev/disk:ro
+    environment:
+      - GLANCES_OPT=-w
+
+  dashboard:
+    image: nginx:alpine
+    container_name: dashboard
+    restart: unless-stopped
+    ports:
+      - "8088:80"
+    volumes:
+      - ./dashboard:/usr/share/nginx/html:ro
+
   watchdog:
     image: docker:24-cli-alpine
     container_name: watchdog
@@ -65,3 +90,6 @@ services:
       - pawns
       - watchtower
       - dozzle
+      - glances
+      - dashboard
+      
