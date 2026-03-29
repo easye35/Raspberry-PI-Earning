@@ -1,22 +1,41 @@
-- Update the installer to auto‑detect the username
-- Make the systemd file dynamic
-- Add a post‑install verification step
-- Add colored success/failure output
-# Detect current username
-USERNAME=$(whoami)
-PROJECT_DIR="/home/$USERNAME/Raspberry-PI-docker-Earning"
-
-info "Detected username: $USERNAME"
-info "Project directory: $PROJECT_DIR"
 #!/bin/bash
 set -e
+
+###############################################
+# COLORS & STATUS HELPERS
+###############################################
+
+GREEN="\e[32m"
+RED="\e[31m"
+YELLOW="\e[33m"
+BLUE="\e[34m"
+RESET="\e[0m"
+
+ok()    { echo -e "${GREEN}[✔]${RESET} $1"; }
+warn()  { echo -e "${YELLOW}[!]${RESET} $1"; }
+err()   { echo -e "${RED}[✘]${RESET} $1"; }
+info()  { echo -e "${BLUE}[*]${RESET} $1"; }
+
+###############################################
+# HEADER
+###############################################
 
 echo "----------------------------------------"
 echo " Raspberry Pi Docker Earning Appliance"
 echo "----------------------------------------"
 
 ###############################################
-# 0. PROMPTS
+# 0. DETECT USER + PROJECT PATH
+###############################################
+
+USERNAME=$(whoami)
+PROJECT_DIR="/home/$USERNAME/Raspberry-PI-docker-Earning"
+
+info "Detected username: $USERNAME"
+info "Project directory: $PROJECT_DIR"
+
+###############################################
+# 1. PROMPTS
 ###############################################
 
 echo ""
@@ -32,50 +51,59 @@ read -p "Use systemd watchdog instead of Docker watchdog? (y/N): " USE_SYSTEMD
 echo ""
 
 ###############################################
-# 1. SYSTEM PREP
+# 2. SYSTEM PREP
 ###############################################
 
+info "Updating system packages..."
 sudo apt update && sudo apt upgrade -y
 sudo apt install -y jq ca-certificates curl gnupg netcat-openbsd
+ok "System updated"
 
 ###############################################
-# 2. INSTALL DOCKER
+# 3. INSTALL DOCKER
 ###############################################
 
+info "Installing Docker..."
 curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker "$USER"
+sudo usermod -aG docker "$USERNAME"
+ok "Docker installed"
 
 ###############################################
-# 3. OPTIONAL: INSTALL TAILSCALE
+# 4. OPTIONAL: INSTALL TAILSCALE
 ###############################################
 
 if [[ "$INSTALL_TAILSCALE" =~ ^[Yy]$ ]]; then
+  info "Installing Tailscale..."
   curl -fsSL https://tailscale.com/install.sh | sh
-  echo ""
-  echo "Tailscale installed. Run 'sudo tailscale up' to authenticate."
-  echo ""
+  ok "Tailscale installed (run 'sudo tailscale up' to authenticate)"
 fi
 
 ###############################################
-# 4. ENABLE X86 EMULATION
+# 5. ENABLE X86 EMULATION
 ###############################################
 
+info "Enabling x86 emulation..."
 sudo docker run --privileged --rm tonistiigi/binfmt --install all
+ok "x86 emulation enabled"
 
 ###############################################
-# 5. WRITE .env FILE
+# 6. WRITE .env FILE
 ###############################################
 
+info "Writing .env file..."
 cat > .env <<EOF
 HG_EMAIL=$HG_EMAIL
 HG_PASSWORD=$HG_PASSWORD
 PAWNS_EMAIL=$PAWNS_EMAIL
 PAWNS_PASSWORD=$PAWNS_PASSWORD
 EOF
+ok ".env created"
 
 ###############################################
-# 6. CREATE WATCHDOG SCRIPT
+# 7. CREATE WATCHDOG SCRIPT
 ###############################################
+
+info "Creating watchdog script..."
 
 cat > watchdog.sh <<'EOF'
 #!/bin/sh
@@ -101,10 +129,13 @@ done
 EOF
 
 chmod +x watchdog.sh
+ok "watchdog.sh created"
 
 ###############################################
-# 7. CREATE DIAGNOSTICS SERVER
+# 8. CREATE DIAGNOSTICS SERVER
 ###############################################
+
+info "Creating diagnostics server..."
 
 cat > diagnostics-server.sh <<'EOF'
 #!/bin/sh
@@ -147,10 +178,13 @@ done
 EOF
 
 chmod +x diagnostics-server.sh
+ok "diagnostics-server.sh created"
 
 ###############################################
-# 8. CREATE DASHBOARD
+# 9. CREATE DASHBOARD
 ###############################################
+
+info "Creating dashboard..."
 
 mkdir -p dashboard
 
@@ -198,8 +232,10 @@ function runDiagnostics() {
 </html>
 EOF
 
+ok "Dashboard created"
+
 ###############################################
-# 9. HANDLE WATCHDOG MODE
+# 10. HANDLE WATCHDOG MODE
 ###############################################
 
 if [[ "$USE_SYSTEMD" =~ ^[Yy]$ ]]; then
@@ -232,31 +268,32 @@ EOF
 
   ok "Systemd watchdog installed"
 
-  # Remove Docker watchdog from stack.yml
   sed -i '/watchdog:/,/entrypoint:/d' stack.yml
 else
   info "Using Docker-based watchdog"
 fi
+
 ###############################################
-# 10. DEPLOY STACK
+# 11. DEPLOY STACK
 ###############################################
 
+info "Deploying Docker stack..."
 sudo docker compose down || true
 sudo docker compose up -d
+ok "Stack deployed"
+
 ###############################################
-# 11. POST-INSTALL VERIFICATION
+# 12. POST-INSTALL VERIFICATION
 ###############################################
 
 info "Running post-install verification..."
 
-# Check Docker
 if docker ps >/dev/null 2>&1; then
   ok "Docker is running"
 else
   err "Docker is NOT running"
 fi
 
-# Check containers
 REQUIRED_CONTAINERS="honeygain pawns watchtower dozzle glances dashboard diagnostics"
 
 for C in $REQUIRED_CONTAINERS; do
@@ -267,7 +304,6 @@ for C in $REQUIRED_CONTAINERS; do
   fi
 done
 
-# Check watchdog mode
 if [[ "$USE_SYSTEMD" =~ ^[Yy]$ ]]; then
   if systemctl is-active --quiet pi-earning-watchdog; then
     ok "Systemd watchdog active"
@@ -283,6 +319,7 @@ else
 fi
 
 ok "Verification complete"
+
 echo "----------------------------------------"
 echo " Deployment complete!"
 echo " Dashboard: http://<PI-IP>:8088"
