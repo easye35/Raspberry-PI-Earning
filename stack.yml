@@ -1,36 +1,66 @@
 version: "3.8"
 
 services:
+
+  ############################################################
+  # EarnApp (auto-token via install.sh)
+  ############################################################
   earnapp:
-    image: fscarmen/earnapp:latest
-    platform: linux/amd64
+    image: fearnapp/earnapp:latest
     container_name: earnapp
-    restart: always
+    restart: unless-stopped
+    platform: linux/amd64
     environment:
       - EARNAPP_TOKEN=${EARNAPP_TOKEN}
+    volumes:
+      - earnapp_data:/data
 
+  ############################################################
+  # Honeygain
+  ############################################################
   honeygain:
-    image: mktx/honeygain:latest
+    image: honeygain/honeygain:latest
     container_name: honeygain
-    restart: always
-    environment:
-      - EMAIL=${HG_EMAIL}
-      - PASSWORD=${HG_PASSWORD}
-      - DEVICE_NAME=pi-honeygain
+    restart: unless-stopped
+    command: >
+      -tou-accept
+      -email ${HG_EMAIL}
+      -pass ${HG_PASSWORD}
+      -device RaspberryPi
+    platform: linux/amd64
+    volumes:
+      - honeygain_data:/data
 
+  ############################################################
+  # Pawns.app
+  ############################################################
   pawns:
     image: iproyal/pawns-cli:latest
     container_name: pawns
-    restart: always
-    environment:
-      - PAWNS_EMAIL=${PAWNS_EMAIL}
-      - PAWNS_PASSWORD=${PAWNS_PASSWORD}
-      - PAWNS_DEVICE_NAME=pi-pawns
+    restart: unless-stopped
+    platform: linux/amd64
+    command: >
+      --email ${PAWNS_EMAIL}
+      --password ${PAWNS_PASSWORD}
+      --device-name RaspberryPi
+      --accept-tos
+    volumes:
+      - pawns_data:/data
 
+  ############################################################
+  # Watchtower (auto-update all containers)
+  ############################################################
   watchtower:
     image: containrrr/watchtower:latest
     container_name: watchtower
-    restart: always
+    restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    command: --cleanup --include-restarting --include-stopped --interval 300
+    command: >
+      --cleanup
+      --schedule "0 */6 * * *"
+
+volumes:
+  earnapp_data:
+  honeygain_data:
+  pawns_data:
