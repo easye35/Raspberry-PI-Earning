@@ -35,6 +35,47 @@ info "Detected username: $USERNAME"
 info "Project directory: $PROJECT_DIR"
 
 ###############################################
+# PRE-FLIGHT CHECKS
+###############################################
+
+info "Running pre-flight checks..."
+
+# Ensure script is run from project directory
+if [ ! -f "stack.yml" ]; then
+  err "stack.yml not found. Run this installer from the project root:"
+  echo "  cd ~/Raspberry-PI-docker-Earning"
+  exit 1
+fi
+
+# Ensure dashboard directory exists
+if [ ! -d "dashboard" ]; then
+  warn "dashboard/ directory missing — creating it now"
+  mkdir -p dashboard
+fi
+
+# Ensure index.html exists
+if [ ! -f "dashboard/index.html" ]; then
+  warn "dashboard/index.html missing — creating placeholder"
+  echo "<h1>Dashboard Placeholder</h1>" > dashboard/index.html
+fi
+
+# Ensure Docker is installed
+if ! command -v docker >/dev/null 2>&1; then
+  warn "Docker not installed — will install during setup"
+else
+  ok "Docker is installed"
+fi
+
+# Ensure docker compose exists
+if ! docker compose version >/dev/null 2>&1; then
+  warn "Docker Compose not available — will install with Docker"
+else
+  ok "Docker Compose is available"
+fi
+
+ok "Pre-flight checks complete"
+
+###############################################
 # 1. PROMPTS
 ###############################################
 
@@ -181,13 +222,13 @@ chmod +x diagnostics-server.sh
 ok "diagnostics-server.sh created"
 
 ###############################################
-# 9. CREATE DASHBOARD
+# 9. CREATE DASHBOARD (PATCHED)
 ###############################################
 
-info "Creating dashboard..."
-
+info "Ensuring dashboard directory exists..."
 mkdir -p dashboard
 
+info "Writing dashboard/index.html..."
 cat > dashboard/index.html <<'EOF'
 <!DOCTYPE html>
 <html lang="en">
@@ -235,6 +276,56 @@ EOF
 ok "Dashboard created"
 
 ###############################################
+# REPAIR ROUTINES
+###############################################
+
+info "Running repair routines..."
+
+# Fix misplaced index.html
+if [ -f "index.html" ] && [ ! -f "dashboard/index.html" ]; then
+  warn "Found index.html in project root — moving to dashboard/"
+  mv index.html dashboard/
+fi
+
+# Fix missing dashboard block
+if ! grep -q "dashboard:" stack.yml; then
+  warn "Dashboard service missing — restoring it"
+
+  cat >> stack.yml <<EOF
+
+  dashboard:
+    image: nginx:alpine
+    container_name: dashboard
+    restart: unless-stopped
+    ports:
+      - "8088:80"
+    volumes:
+      - ./dashboard:/usr/share/nginx/html:ro
+EOF
+fi
+
+# Fix missing diagnostics block
+if ! grep -q "diagnostics:" stack.yml; then
+  warn "Diagnostics service missing — restoring it"
+
+  cat >> stack.yml <<EOF
+
+  diagnostics:
+    image: alpine:latest
+    container_name: diagnostics
+    restart: unless-stopped
+    ports:
+      - "7000:7000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./diagnostics-server.sh:/diagnostics-server.sh:ro
+    entrypoint: ["/bin/sh", "/diagnostics-server.sh"]
+EOF
+fi
+
+ok "Repair routines complete"
+
+###############################################
 # 10. HANDLE WATCHDOG MODE
 ###############################################
 
@@ -278,8 +369,8 @@ fi
 ###############################################
 
 info "Deploying Docker stack..."
-sudo docker compose down || true
-sudo docker compose up -d
+docker compose down || true
+docker compose up -d
 ok "Stack deployed"
 
 ###############################################
@@ -304,6 +395,15 @@ for C in $REQUIRED_CONTAINERS; do
   fi
 done
 
+# Verify dashboard
+if docker ps --format '{{.Names}}' | grep -q "^dashboard$"; then
+  ok "Dashboard container running"
+else
+  err "Dashboard container NOT running — attempting repair"
+  docker compose up -d dashboard || err "Dashboard failed to start even after repair"
+fi
+
+# Verify watchdog
 if [[ "$USE_SYSTEMD" =~ ^[Yy]$ ]]; then
   if systemctl is-active --quiet pi-earning-watchdog; then
     ok "Systemd watchdog active"
