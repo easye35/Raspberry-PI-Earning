@@ -3,22 +3,128 @@
 <head>
   <meta charset="UTF-8">
   <title>Pi Earning Appliance Dashboard</title>
+
   <style>
-    body { font-family: system-ui, sans-serif; background: #050816; color: #f9fafb; padding: 24px; }
-    .card { background:#0b1020; padding:16px; border-radius:10px; margin-bottom:16px; }
-    button { padding:10px 18px; background:#2563eb; color:white; border:none; border-radius:6px; cursor:pointer; }
-    pre { background:#0b1020; padding:16px; border-radius:8px; white-space:pre-wrap; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #050816;
+      color: #f9fafb;
+      padding: 24px;
+      margin: 0;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: #0b1020;
+      padding: 16px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #0004;
+    }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: bold;
+    }
+
+    .ok { background: #16a34a; }
+    .warn { background: #ca8a04; }
+    .err { background: #dc2626; }
+
+    button {
+      padding: 10px 18px;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    pre {
+      background: #0b1020;
+      padding: 16px;
+      border-radius: 8px;
+      white-space: pre-wrap;
+      margin-top: 20px;
+    }
   </style>
 </head>
+
 <body>
 
 <h1>Raspberry Pi Earning Appliance</h1>
 
-<button onclick="runDiagnostics()">Run Diagnostics</button>
+<div class="grid">
+  <div class="card">
+    <h2>System Status</h2>
+    <p><strong>CPU Load:</strong> <span id="cpu"></span></p>
+    <p><strong>RAM:</strong> <span id="ram"></span></p>
+    <p><strong>Disk:</strong> <span id="disk"></span></p>
+    <p><strong>Temp:</strong> <span id="temp"></span></p>
+    <p><strong>Uptime:</strong> <span id="uptime"></span></p>
+  </div>
 
-<pre id="diag-output" style="display:none;"></pre>
+  <div class="card">
+    <h2>Containers</h2>
+    <div id="containers"></div>
+  </div>
+
+  <div class="card">
+    <h2>Healthchecks</h2>
+    <div id="health"></div>
+  </div>
+
+  <div class="card">
+    <h2>Actions</h2>
+    <button onclick="runDiagnostics()">Run Diagnostics</button>
+    <pre id="diag-output" style="display:none;"></pre>
+  </div>
+</div>
 
 <script>
+async function fetchDiag() {
+  try {
+    const res = await fetch("http://" + window.location.hostname + ":7000");
+    const data = await res.json();
+
+    document.getElementById("cpu").textContent = data.system.cpu_load;
+    document.getElementById("ram").textContent = data.system.ram;
+    document.getElementById("disk").textContent = data.system.disk;
+    document.getElementById("temp").textContent = data.system.temp;
+    document.getElementById("uptime").textContent = data.system.uptime;
+
+    let contHTML = "";
+    for (const [name, state] of Object.entries(data.containers)) {
+      if (name === "_end") continue;
+      const cls = state === "running" ? "ok" : "err";
+      contHTML += `<p><span class="badge ${cls}">${state}</span> ${name}</p>`;
+    }
+    document.getElementById("containers").innerHTML = contHTML;
+
+    let healthHTML = "";
+    for (const [name, state] of Object.entries(data.healthchecks)) {
+      if (name === "_end") continue;
+      const cls = state === "healthy" ? "ok" : "warn";
+      healthHTML += `<p><span class="badge ${cls}">${state}</span> ${name}</p>`;
+    }
+    document.getElementById("health").innerHTML = healthHTML;
+
+  } catch (err) {
+    console.log("Diagnostics fetch failed:", err);
+  }
+}
+
 function runDiagnostics() {
   const box = document.getElementById("diag-output");
   box.style.display = "block";
@@ -29,13 +135,10 @@ function runDiagnostics() {
     .then(data => box.textContent = JSON.stringify(data, null, 2))
     .catch(err => box.textContent = "Error: " + err);
 }
-</script>
 
-<div class="card">
-  <h2>Quick Links</h2>
-  <p>Logs: <code>http://&lt;PI-IP&gt;:9999</code></p>
-  <p>System Monitor: <code>http://&lt;PI-IP&gt;:61208</code></p>
-</div>
+setInterval(fetchDiag, 5000);
+fetchDiag();
+</script>
 
 </body>
 </html>
