@@ -1,34 +1,31 @@
-version: '3.8'
+version: "3.8"
 
 services:
-
   earnapp:
-    image: earnapp/earnapp:latest
+    image: fscarmen/earnapp:latest
+    platform: linux/amd64
     container_name: earnapp
     restart: always
     environment:
-      - EARNAPP_DEVICE_TOKEN=${EARNAPP_TOKEN}
-    volumes:
-      - earnapp_data:/data
+      - EARNAPP_TOKEN=${EARNAPP_TOKEN}
 
   honeygain:
-    image: honeygain/honeygain:latest
+    image: mktx/honeygain:latest
     container_name: honeygain
     restart: always
-    command: >
-      -tou-accept
-      -email ${HONEYGAIN_EMAIL}
-      -pass ${HONEYGAIN_PASSWORD}
-      -device ${HONEYGAIN_DEVICE}
+    environment:
+      - EMAIL=${HG_EMAIL}
+      - PASSWORD=${HG_PASSWORD}
+      - DEVICE_NAME=pi-honeygain
 
   pawns:
     image: iproyal/pawns-cli:latest
     container_name: pawns
     restart: always
-    command: >
-      -email=${PAWNS_EMAIL}
-      -password=${PAWNS_PASSWORD}
-      -device-name=${PAWNS_DEVICE}
+    environment:
+      - PAWNS_EMAIL=${PAWNS_EMAIL}
+      - PAWNS_PASSWORD=${PAWNS_PASSWORD}
+      - PAWNS_DEVICE_NAME=pi-pawns
 
   watchtower:
     image: containrrr/watchtower:latest
@@ -36,19 +33,4 @@ services:
     restart: always
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    command: >
-      --cleanup
-      --include-restarting
-      --include-stopped
-      --revive-stopped
-      --schedule ${WATCHTOWER_SCHEDULE}
-  
-  pi-monitor:
-    image: carlosedp/rpi-monitoring
-    container_name: pi-monitor
-    restart: always
-    privileged: true
-    ports:
-      - "8888:8888"
-volumes:
-  earnapp_data:
+    command: --cleanup --include-restarting --include-stopped --interval 300
