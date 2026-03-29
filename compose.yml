@@ -1,0 +1,74 @@
+services:
+
+  honeygain:
+    image: honeygain/honeygain:latest
+    container_name: honeygain
+    restart: unless-stopped
+    command: >
+      -tou-accept
+      -email ${HONEYGAIN_EMAIL}
+      -pass ${HONEYGAIN_PASSWORD}
+      -device raspberrypi
+    healthcheck:
+      test: ["CMD", "pgrep", "honeygain"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  pawns:
+    image: iproyal/pawns-cli:latest
+    container_name: pawns
+    restart: unless-stopped
+    environment:
+      PAWNS_EMAIL: ${PAWNS_EMAIL}
+      PAWNS_PASSWORD: ${PAWNS_PASSWORD}
+      PAWNS_DEVICE_NAME: raspberrypi
+    healthcheck:
+      test: ["CMD", "pgrep", "pawns-cli"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --cleanup --interval 3600
+
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    restart: unless-stopped
+    ports:
+      - "9999:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  glances:
+    image: nicolargo/glances:latest-full
+    container_name: glances
+    restart: unless-stopped
+    ports:
+      - "61208:61208"
+    environment:
+      - GLANCES_OPT=-w
+
+  dashboard:
+    image: nginx:alpine
+    container_name: dashboard
+    restart: unless-stopped
+    ports:
+      - "8088:80"
+    volumes:
+      - ./dashboard:/usr/share/nginx/html:ro
+
+  diagnostics:
+    build: ./diagnostics
+    container_name: diagnostics
+    restart: unless-stopped
+    ports:
+      - "7000:7000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
