@@ -1,3 +1,13 @@
+- Update the installer to auto‑detect the username
+- Make the systemd file dynamic
+- Add a post‑install verification step
+- Add colored success/failure output
+# Detect current username
+USERNAME=$(whoami)
+PROJECT_DIR="/home/$USERNAME/Raspberry-PI-docker-Earning"
+
+info "Detected username: $USERNAME"
+info "Project directory: $PROJECT_DIR"
 #!/bin/bash
 set -e
 
@@ -193,11 +203,11 @@ EOF
 ###############################################
 
 if [[ "$USE_SYSTEMD" =~ ^[Yy]$ ]]; then
-  echo "[*] Using systemd watchdog"
+  info "Using systemd watchdog"
 
   mkdir -p systemd
 
-  cat > systemd/pi-earning-watchdog.service <<'EOF'
+  cat > systemd/pi-earning-watchdog.service <<EOF
 [Unit]
 Description=Raspberry Pi Earning Appliance Watchdog
 After=docker.service
@@ -205,7 +215,7 @@ Requires=docker.service
 
 [Service]
 Type=simple
-WorkingDirectory=/home/pi/Raspberry-PI-docker-Earning
+WorkingDirectory=$PROJECT_DIR
 ExecStart=/usr/bin/docker start watchdog
 ExecStop=/usr/bin/docker stop watchdog
 Restart=always
@@ -220,18 +230,59 @@ EOF
   sudo systemctl enable pi-earning-watchdog
   sudo systemctl start pi-earning-watchdog
 
+  ok "Systemd watchdog installed"
+
+  # Remove Docker watchdog from stack.yml
   sed -i '/watchdog:/,/entrypoint:/d' stack.yml
 else
-  echo "[*] Using Docker-based watchdog"
+  info "Using Docker-based watchdog"
 fi
-
 ###############################################
 # 10. DEPLOY STACK
 ###############################################
 
 sudo docker compose down || true
 sudo docker compose up -d
+###############################################
+# 11. POST-INSTALL VERIFICATION
+###############################################
 
+info "Running post-install verification..."
+
+# Check Docker
+if docker ps >/dev/null 2>&1; then
+  ok "Docker is running"
+else
+  err "Docker is NOT running"
+fi
+
+# Check containers
+REQUIRED_CONTAINERS="honeygain pawns watchtower dozzle glances dashboard diagnostics"
+
+for C in $REQUIRED_CONTAINERS; do
+  if docker ps --format '{{.Names}}' | grep -q "^${C}$"; then
+    ok "Container running: $C"
+  else
+    warn "Container NOT running: $C"
+  fi
+done
+
+# Check watchdog mode
+if [[ "$USE_SYSTEMD" =~ ^[Yy]$ ]]; then
+  if systemctl is-active --quiet pi-earning-watchdog; then
+    ok "Systemd watchdog active"
+  else
+    err "Systemd watchdog NOT running"
+  fi
+else
+  if docker ps --format '{{.Names}}' | grep -q "^watchdog$"; then
+    ok "Docker watchdog active"
+  else
+    err "Docker watchdog NOT running"
+  fi
+fi
+
+ok "Verification complete"
 echo "----------------------------------------"
 echo " Deployment complete!"
 echo " Dashboard: http://<PI-IP>:8088"
