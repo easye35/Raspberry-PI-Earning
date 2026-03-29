@@ -3,7 +3,7 @@ set -e
 
 echo "----------------------------------------"
 echo " Raspberry Pi Docker Earning Appliance"
-echo " Honeygain + Pawns + Watchdog + Monitoring"
+echo " Honeygain + Pawns + Watchdog + Dashboard"
 echo " (No EarnApp, No Portainer)"
 echo "----------------------------------------"
 
@@ -51,28 +51,28 @@ PAWNS_PASSWORD=$PAWNS_PASSWORD
 EOF
 
 ###############################################
-# 5. ENSURE WATCHDOG SCRIPT EXISTS
+# 5. CREATE WATCHDOG SCRIPT
 ###############################################
 
 cat > watchdog.sh <<'EOF'
 #!/bin/sh
 
 INTERVAL=60
-SERVICES="honeygain pawns watchtower dozzle"
+SERVICES="honeygain pawns watchtower dozzle glances dashboard"
 
 echo "[watchdog] Starting watchdog loop..."
 
 while true; do
-  for S in $SERVICES; do
-    if ! docker ps --format '{{.Names}}' | grep -q "^${S}\$"; then
-      echo "[watchdog] Service ${S} not running, attempting to start..."
-      docker start "${S}" 2>/dev/null || docker restart "${S}" 2>/dev/null || true
-    fi
-  done
-
-  # If Docker itself is in trouble, this will fail; we just log and try again.
+  # Check Docker daemon
   if ! docker ps >/dev/null 2>&1; then
     echo "[watchdog] WARNING: docker ps failed. Docker daemon may be unhealthy."
+  else
+    for S in $SERVICES; do
+      if ! docker ps --format '{{.Names}}' | grep -q "^${S}\$"; then
+        echo "[watchdog] Service ${S} not running, attempting to start..."
+        docker start "${S}" 2>/dev/null || docker restart "${S}" 2>/dev/null || true
+      fi
+    done
   fi
 
   sleep "${INTERVAL}"
@@ -82,16 +82,59 @@ EOF
 chmod +x watchdog.sh
 
 ###############################################
-# 6. DEPLOY DOCKER COMPOSE STACK
+# 6. CREATE DASHBOARD HTML
 ###############################################
 
-echo "[*] Deploying Docker Compose stack..."
+mkdir -p dashboard
 
-sudo docker compose down || true
-sudo docker compose up -d
+cat > dashboard/index.html <<'EOF'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pi Earning Appliance Dashboard</title>
+  <style>
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0b1020; color: #f5f5f5; margin: 0; padding: 20px; }
+    h1 { margin-top: 0; }
+    .card { background: #151a2c; border-radius: 8px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 0 0 1px #222842; }
+    a { color: #61dafb; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; background: #1f253a; margin-right: 6px; }
+    .tag-ok { color: #4ade80; }
+    .tag-warn { color: #facc15; }
+    .tag-err { color: #f97373; }
+    code { background: #111827; padding: 2px 4px; border-radius: 4px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>Raspberry Pi Earning Appliance</h1>
+  <p>Honeygain + Pawns + Watchtower + Watchdog + Monitoring</p>
 
-echo "----------------------------------------"
-echo " Deployment complete!"
-echo " Honeygain, Pawns, Watchtower, Watchdog, Dozzle are now running."
-echo "----------------------------------------"
-echo "View logs and monitoring at: http://<PI-IP>:9999"
+  <div class="grid">
+    <div class="card">
+      <h2>Services</h2>
+      <p><span class="tag tag-ok">●</span> Honeygain</p>
+      <p><span class="tag tag-ok">●</span> Pawns</p>
+      <p><span class="tag tag-ok">●</span> Watchtower (auto-update)</p>
+      <p><span class="tag tag-ok">●</span> Watchdog (self-healing)</p>
+      <p><span class="tag tag-ok">●</span> Dozzle (logs)</p>
+      <p><span class="tag tag-ok">●</span> Glances (system metrics)</p>
+    </div>
+
+    <div class="card">
+      <h2>Monitoring & Logs</h2>
+      <p><strong>Logs (Dozzle):</strong><br>
+        <code>http://&lt;PI-IP&gt;:9999</code></p>
+      <p><strong>System Monitor (Glances):</strong><br>
+        <code>http://&lt;PI-IP&gt;:61208</code></p>
+    </div>
+
+    <div class="card">
+      <h2>Remote Access (Example)</h2>
+      <p><strong>With Tailscale:</strong></p>
+      <p>Install on the Pi:</p>
+      <p><code>curl -fsSL https://tailscale.com/install.sh | sh</code><br>
+         <code>sudo tailscale up</code></p>
+      <p>Then open:</p>
+      <p><code>http://100.x.x.x:8088</code> (this
