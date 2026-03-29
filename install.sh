@@ -2,7 +2,7 @@
 
 echo "----------------------------------------"
 echo " Raspberry Pi Passive-Income Appliance"
-echo " Full Auto-Deploy Version (EarnApp + Honeygain + Pawns + Watchtower)"
+echo " Docker-Only Deployment (Pi-Optimized)"
 echo "----------------------------------------"
 
 ###############################################
@@ -51,21 +51,17 @@ echo "EarnApp token extracted: $TOKEN"
 # 2. WRITE TOKEN TO .env (ONLY THIS)
 ###############################################
 
-if [ ! -f .env ]; then
-    echo "EARNAPP_TOKEN=" > .env
-fi
-
-sed -i "s|^EARNAPP_TOKEN=.*|EARNAPP_TOKEN=$TOKEN|" .env
+echo "EARNAPP_TOKEN=$TOKEN" > .env
 
 ###############################################
-# 3. BASIC SYSTEM PREP
+# 3. SYSTEM PREP
 ###############################################
 
 sudo apt update && sudo apt upgrade -y
 sudo apt install -y jq ca-certificates curl gnupg
 
 ###############################################
-# 4. INSTALL DOCKER (GET.DOCKER.COM)
+# 4. INSTALL DOCKER
 ###############################################
 
 echo "Installing Docker..."
@@ -73,14 +69,14 @@ curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker "$USER"
 
 ###############################################
-# 5. ENABLE X86 EMULATION (FOR EARNAPP)
+# 5. ENABLE X86 EMULATION (ALWAYS)
 ###############################################
 
 echo "Enabling x86 emulation (binfmt)..."
 sudo docker run --privileged --rm tonistiigi/binfmt --install all
 
 ###############################################
-# 6. INSTALL PORTAINER
+# 6. INSTALL PORTAINER (DOCKER ONLY)
 ###############################################
 
 echo "Installing Portainer..."
@@ -149,7 +145,7 @@ curl -k -X POST "$PORTAINER_URL/api/stacks" \
 
 echo "----------------------------------------"
 echo " Deployment complete!"
-echo " EarnApp, Honeygain, Pawns, Watchtower are now running."
+echo " EarnApp, Honeygain, Pawns, Watchtower are now running in Docker."
 echo "----------------------------------------"
 echo "Access Portainer at: https://<PI-IP>:9443"
 echo "Use admin / (your chosen password)"
