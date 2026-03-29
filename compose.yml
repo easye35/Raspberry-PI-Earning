@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 services:
 
   honeygain:
@@ -12,6 +13,25 @@ services:
     healthcheck:
       test: ["CMD", "pgrep", "honeygain"]
       interval: 30s
+=======
+version: "3.9"
+
+services:
+
+  honeygain:
+    image: honeygain/honeygain
+    container_name: honeygain
+    restart: unless-stopped
+    platform: linux/amd64
+    command: >
+      -tou-accept
+      -email ${HG_EMAIL}
+      -pass ${HG_PASSWORD}
+      -device raspberrypi
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f honeygain || exit 1"]
+      interval: 60s
+>>>>>>> Stashed changes
       timeout: 10s
       retries: 3
 
@@ -19,6 +39,7 @@ services:
     image: iproyal/pawns-cli:latest
     container_name: pawns
     restart: unless-stopped
+<<<<<<< Updated upstream
     environment:
       PAWNS_EMAIL: ${PAWNS_EMAIL}
       PAWNS_PASSWORD: ${PAWNS_PASSWORD}
@@ -26,11 +47,26 @@ services:
     healthcheck:
       test: ["CMD", "pgrep", "pawns-cli"]
       interval: 30s
+=======
+    platform: linux/amd64
+    command: >
+      --email ${PAWNS_EMAIL}
+      --password ${PAWNS_PASSWORD}
+      --device-name raspberrypi
+      --accept-tos
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f pawns || exit 1"]
+      interval: 60s
+>>>>>>> Stashed changes
       timeout: 10s
       retries: 3
 
   watchtower:
+<<<<<<< Updated upstream
     image: containrrr/watchtower:latest
+=======
+    image: containrrr/watchtower
+>>>>>>> Stashed changes
     container_name: watchtower
     restart: unless-stopped
     volumes:
@@ -44,7 +80,11 @@ services:
     ports:
       - "9999:8080"
     volumes:
+<<<<<<< Updated upstream
       - /var/run/docker.sock:/var/run/docker.sock
+=======
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+>>>>>>> Stashed changes
 
   glances:
     image: nicolargo/glances:latest-full
@@ -52,6 +92,16 @@ services:
     restart: unless-stopped
     ports:
       - "61208:61208"
+<<<<<<< Updated upstream
+=======
+    pid: "host"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /dev/disk:/dev/disk:ro
+>>>>>>> Stashed changes
     environment:
       - GLANCES_OPT=-w
 
@@ -65,10 +115,28 @@ services:
       - ./dashboard:/usr/share/nginx/html:ro
 
   diagnostics:
+<<<<<<< Updated upstream
     build: ./diagnostics
+=======
+    image: alpine:latest
+>>>>>>> Stashed changes
     container_name: diagnostics
     restart: unless-stopped
     ports:
       - "7000:7000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+<<<<<<< Updated upstream
+=======
+      - ./diagnostics-server.sh:/diagnostics-server.sh:ro
+    entrypoint: ["/bin/sh", "/diagnostics-server.sh"]
+
+  watchdog:
+    image: docker:24-cli-alpine
+    container_name: watchdog
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./watchdog.sh:/watchdog.sh:ro
+    entrypoint: ["/bin/sh", "/watchdog.sh"]
+>>>>>>> Stashed changes
