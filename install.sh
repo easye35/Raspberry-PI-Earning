@@ -41,9 +41,31 @@ info "Project directory: $PROJECT_DIR"
 info "Running pre-flight checks..."
 
 # Ensure script is run from project directory
-if [ ! -f "stack.yml" ]; then
-  err "stack.yml not found. Run this installer from the project root:"
+if [ ! -f "stack.yml" ] && [ ! -f "compose.yml" ]; then
+  err "No compose file found. Run this installer from the project root:"
   echo "  cd ~/Raspberry-PI-docker-Earning"
+  exit 1
+fi
+
+# Normalize compose file name
+if [ -f "stack.yml" ] && [ ! -f "compose.yml" ]; then
+  warn "Renaming stack.yml → compose.yml for Docker Compose v2 compatibility"
+  mv stack.yml compose.yml
+  ok "Compose file renamed to compose.yml"
+fi
+
+# Ensure compose.yml exists
+if [ ! -f "compose.yml" ]; then
+  err "compose.yml missing — cannot continue"
+  exit 1
+fi
+
+# Detect correct compose command
+if docker compose version >/dev/null 2>&1; then
+  COMPOSE_CMD="docker compose"
+  ok "Using Docker Compose v2"
+else
+  err "Docker Compose v2 not found — installer requires it"
   exit 1
 fi
 
@@ -66,41 +88,7 @@ else
   ok "Docker is installed"
 fi
 
-# Ensure docker compose exists
-if ! docker compose version >/dev/null 2>&1; then
-  warn "Docker Compose not available — will install with Docker"
-else
-  ok "Docker Compose is available"
-fi
-
 ok "Pre-flight checks complete"
-###############################################
-# COMPOSE FILE NORMALIZATION (REQUIRED)
-###############################################
-
-info "Normalizing Docker Compose configuration..."
-
-# If stack.yml exists but compose.yml does not, rename it
-if [ -f "stack.yml" ] && [ ! -f "compose.yml" ]; then
-  warn "Renaming stack.yml → compose.yml for Docker Compose v2 compatibility"
-  mv stack.yml compose.yml
-  ok "Compose file renamed to compose.yml"
-fi
-
-# Ensure compose.yml now exists
-if [ ! -f "compose.yml" ]; then
-  err "compose.yml missing — cannot continue"
-  exit 1
-fi
-
-# Detect correct compose command
-if docker compose version >/dev/null 2>&1; then
-  COMPOSE_CMD="docker compose"
-  ok "Using Docker Compose v2"
-else
-  err "Docker Compose v2 not found — installer requires it"
-  exit 1
-fi
 
 ###############################################
 # 1. PROMPTS
@@ -249,7 +237,7 @@ chmod +x diagnostics-server.sh
 ok "diagnostics-server.sh created"
 
 ###############################################
-# 9. CREATE DASHBOARD (PATCHED)
+# 9. CREATE DASHBOARD
 ###############################################
 
 info "Ensuring dashboard directory exists..."
@@ -315,10 +303,10 @@ if [ -f "index.html" ] && [ ! -f "dashboard/index.html" ]; then
 fi
 
 # Fix missing dashboard block
-if ! grep -q "dashboard:" stack.yml; then
+if ! grep -q "dashboard:" compose.yml; then
   warn "Dashboard service missing — restoring it"
 
-  cat >> stack.yml <<EOF
+  cat >> compose.yml <<EOF
 
   dashboard:
     image: nginx:alpine
@@ -332,10 +320,10 @@ EOF
 fi
 
 # Fix missing diagnostics block
-if ! grep -q "diagnostics:" stack.yml; then
+if ! grep -q "diagnostics:" compose.yml; then
   warn "Diagnostics service missing — restoring it"
 
-  cat >> stack.yml <<EOF
+  cat >> compose.yml <<EOF
 
   diagnostics:
     image: alpine:latest
@@ -386,7 +374,7 @@ EOF
 
   ok "Systemd watchdog installed"
 
-  sed -i '/watchdog:/,/entrypoint:/d' stack.yml
+  sed -i '/watchdog:/,/entrypoint:/d' compose.yml
 else
   info "Using Docker-based watchdog"
 fi
@@ -396,8 +384,8 @@ fi
 ###############################################
 
 info "Deploying Docker stack..."
-docker compose down || true
-docker compose up -d
+$COMPOSE_CMD down || true
+$COMPOSE_CMD up -d
 ok "Stack deployed"
 
 ###############################################
@@ -427,7 +415,7 @@ if docker ps --format '{{.Names}}' | grep -q "^dashboard$"; then
   ok "Dashboard container running"
 else
   err "Dashboard container NOT running — attempting repair"
-  docker compose up -d dashboard || err "Dashboard failed to start even after repair"
+  $COMPOSE_CMD up -d dashboard || err "Dashboard failed to start even after repair"
 fi
 
 # Verify watchdog
