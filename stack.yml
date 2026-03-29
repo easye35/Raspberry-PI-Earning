@@ -1,20 +1,22 @@
 version: "3.9"
 
 services:
-  earnapp:
-    image: ghcr.io/techtanic/earnapp:latest
-    container_name: earnapp
-    restart: unless-stopped
-    platform: linux/amd64
-    environment:
-      - EARNAPP_UUID=${EARNAPP_TOKEN}
-
   honeygain:
     image: honeygain/honeygain
     container_name: honeygain
     restart: unless-stopped
-    command: -tou-accept -email ${HG_EMAIL} -pass ${HG_PASSWORD} -device raspberrypi
     platform: linux/amd64
+    command: >
+      -tou-accept
+      -email ${HG_EMAIL}
+      -pass ${HG_PASSWORD}
+      -device raspberrypi
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f honeygain || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   pawns:
     image: iproyal/pawns-cli:latest
@@ -26,6 +28,12 @@ services:
       --password ${PAWNS_PASSWORD}
       --device-name raspberrypi
       --accept-tos
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f pawns || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   watchtower:
     image: containrrr/watchtower
@@ -34,3 +42,26 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     command: --cleanup --interval 3600
+
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    restart: unless-stopped
+    ports:
+      - "9999:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  watchdog:
+    image: docker:24-cli-alpine
+    container_name: watchdog
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./watchdog.sh:/watchdog.sh:ro
+    entrypoint: ["/bin/sh", "/watchdog.sh"]
+    depends_on:
+      - honeygain
+      - pawns
+      - watchtower
+      - dozzle
