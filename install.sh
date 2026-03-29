@@ -51,7 +51,7 @@ sudo docker run -d \
   --name earnapp-temp \
   --restart=unless-stopped \
   --platform linux/amd64 \
-  fearnapp/earnapp:latest
+  ghcr.io/earnapp/earnapp:latest
 
 echo "[*] Waiting for EarnApp to generate registration link..."
 
