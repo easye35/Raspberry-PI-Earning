@@ -3,7 +3,8 @@ set -e
 
 echo "----------------------------------------"
 echo " Raspberry Pi Docker Earning Appliance"
-echo " Docker-only install (no Portainer)"
+echo " Honeygain + Pawns + Watchdog + Monitoring"
+echo " (No EarnApp, No Portainer)"
 echo "----------------------------------------"
 
 ###############################################
@@ -33,57 +34,16 @@ curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker "$USER"
 
 ###############################################
-# 3. ENABLE X86 EMULATION (ALWAYS)
+# 3. ENABLE X86 EMULATION (FOR X86-ONLY IMAGES)
 ###############################################
 
 sudo docker run --privileged --rm tonistiigi/binfmt --install all
 
 ###############################################
-# 4. BOOTSTRAP EARNAPP (TEMP CONTAINER)
-###############################################
-
-echo "[*] Starting temporary EarnApp container..."
-
-sudo docker rm -f earnapp-temp 2>/dev/null || true
-
-sudo docker run -d \
-  --name earnapp-temp \
-  --restart=unless-stopped \
-  --platform linux/amd64 \
-  ghcr.io/techtanic/earnapp:latest
-
-echo "[*] Waiting for EarnApp to generate registration link..."
-
-TOKEN=""
-ATTEMPTS=60
-SLEEP_SECONDS=5
-
-for i in $(seq 1 $ATTEMPTS); do
-  LOGS=$(sudo docker logs earnapp-temp 2>&1 || true)
-  LINK=$(echo "$LOGS" | grep -o 'https://earnapp.com/r/[A-Za-z0-9]*' | head -n 1 || true)
-
-  if [ -n "$LINK" ]; then
-    TOKEN=$(echo "$LINK" | sed 's#.*/##')
-    echo "[*] Found EarnApp registration link: $LINK"
-    echo "[*] Extracted token: $TOKEN"
-    break
-  fi
-
-  echo "[*] Attempt $i/$ATTEMPTS: waiting..."
-  sleep "$SLEEP_SECONDS"
-done
-
-if [ -z "$TOKEN" ]; then
-  echo "ERROR: Could not extract EarnApp token."
-  exit 1
-fi
-
-###############################################
-# 5. WRITE .env FILE
+# 4. WRITE .env FILE
 ###############################################
 
 cat > .env <<EOF
-EARNAPP_TOKEN=$TOKEN
 HG_EMAIL=$HG_EMAIL
 HG_PASSWORD=$HG_PASSWORD
 PAWNS_EMAIL=$PAWNS_EMAIL
@@ -91,13 +51,38 @@ PAWNS_PASSWORD=$PAWNS_PASSWORD
 EOF
 
 ###############################################
-# 6. REMOVE TEMP EARNAPP CONTAINER
+# 5. ENSURE WATCHDOG SCRIPT EXISTS
 ###############################################
 
-sudo docker rm -f earnapp-temp || true
+cat > watchdog.sh <<'EOF'
+#!/bin/sh
+
+INTERVAL=60
+SERVICES="honeygain pawns watchtower dozzle"
+
+echo "[watchdog] Starting watchdog loop..."
+
+while true; do
+  for S in $SERVICES; do
+    if ! docker ps --format '{{.Names}}' | grep -q "^${S}\$"; then
+      echo "[watchdog] Service ${S} not running, attempting to start..."
+      docker start "${S}" 2>/dev/null || docker restart "${S}" 2>/dev/null || true
+    fi
+  done
+
+  # If Docker itself is in trouble, this will fail; we just log and try again.
+  if ! docker ps >/dev/null 2>&1; then
+    echo "[watchdog] WARNING: docker ps failed. Docker daemon may be unhealthy."
+  fi
+
+  sleep "${INTERVAL}"
+done
+EOF
+
+chmod +x watchdog.sh
 
 ###############################################
-# 7. DEPLOY DOCKER COMPOSE STACK
+# 6. DEPLOY DOCKER COMPOSE STACK
 ###############################################
 
 echo "[*] Deploying Docker Compose stack..."
@@ -107,6 +92,6 @@ sudo docker compose up -d
 
 echo "----------------------------------------"
 echo " Deployment complete!"
-echo " EarnApp, Honeygain, Pawns, Watchtower are now running."
+echo " Honeygain, Pawns, Watchtower, Watchdog, Dozzle are now running."
 echo "----------------------------------------"
-echo "EarnApp token stored in .env: $TOKEN"
+echo "View logs and monitoring at: http://<PI-IP>:9999"
