@@ -61,15 +61,25 @@ if [ ! -f "compose.yml" ]; then
 fi
 
 ###############################################
-# FIXED: RELIABLE DOCKER COMPOSE V2 CHECK
+# FIXED: INSTALL DOCKER + COMPOSE V2 PROPERLY
 ###############################################
 
-info "Checking for Docker + Docker Compose v2..."
+info "Checking Docker installation..."
+
+# Install Docker if missing
+if ! command -v docker >/dev/null 2>&1; then
+    warn "Docker not installed — installing now"
+    curl -fsSL https://get.docker.com | sudo sh
+
+    ok "Docker installed successfully"
+else
+    ok "Docker is already installed"
+fi
 
 # Ensure Docker service is running
 if ! systemctl is-active --quiet docker; then
-    warn "Docker service is not running — starting it"
-    sudo systemctl start docker || true
+    warn "Docker service not running — starting it"
+    sudo systemctl start docker
 fi
 
 # Ensure user is in docker group
@@ -79,22 +89,25 @@ if ! groups $USERNAME | grep -q docker; then
     info "You must log out and back in for group changes to apply"
 fi
 
-# Check Compose v2 availability
-if docker compose version >/dev/null 2>&1; then
-    ok "Docker Compose v2 detected"
-else
-    warn "Docker Compose v2 not detected — installing plugin"
+###############################################
+# Install Docker Compose v2
+###############################################
+
+info "Checking Docker Compose v2..."
+
+if ! docker compose version >/dev/null 2>&1; then
+    warn "Docker Compose v2 not found — installing plugin"
     sudo apt update -y
     sudo apt install -y docker-compose-plugin
+fi
 
-    # Re-check after install
-    if docker compose version >/dev/null 2>&1; then
-        ok "Docker Compose v2 installed successfully"
-    else
-        err "Docker Compose v2 still not available — Docker daemon may need a restart"
-        echo "Try: sudo systemctl restart docker"
-        exit 1
-    fi
+# Verify Compose v2
+if docker compose version >/dev/null 2>&1; then
+    ok "Docker Compose v2 is ready"
+else
+    err "Docker Compose v2 still not available — something is blocking Docker"
+    echo "Try: sudo systemctl restart docker"
+    exit 1
 fi
 
 COMPOSE_CMD="docker compose"
