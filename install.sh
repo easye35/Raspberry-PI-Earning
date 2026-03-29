@@ -1,53 +1,32 @@
-#!/usr/bin/env bash
-set -e
+#!/bin/bash
 
-echo "=============================================="
-echo "     Raspberry-PI-docker-Earning Installer"
-echo "=============================================="
+echo "----------------------------------------"
+echo " Raspberry Pi Passive-Income Appliance"
+echo " Full Auto-Deploy Version (EarnApp + Honeygain + Pawns + Watchtower)"
+echo "----------------------------------------"
+
+###############################################
+# 0. PROMPTS (CREDENTIALS + EARNAPP LINK)
+###############################################
+
 echo ""
-
-# --- Detect architecture -----------------------------------------------------
-
-ARCH=$(uname -m)
-
-echo "Detected architecture: $ARCH"
-
-if [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
-    echo ""
-    echo "⚠ EarnApp's official Docker image does NOT support ARM64."
-    echo "  If you continue with Docker mode, the container will fail to pull."
-    echo ""
-    echo "You can:"
-    echo "  1) Install EarnApp natively on ARM (recommended)"
-    echo "  2) Abort"
-    echo ""
-
-    read -p "Choose option (1 or 2): " ARM_CHOICE
-
-    if [[ "$ARM_CHOICE" == "1" ]]; then
-        echo ""
-        echo "Installing EarnApp natively for ARM64..."
-        curl -s https://earnapp.com/install.sh | bash
-        echo ""
-        echo "✔ Native EarnApp installation complete."
-        exit 0
-    else
-        echo "Aborted by user."
-        exit 1
-    fi
-fi
-
-# --- Ask for EarnApp link ----------------------------------------------------
-
+read -p "Enter Portainer admin password: " PORTAINER_PASSWORD
+read -p "Enter Honeygain email: " HG_EMAIL
+read -s -p "Enter Honeygain password: " HG_PASSWORD
+echo ""
+read -p "Enter Pawns email: " PAWNS_EMAIL
+read -s -p "Enter Pawns password: " PAWNS_PASSWORD
 echo ""
 read -p "Paste your EarnApp registration link: " EARNAPP_LINK
 
 if [[ -z "$EARNAPP_LINK" ]]; then
-    echo "❌ No link provided. Cannot continue."
+    echo "ERROR: No EarnApp link provided."
     exit 1
 fi
 
-# --- Extract token -----------------------------------------------------------
+###############################################
+# 1. EXTRACT EARNAPP TOKEN FROM LINK
+###############################################
 
 TOKEN=""
 
@@ -62,53 +41,117 @@ if [[ "$EARNAPP_LINK" =~ token=([A-Za-z0-9]+) ]]; then
 fi
 
 if [[ -z "$TOKEN" ]]; then
-    echo "❌ Could not extract token from the link."
-    echo "Make sure the link looks like:"
-    echo "  https://earnapp.com/r/abcdef123456"
-    echo "or:"
-    echo "  https://earnapp.com/dashboard?token=abcdef123456"
+    echo "ERROR: Could not extract EarnApp token from link."
     exit 1
 fi
 
-# --- Validate token ----------------------------------------------------------
+echo "EarnApp token extracted: $TOKEN"
 
-if [[ ${#TOKEN} -lt 10 ]]; then
-    echo "❌ Extracted token looks too short: $TOKEN"
-    exit 1
+###############################################
+# 2. WRITE TOKEN TO .env (ONLY THIS)
+###############################################
+
+if [ ! -f .env ]; then
+    echo "EARNAPP_TOKEN=" > .env
 fi
 
-echo ""
-echo "✔ Token extracted: $TOKEN"
+sed -i "s|^EARNAPP_TOKEN=.*|EARNAPP_TOKEN=$TOKEN|" .env
 
-# --- Write .env --------------------------------------------------------------
+###############################################
+# 3. BASIC SYSTEM PREP
+###############################################
 
-echo "EARNAPP_TOKEN=\"$TOKEN\"" > .env
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y jq ca-certificates curl gnupg
 
-echo "✔ .env updated."
+###############################################
+# 4. INSTALL DOCKER (GET.DOCKER.COM)
+###############################################
 
-# --- Show registration link --------------------------------------------------
+echo "Installing Docker..."
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker "$USER"
 
-echo ""
-echo "👉 Follow this link to register your device:"
+###############################################
+# 5. ENABLE X86 EMULATION (FOR EARNAPP)
+###############################################
+
+echo "Enabling x86 emulation (binfmt)..."
+sudo docker run --privileged --rm tonistiigi/binfmt --install all
+
+###############################################
+# 6. INSTALL PORTAINER
+###############################################
+
+echo "Installing Portainer..."
+sudo docker volume create portainer_data
+sudo docker run -d \
+  -p 8000:8000 \
+  -p 9443:9443 \
+  --name portainer \
+  --restart=always \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v portainer_data:/data \
+  portainer/portainer-ce:latest
+
+echo "Waiting for Portainer to initialize..."
+sleep 20
+
+###############################################
+# 7. SET PORTAINER ADMIN PASSWORD + AUTH
+###############################################
+
+PORTAINER_URL="https://localhost:9443"
+
+echo "Setting Portainer admin password..."
+curl -k -X POST "$PORTAINER_URL/api/users/admin/init" \
+  -H "Content-Type: application/json" \
+  -d "{\"Username\": \"admin\", \"Password\": \"$PORTAINER_PASSWORD\"}"
+
+echo "Authenticating to Portainer API..."
+JWT=$(curl -k -s -X POST "$PORTAINER_URL/api/auth" \
+  -H "Content-Type: application/json" \
+  -d "{\"username\": \"admin\", \"password\": \"$PORTAINER_PASSWORD\"}" | jq -r '.jwt')
+
+if [ "$JWT" == "null" ] || [ -z "$JWT" ]; then
+  echo "ERROR: Could not authenticate to Portainer."
+  exit 1
+fi
+
+echo "Portainer authentication successful."
+
+###############################################
+# 8. PREP STACK FILE (WITH RUNTIME VARS)
+###############################################
+
+STACK_FILE="/tmp/stack.yml"
+
+export HG_EMAIL HG_PASSWORD PAWNS_EMAIL PAWNS_PASSWORD
+
+envsubst < stack.yml > "$STACK_FILE"
+
+echo "Stack file prepared."
+
+###############################################
+# 9. DEPLOY STACK VIA PORTAINER API
+###############################################
+
+echo "Deploying stack into Portainer..."
+
+curl -k -X POST "$PORTAINER_URL/api/stacks" \
+  -H "Authorization: Bearer $JWT" \
+  -H "Content-Type: multipart/form-data" \
+  -F "Name=pi-passive-income" \
+  -F "SwarmID=" \
+  -F "StackFile=@$STACK_FILE" \
+  -F "EndpointId=1" \
+  -F "method=string=string"
+
+echo "----------------------------------------"
+echo " Deployment complete!"
+echo " EarnApp, Honeygain, Pawns, Watchtower are now running."
+echo "----------------------------------------"
+echo "Access Portainer at: https://<PI-IP>:9443"
+echo "Use admin / (your chosen password)"
+echo "EarnApp link (for dashboard registration):"
 echo "$EARNAPP_LINK"
-echo ""
-
-# --- Deploy Docker container -------------------------------------------------
-
-echo "Deploying EarnApp Docker container..."
-
-docker rm -f earnapp >/dev/null 2>&1 || true
-
-docker run -d \
-    --name earnapp \
-    --restart unless-stopped \
-    -e EARNAPP_TOKEN="$TOKEN" \
-    -v earnapp-data:/data \
-    --pull always \
-    fscarmen/earnapp
-
-echo ""
-echo "✔ EarnApp container deployed (if architecture supports it)."
-echo "Check Portainer to confirm."
-echo ""
-echo "Done."
