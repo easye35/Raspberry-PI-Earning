@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pi Earning Appliance Dashboard</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #050816; color: #f9fafb; padding: 24px; }
+    .card { background:#0b1020; padding:16px; border-radius:10px; margin-bottom:16px; }
+    button { padding:10px 18px; background:#2563eb; color:white; border:none; border-radius:6px; cursor:pointer; }
+    pre { background:#0b1020; padding:16px; border-radius:8px; white-space:pre-wrap; }
+  </style>
+</head>
+<body>
+
+<h1>Raspberry Pi Earning Appliance</h1>
+
+<button onclick="runDiagnostics()">Run Diagnostics</button>
+
+<pre id="diag-output" style="display:none;"></pre>
+
+<script>
+function runDiagnostics() {
+  const box = document.getElementById("diag-output");
+  box.style.display = "block";
+  box.textContent = "Running diagnostics...";
+
+  fetch("http://" + window.location.hostname + ":7000")
+    .then(r => r.json())
+    .then(data => box.textContent = JSON.stringify(data, null, 2))
+    .catch(err => box.textContent = "Error: " + err);
+}
+</script>
+
+<div class="card">
+  <h2>Quick Links</h2>
+  <p>Logs: <code>http://&lt;PI-IP&gt;:9999</code></p>
+  <p>System Monitor: <code>http://&lt;PI-IP&gt;:61208</code></p>
+</div>
+
+</body>
+</html>
