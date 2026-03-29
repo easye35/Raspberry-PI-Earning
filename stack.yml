@@ -1,6 +1,7 @@
 version: "3.9"
 
 services:
+
   honeygain:
     image: honeygain/honeygain
     container_name: honeygain
@@ -16,7 +17,6 @@ services:
       interval: 60s
       timeout: 10s
       retries: 3
-      start_period: 30s
 
   pawns:
     image: iproyal/pawns-cli:latest
@@ -33,7 +33,6 @@ services:
       interval: 60s
       timeout: 10s
       retries: 3
-      start_period: 30s
 
   watchtower:
     image: containrrr/watchtower
@@ -77,6 +76,17 @@ services:
     volumes:
       - ./dashboard:/usr/share/nginx/html:ro
 
+  diagnostics:
+    image: alpine:latest
+    container_name: diagnostics
+    restart: unless-stopped
+    ports:
+      - "7000:7000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./diagnostics-server.sh:/diagnostics-server.sh:ro
+    entrypoint: ["/bin/sh", "/diagnostics-server.sh"]
+
   watchdog:
     image: docker:24-cli-alpine
     container_name: watchdog
@@ -85,10 +95,3 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./watchdog.sh:/watchdog.sh:ro
     entrypoint: ["/bin/sh", "/watchdog.sh"]
-    depends_on:
-      - honeygain
-      - pawns
-      - watchtower
-      - dozzle
-      - glances
-      - dashboard
