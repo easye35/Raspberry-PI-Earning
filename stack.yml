@@ -92,4 +92,3 @@ services:
       - dozzle
       - glances
       - dashboard
-      
