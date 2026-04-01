@@ -3,7 +3,7 @@
 
 set -e
 
-ROOT_DIR="$(dirname "$0")"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LIB_DIR="${ROOT_DIR}/lib"
 MODULE_DIR="${ROOT_DIR}/modules"
 
