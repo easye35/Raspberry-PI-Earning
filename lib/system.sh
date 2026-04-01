@@ -2,9 +2,6 @@
 # System module (appliance‑grade)
 # Requires: lib/logging.sh, lib/colors.sh
 
-MODULE_DIR="$(dirname "${BASH_SOURCE[0]}")"
-LIB_DIR="${MODULE_DIR}/../lib"
-
 # shellcheck source=../lib/logging.sh
 source "${LIB_DIR}/logging.sh"
 
