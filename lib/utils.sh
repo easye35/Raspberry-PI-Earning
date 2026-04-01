@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # Utility module (appliance‑grade)
 
+utils::mkdir_safe() {
+    local dir="$1"
+    if [[ ! -d "$dir" ]]; then
+        mkdir -p "$dir"
+    fi
+}
 utils::init() {
     log::info "Initializing utility module…"
 
