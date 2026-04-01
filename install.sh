@@ -337,7 +337,7 @@ info "Verifying..."
 
 docker ps >/dev/null 2>&1 && ok "Docker running"
 
-for C in honeygain pawns watchtower dozzle glances dashboard diagnostics; do
+for C in honeygain pawns dozzle glances dashboard diagnostics; do
   if docker ps --format '{{.Names}}' | grep -q "^${C}$"; then
     ok "Container running: $C"
   else
