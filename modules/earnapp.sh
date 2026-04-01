@@ -1,51 +1,41 @@
 #!/usr/bin/env bash
-# EarnApp module (Docker, token-less onboarding)
-# Requires: lib/logging.sh, lib/system.sh, lib/docker.sh
+# EarnApp module (native binary, official installer)
+# Requires: lib/logging.sh, lib/system.sh
 
-EARNAPP_CONTAINER="earnapp"
-EARNAPP_IMAGE="fearnapp/earnapp:latest"
+EARNAPP_BIN="/usr/bin/earnapp"
+EARNAPP_SERVICE="earnapp"
 EARNAPP_DIR="/var/lib/earnapp"
 
 ##############################################
 # Internal helpers
 ##############################################
 
-earnapp::_ensure_dirs() {
-  log::info "Ensuring EarnApp data directory exists at: ${EARNAPP_DIR}"
-  mkdir -p "${EARNAPP_DIR}"
-  chmod 700 "${EARNAPP_DIR}" || true
+earnapp::_install_native() {
+  log::info "Installing EarnApp using official BrightData installer…"
+
+  wget -qO- https://brightdata.com/static/earnapp/install.sh | sudo bash || \
+    log::die "EarnApp installation failed."
+
+  log::ok "EarnApp installed successfully."
 }
 
-earnapp::_pull_image() {
-  log::info "Pulling latest EarnApp Docker image: ${EARNAPP_IMAGE}"
-docker::init
-docker pull "${EARNAPP_IMAGE}"
+earnapp::_ensure_service() {
+  log::info "Ensuring EarnApp systemd service is enabled…"
+
+  systemctl enable "${EARNAPP_SERVICE}" >/dev/null 2>&1 || true
+  systemctl restart "${EARNAPP_SERVICE}" || \
+    log::die "Failed to start EarnApp service."
+
+  log::ok "EarnApp service is running."
 }
 
-earnapp::_remove_old_container() {
-  if docker ps -a --format '{{.Names}}' | grep -q "^${EARNAPP_CONTAINER}$"; then
-    log::warn "Existing EarnApp container found. Removing it for a clean install..."
-    docker stop "${EARNAPP_CONTAINER}" || true
-    docker rm "${EARNAPP_CONTAINER}" || true
+earnapp::_verify() {
+  if [[ ! -f "${EARNAPP_BIN}" ]]; then
+    log::fail "EarnApp binary missing."
+    return 1
   fi
-}
 
-earnapp::_run_container() {
-  log::info "Starting EarnApp container: ${EARNAPP_CONTAINER}"
-
-  docker run -d \
-    --name "${EARNAPP_CONTAINER}" \
-    --restart unless-stopped \
-    -v "${EARNAPP_DIR}:/var/lib/earnapp" \
-    "${EARNAPP_IMAGE}"
-
-  log::ok "EarnApp container started."
-  log::info "Visit your EarnApp dashboard to link this device if required."
-}
-
-earnapp::_self_heal() {
-  # Optional: you can extend this later with a watchdog/systemd unit
-  log::info "EarnApp self-heal hook (placeholder) – container is managed via Docker restart policy."
+  log::info "EarnApp version: $(${EARNAPP_BIN} --version 2>/dev/null || echo 'unknown')"
 }
 
 ##############################################
@@ -53,28 +43,23 @@ earnapp::_self_heal() {
 ##############################################
 
 earnapp::install() {
-  log::section "EarnApp (Docker) – token-less install"
+  log::section "EarnApp (Native Binary) – Install"
 
-  earnapp::_ensure_dirs
-  earnapp::_pull_image
-  earnapp::_remove_old_container
-  earnapp::_run_container
-  earnapp::_self_heal
+  earnapp::_install_native
+  earnapp::_ensure_service
+  earnapp::_verify
 }
 
 earnapp::update() {
-  log::section "EarnApp (Docker) – update"
+  log::section "EarnApp – Update"
 
-  earnapp::_ensure_dirs
-  earnapp::_pull_image
-  earnapp::_remove_old_container
-  earnapp::_run_container
-  earnapp::_self_heal
+  earnapp::_install_native
+  earnapp::_ensure_service
+  earnapp::_verify
 }
 
 earnapp::register() {
-  # Register with your appliance registry / dashboard
-  system::register_container "${EARNAPP_CONTAINER}" "EarnApp passive income container"
+  system::register_container "earnapp" "EarnApp native earning service"
 }
 
 earnapp::init() {
