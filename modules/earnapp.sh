@@ -1,140 +1,83 @@
 #!/usr/bin/env bash
-# EarnApp module (appliance‑grade)
-# Requires: docker, utils, logging
-
-MODULE_DIR="$(dirname "${BASH_SOURCE[0]}")"
-LIB_DIR="${MODULE_DIR}/../lib"
-
-# shellcheck source=../lib/logging.sh
-
-###############################################
-# SECTION: Config
-###############################################
+# EarnApp module (Docker, token-less onboarding)
+# Requires: lib/logging.sh, lib/system.sh, lib/docker.sh
 
 EARNAPP_CONTAINER="earnapp"
 EARNAPP_IMAGE="fearnapp/earnapp:latest"
 EARNAPP_DIR="/var/lib/earnapp"
-EARNAPP_TOKEN_FILE="${EARNAPP_DIR}/token"
 
-###############################################
-# SECTION: Internal helpers
-###############################################
+##############################################
+# Internal helpers
+##############################################
 
 earnapp::_ensure_dirs() {
-    utils::mkdir_safe "$EARNAPP_DIR"
+  log::info "Ensuring EarnApp data directory exists at: ${EARNAPP_DIR}"
+  mkdir -p "${EARNAPP_DIR}"
+  chmod 700 "${EARNAPP_DIR}" || true
 }
-
-earnapp::_load_token() {
-    if [[ -f "$EARNAPP_TOKEN_FILE" ]]; then
-        EARNAPP_TOKEN=$(cat "$EARNAPP_TOKEN_FILE")
-        return 0
-    fi
-
-    log::warn "No EarnApp token found."
-    return 1
-}
-
-earnapp::_save_token() {
-    local token="$1"
-    utils::atomic_write "$EARNAPP_TOKEN_FILE" "$token"
-    chmod 600 "$EARNAPP_TOKEN_FILE"
-}
-
-earnapp::_prompt_token() {
-    log::info "EarnApp requires a device token."
-    read -r -p "Enter EarnApp token: " token
-
-    if [[ -z "$token" ]]; then
-        log::die "Token cannot be empty."
-    fi
-
-    earnapp::_save_token "$token"
-    EARNAPP_TOKEN="$token"
-}
-
-earnapp::_ensure_token() {
-    earnapp::_load_token || earnapp::_prompt_token
-}
-
-###############################################
-# SECTION: Container lifecycle
-###############################################
 
 earnapp::_pull_image() {
-    log::info "Pulling latest EarnApp image…"
-    docker pull "$EARNAPP_IMAGE" || log::die "Failed to pull EarnApp image."
-    log::ok "Image updated."
+  log::info "Pulling latest EarnApp Docker image: ${EARNAPP_IMAGE}"
+  docker::ensure_engine
+  docker pull "${EARNAPP_IMAGE}"
 }
 
 earnapp::_remove_old_container() {
-    if utils::container_exists "$EARNAPP_CONTAINER"; then
-        log::warn "Removing old EarnApp container…"
-        docker rm -f "$EARNAPP_CONTAINER" >/dev/null
-    fi
+  if docker ps -a --format '{{.Names}}' | grep -q "^${EARNAPP_CONTAINER}$"; then
+    log::warn "Existing EarnApp container found. Removing it for a clean install..."
+    docker stop "${EARNAPP_CONTAINER}" || true
+    docker rm "${EARNAPP_CONTAINER}" || true
+  fi
 }
 
 earnapp::_run_container() {
-    log::info "Starting EarnApp container…"
+  log::info "Starting EarnApp container: ${EARNAPP_CONTAINER}"
 
-    docker run -d \
-        --name "$EARNAPP_CONTAINER" \
-        --restart unless-stopped \
-        -e EARNAPP_DEVICE_TOKEN="$EARNAPP_TOKEN" \
-        -v "$EARNAPP_DIR:/data" \
-        "$EARNAPP_IMAGE" \
-        || log::die "Failed to start EarnApp container."
+  docker run -d \
+    --name "${EARNAPP_CONTAINER}" \
+    --restart unless-stopped \
+    -v "${EARNAPP_DIR}:/var/lib/earnapp" \
+    "${EARNAPP_IMAGE}"
 
-    log::ok "EarnApp container started."
+  log::ok "EarnApp container started."
+  log::info "Visit your EarnApp dashboard to link this device if required."
 }
 
 earnapp::_self_heal() {
-    log::info "Checking EarnApp container health…"
-    utils::container_ensure "$EARNAPP_CONTAINER"
+  # Optional: you can extend this later with a watchdog/systemd unit
+  log::info "EarnApp self-heal hook (placeholder) – container is managed via Docker restart policy."
 }
 
-###############################################
-# SECTION: Public API
-###############################################
+##############################################
+# Public API
+##############################################
 
 earnapp::install() {
-    log::section "Installing EarnApp"
+  log::section "EarnApp (Docker) – token-less install"
 
-    earnapp::_ensure_dirs
-    earnapp::_ensure_token
-    earnapp::_pull_image
-    earnapp::_remove_old_container
-    earnapp::_run_container
-    earnapp::_self_heal
-
-    log::ok "EarnApp installation complete."
+  earnapp::_ensure_dirs
+  earnapp::_pull_image
+  earnapp::_remove_old_container
+  earnapp::_run_container
+  earnapp::_self_heal
 }
 
 earnapp::update() {
-    log::section "Updating EarnApp"
+  log::section "EarnApp (Docker) – update"
 
-    earnapp::_ensure_dirs
-    earnapp::_ensure_token
-    earnapp::_pull_image
-    earnapp::_remove_old_container
-    earnapp::_run_container
-
-    log::ok "EarnApp updated."
+  earnapp::_ensure_dirs
+  earnapp::_pull_image
+  earnapp::_remove_old_container
+  earnapp::_run_container
+  earnapp::_self_heal
 }
 
 earnapp::register() {
-    if command -v system::register_container >/dev/null 2>&1; then
-        system::register_container "earnapp" "EarnApp passive income container"
-        log::ok "EarnApp registered with container registry."
-    else
-        log::warn "system::register_container not found — skipping registry."
-    fi
+  # Register with your appliance registry / dashboard
+  system::register_container "${EARNAPP_CONTAINER}" "EarnApp passive income container"
 }
 
 earnapp::init() {
-    log::title "Initializing EarnApp Module"
-
-    earnapp::install
-    earnapp::register
-
-    log::ok "EarnApp module complete."
+  earnapp::install
+  earnapp::register
 }
