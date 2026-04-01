@@ -25,7 +25,10 @@ log::info "Modules:   $MODULE_DIR"
 
 log::section "Initializing core modules"
 utils::init
-system::init
+system::preflight
+system::update
+system::install_dependencies
+system::optimize
 
 log::section "Installing Docker"
 docker::init
