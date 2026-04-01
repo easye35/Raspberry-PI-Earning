@@ -17,20 +17,53 @@ while true; do
     echo "{"
     echo "\"docker_running\": \"$(docker ps >/dev/null 2>&1 && echo yes || echo no)\","
 
+    ############################################################
+    # Dynamic container list
+    ############################################################
     echo "\"containers\": {"
-    for S in honeygain pawns watchtower dozzle glances dashboard diagnostics; do
-      RUNNING=$(docker ps --format '{{.Names}}' | grep -q "^${S}$" && echo running || echo stopped)
+
+    SERVICES=$(docker ps --format '{{.Names}}')
+
+    for S in $SERVICES; do
+      RUNNING="running"
       echo "\"$S\": \"$RUNNING\","
     done
+
     echo "\"_end\": \"\"},"
 
+    ############################################################
+    # Dynamic healthchecks
+    ############################################################
     echo "\"healthchecks\": {"
-    for S in honeygain pawns; do
-      STATUS=$(docker inspect --format='{{.State.Health.Status}}' "$S" 2>/dev/null)
-      echo "\"$S\": \"$STATUS\","
+
+    for S in $SERVICES; do
+      HEALTH=$(docker inspect --format='{{.State.Health.Status}}' "$S" 2>/dev/null)
+
+      if [ -n "$HEALTH" ] && [ "$HEALTH" != "<no value>" ]; then
+        echo "\"$S\": \"$HEALTH\","
+      fi
     done
+
     echo "\"_end\": \"\"},"
 
+    ############################################################
+    # EarnApp systemd detection
+    ############################################################
+    echo "\"earnapp\": {"
+
+    if systemctl list-units --type=service | grep -q "earnapp.service"; then
+      EA_STATUS=$(systemctl is-active earnapp 2>/dev/null || echo "unknown")
+      echo "\"installed\": \"yes\","
+      echo "\"status\": \"$EA_STATUS\""
+    else
+      echo "\"installed\": \"no\""
+    fi
+
+    echo "},"
+
+    ############################################################
+    # System metrics
+    ############################################################
     echo "\"system\": {"
     echo "\"cpu_load\": \"$CPU\","
     echo "\"ram\": \"$RAM\","
