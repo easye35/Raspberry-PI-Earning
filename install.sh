@@ -10,10 +10,10 @@ MODULE_DIR="${ROOT_DIR}/modules"
 # Core libs
 source "${LIB_DIR}/logging.sh"
 source "${LIB_DIR}/system.sh"
+source "${LIB_DIR}/docker.sh"
 
 # Modules
 source "${MODULE_DIR}/utils.sh"
-source "${MODULE_DIR}/docker.sh"
 source "${MODULE_DIR}/earnapp.sh"
 source "${MODULE_DIR}/diagnostics.sh"
 
