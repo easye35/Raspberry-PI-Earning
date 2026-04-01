@@ -337,13 +337,28 @@ info "Verifying..."
 
 docker ps >/dev/null 2>&1 && ok "Docker running"
 
-for C in honeygain pawns dozzle glances dashboard diagnostics; do
-  if docker ps --format '{{.Names}}' | grep -q "^${C}$"; then
-    ok "Container running: $C"
+###############################################
+# 9. POST-INSTALL VERIFICATION (DYNAMIC)
+###############################################
+
+info "Verifying..."
+
+docker ps >/dev/null 2>&1 && ok "Docker running"
+
+# Extract service names from compose.yml
+SERVICES=$(docker compose config --services)
+
+info "Checking running containers..."
+
+for S in $SERVICES; do
+  if docker ps --format '{{.Names}}' | grep -q "^${S}$"; then
+    ok "Container running: $S"
   else
-    warn "Container NOT running: $C"
+    warn "Container NOT running: $S"
   fi
 done
+
+ok "Verification complete"
 
 ok "Verification complete"
 
