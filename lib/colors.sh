@@ -38,10 +38,10 @@ DIM="\e[2m"
 UNDERLINE="\e[4m"
 
 # Symbols (UTF-8 safe)
-SYMBOL_OK="✔"
-SYMBOL_FAIL="✖"
-SYMBOL_WARN="⚠"
-SYMBOL_INFO="➜"
+SYMBOL_OK="[OK]"
+SYMBOL_FAIL="[X]"
+SYMBOL_WARN="[!]"
+SYMBOL_INFO="->""
 
 # High-level color presets (auto-select best available)
 if [[ "$COLOR_SUPPORT" -ge 256 ]]; then
