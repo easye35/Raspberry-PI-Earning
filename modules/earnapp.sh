@@ -18,8 +18,8 @@ earnapp::_ensure_dirs() {
 
 earnapp::_pull_image() {
   log::info "Pulling latest EarnApp Docker image: ${EARNAPP_IMAGE}"
-  docker::ensure_engine
-  docker pull "${EARNAPP_IMAGE}"
+docker::init
+docker pull "${EARNAPP_IMAGE}"
 }
 
 earnapp::_remove_old_container() {
