@@ -284,6 +284,9 @@ function updatePower(power) {
   document.getElementById("p-throttled").textContent = power.throttled;
   document.getElementById("p-soft").textContent = power.soft_temp_limit;
   document.getElementById("p-raw").textContent = power.raw;
+  if (power.undervoltage === "yes") {
+  document.getElementById("p-undervolt").innerHTML = "⚡ Undervoltage";
+}
 }
 
 function runDiagnostics() {
