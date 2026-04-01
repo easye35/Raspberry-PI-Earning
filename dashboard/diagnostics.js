@@ -276,6 +276,16 @@ async function fetchDiag() {
   }
 }
 
+function updatePower(power) {
+  if (!power) return;
+
+  document.getElementById("p-undervolt").textContent = power.undervoltage;
+  document.getElementById("p-capped").textContent = power.frequency_capped;
+  document.getElementById("p-throttled").textContent = power.throttled;
+  document.getElementById("p-soft").textContent = power.soft_temp_limit;
+  document.getElementById("p-raw").textContent = power.raw;
+}
+
 function runDiagnostics() {
   const box = document.getElementById("diag-output");
   box.style.display = "block";
