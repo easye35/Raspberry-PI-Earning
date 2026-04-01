@@ -34,8 +34,7 @@ log::section "Installing Docker"
 docker::init
 
 log::section "Installing EarnApp"
-earnapp::init
-
+earnapp::install
 log::section "Final diagnostics"
 diagnostics::run
 
