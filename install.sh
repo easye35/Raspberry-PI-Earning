@@ -98,6 +98,37 @@ docker compose version >/dev/null 2>&1 || {
 ok "Docker Compose v2 ready"
 
 ###############################################
+# DOCKER PERMISSION SELF-HEALING
+###############################################
+
+info "Verifying Docker permissions..."
+
+if ! docker ps >/dev/null 2>&1; then
+    warn "Docker access denied — applying fixes..."
+
+    # Add user to docker group if missing
+    if ! groups $USERNAME | grep -q docker; then
+        info "Adding $USERNAME to docker group..."
+        sudo usermod -aG docker "$USERNAME"
+        sg docker -c "echo '[✔] Docker group applied'"
+    fi
+
+    # Fix socket permissions if still failing
+    if ! docker ps >/dev/null 2>&1; then
+        info "Fixing Docker socket permissions..."
+        sudo chmod 666 /var/run/docker.sock
+    fi
+fi
+
+# Final verification
+if docker ps >/dev/null 2>&1; then
+    ok "Docker permissions OK"
+else
+    err "Docker still inaccessible — reboot required"
+    exit 1
+fi
+
+###############################################
 # DASHBOARD DIRECTORY
 ###############################################
 
