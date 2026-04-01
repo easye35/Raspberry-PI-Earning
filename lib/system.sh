@@ -125,6 +125,7 @@ system::optimize() {
 # Any new container module can register itself here.
 
 system::register_container() {
+    mkdir -p /var/lib/appliance
     local name="$1"
     local description="$2"
 
