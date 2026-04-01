@@ -244,7 +244,7 @@ async function fetchDiag() {
     document.getElementById("disk").textContent = data.system.disk;
     document.getElementById("temp").textContent = data.system.temp;
     document.getElementById("uptime").textContent = data.system.uptime;
-
+    updatePower(data.power);
     let contHTML = "";
     for (const [name, state] of Object.entries(data.containers)) {
       if (name === "_end") continue;
