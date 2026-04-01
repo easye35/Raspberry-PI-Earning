@@ -201,6 +201,25 @@ sudo apt install -y jq ca-certificates curl gnupg busybox
 ok "System updated"
 
 ###############################################
+# 2B. OPTIONAL: EARNAPP INSTALLATION
+###############################################
+
+read -p "Install EarnApp? (y/N): " INSTALL_EARNAPP
+echo ""
+
+if [[ "$INSTALL_EARNAPP" =~ ^[Yy]$ ]]; then
+  info "Installing EarnApp (official BrightData installer)..."
+  wget -qO- https://brightdata.com/static/earnapp/install.sh > /tmp/earnapp.sh
+  sudo bash /tmp/earnapp.sh
+  ok "EarnApp installed"
+
+  echo ""
+  warn "IMPORTANT: EarnApp requires manual linking."
+  echo "Open the URL printed above in your browser to link this device."
+  echo ""
+fi
+
+###############################################
 # 3. OPTIONAL: TAILSCALE
 ###############################################
 
