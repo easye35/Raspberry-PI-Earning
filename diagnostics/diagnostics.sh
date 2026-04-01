@@ -61,7 +61,24 @@ while true; do
 
     echo "},"
 
-    ############################################################
+    THROTTLED_RAW=$(vcgencmd get_throttled 2>/dev/null | awk -F= '{print $2}')
+THROTTLED_HEX=${THROTTLED_RAW:-0x0}
+
+# Decode throttling flags
+UNDERVOLT=$([ $((THROTTLED_HEX & 0x1)) -ne 0 ] && echo "yes" || echo "no")
+CAPPED=$([ $((THROTTLED_HEX & 0x2)) -ne 0 ] && echo "yes" || echo "no")
+THROTTLED=$([ $((THROTTLED_HEX & 0x4)) -ne 0 ] && echo "yes" || echo "no")
+SOFT_TEMP=$([ $((THROTTLED_HEX & 0x8)) -ne 0 ] && echo "yes" || echo "no")
+
+echo "\"power\": {"
+echo "\"raw\": \"$THROTTLED_HEX\","
+echo "\"undervoltage\": \"$UNDERVOLT\","
+echo "\"frequency_capped\": \"$CAPPED\","
+echo "\"throttled\": \"$THROTTLED\","
+echo "\"soft_temp_limit\": \"$SOFT_TEMP\""
+echo "},"
+
+############################################################
     # System metrics
     ############################################################
     echo "\"system\": {"
