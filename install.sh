@@ -8,19 +8,13 @@ LIB_DIR="${ROOT_DIR}/lib"
 MODULE_DIR="${ROOT_DIR}/modules"
 
 # Core libs
-# shellcheck source=lib/logging.sh
 source "${LIB_DIR}/logging.sh"
-# shellcheck source=lib/system.sh
 source "${LIB_DIR}/system.sh"
 
 # Modules
-# shellcheck source=modules/utils.sh
 source "${MODULE_DIR}/utils.sh"
-# shellcheck source=modules/docker.sh
 source "${MODULE_DIR}/docker.sh"
-# shellcheck source=modules/earnapp.sh
 source "${MODULE_DIR}/earnapp.sh"
-# shellcheck source=modules/diagnostics.sh
 source "${MODULE_DIR}/diagnostics.sh"
 
 log::title "Raspberry Pi Earning Appliance Installer"
