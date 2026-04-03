@@ -1,14 +1,4 @@
 services:
-  packetstream:
-    image: packetstream/psclient:latest
-    container_name: packetstream
-    restart: always
-    environment:
-      - PS_USERNAME=${PACKETSTREAM_USERNAME}
-      - PS_PASSWORD=${PACKETSTREAM_PASSWORD}
-    volumes:
-      - /mnt/storage/packetstream:/app/data
-
   earnapp:
     image: fazalfarhan01/earnapp:latest
     container_name: earnapp
@@ -23,14 +13,6 @@ services:
     command: -tou-accept -email ${HONEYGAIN_EMAIL} -pass ${HONEYGAIN_PASSWORD} -device earnbox
     volumes:
       - /mnt/storage/honeygain:/data
-
-  pawns:
-    image: iproyal/pawns-cli:latest
-    container_name: pawns
-    restart: always
-    command: --email ${PAWNS_EMAIL} --password ${PAWNS_PASSWORD} --device-name earnbox
-    volumes:
-      - /mnt/storage/pawns:/data
 
   nginx:
     image: nginx:alpine
