@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source "$LOG_LIB"
+# Resolve directories
+MODULES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$MODULES_DIR/.." && pwd)"
+
+# Load shared libraries
+source "$ROOT_DIR/lib/logging.sh"
+source "$ROOT_DIR/lib/utils.sh"
 
 log::section "Detecting External Storage"
 
