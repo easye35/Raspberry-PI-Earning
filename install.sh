@@ -2,7 +2,10 @@
 # Appliance-grade installer orchestrator for this repo
 
 set -euo pipefail
-
+if [[ $EUID -ne 0 ]]; then
+    echo "Installer is not running as root — elevating..."
+    exec sudo -E bash "$0" "$@"
+fi
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LIB_DIR="${ROOT_DIR}/lib"
 MODULE_DIR="${ROOT_DIR}/modules"
