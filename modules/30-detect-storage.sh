@@ -5,58 +5,37 @@ source "$LOG_LIB"
 
 log::section "Detecting External Storage"
 
-detect_usb_disks() {
+main() {
     log::step "Scanning for USB storage devices"
 
-    lsblk -J -o NAME,MODEL,TYPE,SIZE,MOUNTPOINT | jq -r '
-        .blockdevices[]
-        | select(.type=="disk")
-        | select(.model != null and (.model | test("SD|MMC") | not))
-        | .name
-    '
-}
+    # Find first USB partition (sda1, sdb1, etc)
+    local part
+    part=$(lsblk -p -o NAME,TYPE | awk '$2=="part" && $1 ~ "/dev/sd"{print $1; exit}')
 
-validate_drive() {
-    local disk="$1"
-
-    log::step "Validating drive /dev/$disk"
-
-    if mount | grep -q "/dev/$disk"; then
-        log::fail "Drive /dev/$disk is mounted — cannot use."
-        return 1
-    fi
-
-    if [[ "$disk" == "mmcblk0" ]]; then
-        log::fail "Drive is the SD card — skipping."
-        return 1
-    fi
-
-    log::ok "Drive /dev/$disk is valid."
-}
-
-main() {
-    local disks
-    disks=$(detect_usb_disks)
-
-    if [[ -z "$disks" ]]; then
+    if [[ -z "$part" ]]; then
         log::warn "No external HDD/SSD detected."
         echo "STORAGE_AVAILABLE=0" > /tmp/storage.env
         return 0
     fi
 
-    local selected
-    selected=$(echo "$disks" | head -n 1)
+    log::substep "Detected partition: $part"
 
-    log::substep "Selected drive: /dev/$selected"
+    # Validate that it's not the SD card
+    if [[ "$part" == *"mmcblk0"* ]]; then
+        log::die "Detected SD card instead of USB drive."
+    fi
 
-    validate_drive "$selected" || log::die "Storage validation failed."
+    # Ensure it's not mounted somewhere unexpected
+    if mount | grep -q "$part"; then
+        log::warn "Drive is currently mounted — will unmount in next module."
+    fi
 
     {
         echo "STORAGE_AVAILABLE=1"
-        echo "STORAGE_DEVICE=/dev/$selected"
+        echo "STORAGE_DEVICE=$part"
     } > /tmp/storage.env
 
-    log::success_block "External storage detected and validated."
+    log::success_block "External storage detected: $part"
 }
 
 main "$@"
