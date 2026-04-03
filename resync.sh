@@ -1,10 +1,17 @@
 #!/bin/bash
 set -e
 
-echo "🔍 Scanning network for Raspberry Pi..."
+echo "🔍 Auto-detecting Raspberry Pi on the network..."
 
-# Detect local subnet (e.g., 192.168.1.0/24)
-SUBNET=$(ip route | awk '/src/ {print $1}' | head -n 1)
+# --- Ensure nmap is installed ---
+if ! command -v nmap >/dev/null 2>&1; then
+    echo "📦 nmap not found — installing..."
+    sudo apt update -y
+    sudo apt install -y nmap
+fi
+
+# --- Detect local subnet properly ---
+SUBNET=$(ip -o -f inet addr show | awk '/scope global/ {print $4; exit}')
 
 if [ -z "$SUBNET" ]; then
     echo "❌ Could not determine local subnet."
@@ -12,9 +19,9 @@ if [ -z "$SUBNET" ]; then
 fi
 
 echo "🌐 Subnet detected: $SUBNET"
-echo "🔎 Running nmap scan (this may take ~5 seconds)..."
+echo "🔎 Running nmap scan (5–10 seconds)..."
 
-# Scan for Raspberry Pi MAC prefixes
+# --- Scan for Raspberry Pi MAC prefixes ---
 PI_IP=$(sudo nmap -sn "$SUBNET" \
     | awk '
         /Nmap scan report/{ip=$5}
