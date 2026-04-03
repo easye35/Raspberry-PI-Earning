@@ -1,103 +1,85 @@
 #!/usr/bin/env bash
-# Module 45: Move Docker to external storage (dynamic, safe)
-
 set -Eeuo pipefail
 
-# Load logging
-if [[ -n "${LOG_LIB:-}" && -f "$LOG_LIB" ]]; then
-    # shellcheck source=/dev/null
-    source "$LOG_LIB"
-else
-    log::info(){ echo "[INFO] $*"; }
-    log::warn(){ echo "[WARN] $*"; }
-    log::error(){ echo "[ERROR] $*"; }
-    log::success(){ echo "[SUCCESS] $*"; }
-    log::section(){ echo; echo "=== $* ==="; echo; }
-fi
+# Resolve module directory
+MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$MODULE_DIR/logging.sh"
+source "$MODULE_DIR/utils.sh"
+
+###############################################################################
+# Migrate Docker Data to External Storage
+###############################################################################
 
 log::section "Migrating Docker to External Storage"
 
-STORAGE_ENV="/tmp/storage.env"
+DEVICE="/dev/sda"
+PARTITION="/dev/sda1"
+MOUNT_POINT="/mnt/storage"
+DOCKER_ROOT="/var/lib/docker"
+TARGET_ROOT="$MOUNT_POINT/docker"
 
-if [[ ! -f "$STORAGE_ENV" ]]; then
-    log::error "Missing $STORAGE_ENV — storage pipeline not initialized."
-    exit 1
+###############################################################################
+# Verify mount
+###############################################################################
+
+log::step "Verifying external storage mount"
+
+if ! mountpoint -q "$MOUNT_POINT"; then
+    log::fail "Expected $MOUNT_POINT to be mounted, but it is not."
 fi
 
-# Load DEVICE, PARTITION, MOUNT_POINT
-source "$STORAGE_ENV"
-
-if [[ -z "${MOUNT_POINT:-}" ]]; then
-    log::error "MOUNT_POINT not found in $STORAGE_ENV"
-    exit 1
-fi
-
-log::info "Using storage mountpoint: $MOUNT_POINT"
+log::ok "External storage is mounted at $MOUNT_POINT"
 
 ###############################################################################
-# Determine Docker data directory
+# Prepare target directory
 ###############################################################################
 
-DOCKER_DIR="$MOUNT_POINT/docker"
-
-log::info "Target Docker directory: $DOCKER_DIR"
-
-mkdir -p "$DOCKER_DIR"
+log::step "Ensuring Docker target directory exists"
+sudo mkdir -p "$TARGET_ROOT"
 
 ###############################################################################
-# Stop Docker safely
+# Stop Docker
 ###############################################################################
 
-log::info "Stopping Docker service (if running)"
-systemctl stop docker 2>/dev/null || true
-sleep 1
-
-###############################################################################
-# If Docker already migrated, skip rsync
-###############################################################################
-
-if [[ -L /var/lib/docker ]]; then
-    CURRENT_TARGET="$(readlink -f /var/lib/docker)"
-    if [[ "$CURRENT_TARGET" == "$DOCKER_DIR" ]]; then
-        log::info "Docker already migrated — skipping data copy."
-        systemctl start docker
-        log::success "Docker migration already complete."
-        exit 0
-    fi
-fi
+log::step "Stopping Docker service"
+sudo systemctl stop docker
 
 ###############################################################################
 # Move Docker data
 ###############################################################################
 
-if [[ -d /var/lib/docker ]]; then
-    log::info "Copying Docker data to $DOCKER_DIR"
-    rsync -aHAX --delete /var/lib/docker/ "$DOCKER_DIR/"
+if [[ -d "$DOCKER_ROOT" ]]; then
+    log::step "Migrating Docker data to $TARGET_ROOT"
+    sudo rsync -aHAX --delete "$DOCKER_ROOT/" "$TARGET_ROOT/"
 else
-    log::warn "/var/lib/docker does not exist — creating fresh directory."
-    mkdir -p "$DOCKER_DIR"
+    log::warn "Docker root directory not found — skipping migration."
 fi
 
 ###############################################################################
-# Replace /var/lib/docker with symlink
+# Update Docker daemon.json
 ###############################################################################
 
-log::info "Replacing /var/lib/docker with symlink → $DOCKER_DIR"
+log::step "Updating Docker data-root configuration"
 
-rm -rf /var/lib/docker
-ln -s "$DOCKER_DIR" /var/lib/docker
+sudo mkdir -p /etc/docker
+
+cat <<EOF | sudo tee /etc/docker/daemon.json >/dev/null
+{
+  "data-root": "$TARGET_ROOT"
+}
+EOF
+
+log::ok "Docker configuration updated."
 
 ###############################################################################
 # Restart Docker
 ###############################################################################
 
-log::info "Starting Docker service"
-systemctl start docker 2>/dev/null || true
-sleep 1
+log::step "Restarting Docker service"
+sudo systemctl start docker
 
-if systemctl is-active --quiet docker; then
-    log::success "Docker successfully migrated to: $DOCKER_DIR"
-else
-    log::error "Docker failed to start after migration."
-    exit 1
-fi
+###############################################################################
+# Final confirmation
+###############################################################################
+
+log::success_block "Docker successfully migrated to $TARGET_ROOT"
