@@ -1,10 +1,7 @@
 #!/bin/bash
 set -e
 
-# Host alias or mDNS name — NO IPs
-PI_HOST="earnbox"          # or "pi@raspberrypi.local"
-
-# Remote base directory (relative to user's home)
+PI_HOST="pi@raspberrypi.local"
 BASE_DIR="earnbox"
 TARGET_DIR="$BASE_DIR/dashboard"
 
