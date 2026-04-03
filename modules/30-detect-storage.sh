@@ -12,7 +12,7 @@ source "$ROOT_DIR/lib/utils.sh"
 log::section "Detecting External Storage"
 
 # ---------------------------------------------------------
-# Auto‑Unmount Function (corrected)
+# Auto‑Unmount Function
 # ---------------------------------------------------------
 auto_unmount_drive() {
     local dev="$1"
@@ -73,7 +73,6 @@ main() {
         log::die "Detected SD card instead of USB drive."
     fi
 
-    # NEW: Auto‑unmount here instead of deferring
     log::info "Checking mount status..."
     auto_unmount_drive "$part"
 
