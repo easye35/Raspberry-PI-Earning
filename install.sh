@@ -73,7 +73,7 @@ run_module() {
 
     log::section "Running module: $module"
     chmod +x "$path"
-    bash "$path"
+    sh "$path"
     log::success "Module completed: $module"
 }
 
