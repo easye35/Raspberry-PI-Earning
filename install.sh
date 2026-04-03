@@ -17,16 +17,27 @@ source "${LIB_DIR}/logging.sh"
 source "${LIB_DIR}/system.sh"
 source "${LIB_DIR}/docker.sh"
 
-# Load module libraries
-source "${MODULE_DIR}/utils.sh"
-source "${MODULE_DIR}/earnapp.sh"
-source "${MODULE_DIR}/diagnostics.sh"
-
 log::title "Raspberry Pi Earning Appliance Installer"
 
 log::info "Root:      $ROOT_DIR"
 log::info "Lib dir:   $LIB_DIR"
 log::info "Modules:   $MODULE_DIR"
+
+# ---------------------------------------------------------
+# Normalize module logging (self-healing step)
+# ---------------------------------------------------------
+
+if [[ -x "${ROOT_DIR}/fix-logging.sh" ]]; then
+  log::section "Normalizing module logging syntax"
+  bash "${ROOT_DIR}/fix-logging.sh" --verbose
+else
+  log::warn "fix-logging.sh not found or not executable; skipping logging normalization."
+fi
+
+# Load module libraries (now normalized)
+source "${MODULE_DIR}/utils.sh"
+source "${MODULE_DIR}/earnapp.sh"
+source "${MODULE_DIR}/diagnostics.sh"
 
 # ---------------------------------------------------------
 # External Storage Preparation (HDD/SSD)
