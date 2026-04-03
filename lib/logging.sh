@@ -123,3 +123,14 @@ log::spinner() {
 
     return $status
 }
+# ---------------------------------------------------------------------------
+# Backwards-compatible aliases (legacy function names)
+# ---------------------------------------------------------------------------
+
+log_info()    { log::info "$@"; }
+log_ok()      { log::ok "$@"; }
+log_warn()    { log::warn "$@"; }
+log_error()   { log::fail "$@"; }
+log_fail()    { log::fail "$@"; }
+log_success() { log::ok "$@"; }
+log_title()   { log::title "$@"; }
