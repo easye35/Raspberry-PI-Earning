@@ -58,6 +58,8 @@ else
     COLOR_TITLE="\e[35m"
 fi
 
+COLOR_DIM="${DIM}"
+
 # Styled prefixes for logging
 PREFIX_OK="${COLOR_OK}${SYMBOL_OK}${RESET}"
 PREFIX_FAIL="${COLOR_FAIL}${SYMBOL_FAIL}${RESET}"
