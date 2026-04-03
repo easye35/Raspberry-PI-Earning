@@ -1,25 +1,25 @@
 /* ---------------------------------------------------------
-   EarnBox UI — Restored Dark Theme (Original Look)
+   EarnBox UI — Original Theme (the one you liked)
 ----------------------------------------------------------*/
 
 :root {
-  --bg: #0a0c10;
+  --bg: #0b0e11;
   --bg-panel: #111418;
-  --bg-sidebar: #0c0e12;
+  --bg-sidebar: #0a0c0f;
 
-  --text: #c9d1d9;          /* slightly brighter than original */
-  --text-muted: #6e7681;
+  --text: #d0d4da;
+  --text-muted: #7a8088;
 
   --accent: #3b82f6;
   --accent-hover: #60a5fa;
 
-  --border: #1f242d;
+  --border: #1c1f26;
 
   --success: #2ea043;
   --warning: #d29922;
   --danger: #f85149;
 
-  --radius: 8px;
+  --radius: 10px;
   --font: "Inter", sans-serif;
 }
 
@@ -31,35 +31,33 @@ body {
   font-family: var(--font);
   margin: 0;
   padding: 0;
-}
-
-/* Layout */
-
-.content {
-  margin-left: 260px;
-  padding: 24px;
-  padding-top: 80px;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Sidebar */
 
 .sidebar {
-  width: 260px;
+  width: 240px;
   background: var(--bg-sidebar);
   height: 100vh;
   position: fixed;
   left: 0;
   top: 0;
-  padding: 20px;
+  padding: 22px;
   box-sizing: border-box;
   border-right: 1px solid var(--border);
+  transition: transform 0.25s ease;
+}
+
+.sidebar.hidden {
+  transform: translateX(-260px);
 }
 
 .sidebar-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .logo {
@@ -74,12 +72,16 @@ body {
   border-radius: var(--radius);
   cursor: pointer;
   color: var(--text-muted);
-  transition: 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.nav-item:hover,
+.nav-item:hover {
+  background: #15191f;
+  color: var(--accent);
+}
+
 .nav-item.active {
-  background: var(--bg-panel);
+  background: #1a1f26;
   color: var(--accent);
 }
 
@@ -87,7 +89,7 @@ body {
 
 .topbar {
   position: fixed;
-  left: 260px;
+  left: 240px;
   right: 0;
   top: 0;
   height: 60px;
@@ -121,6 +123,14 @@ body {
   cursor: pointer;
 }
 
+/* Content */
+
+.content {
+  margin-left: 240px;
+  padding: 24px;
+  padding-top: 80px;
+}
+
 /* Cards */
 
 .card {
@@ -129,6 +139,7 @@ body {
   border-radius: var(--radius);
   padding: 0;
   overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
 }
 
 .card-header {
