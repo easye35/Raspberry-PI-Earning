@@ -1,13 +1,16 @@
-// ADVANCED CANVAS CHART ENGINE -----------------------------------------
+/* -------------------------------------------------------------
+   ADVANCED CANVAS CHART ENGINE
+------------------------------------------------------------- */
 
 function drawChart(canvasId, data, options = {}) {
     const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+
     const ctx = canvas.getContext("2d");
 
     const {
         color = "#00aaff",
         gridColor = "#333",
-        animate = true,
         tooltip = true
     } = options;
 
@@ -19,7 +22,9 @@ function drawChart(canvasId, data, options = {}) {
     const max = Math.max(...data, 1);
     const stepX = width / (data.length - 1);
 
-    // GRIDLINES ---------------------------------------------------------
+    /* ---------------------------------------------------------
+       GRIDLINES
+    --------------------------------------------------------- */
     ctx.strokeStyle = gridColor;
     ctx.lineWidth = 1;
 
@@ -31,7 +36,9 @@ function drawChart(canvasId, data, options = {}) {
         ctx.stroke();
     }
 
-    // LINE --------------------------------------------------------------
+    /* ---------------------------------------------------------
+       LINE GRAPH
+    --------------------------------------------------------- */
     ctx.strokeStyle = color;
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -46,7 +53,9 @@ function drawChart(canvasId, data, options = {}) {
 
     ctx.stroke();
 
-    // TOOLTIP -----------------------------------------------------------
+    /* ---------------------------------------------------------
+       TOOLTIP
+    --------------------------------------------------------- */
     if (tooltip) {
         canvas.onmousemove = (e) => {
             const rect = canvas.getBoundingClientRect();
@@ -57,7 +66,7 @@ function drawChart(canvasId, data, options = {}) {
 
             if (value !== undefined) {
                 ctx.clearRect(0, 0, width, height);
-                drawChart(canvasId, data, { color, gridColor, animate: false, tooltip: false });
+                drawChart(canvasId, data, { color, gridColor, tooltip: false });
 
                 ctx.fillStyle = "#fff";
                 ctx.font = "14px Arial";
@@ -72,13 +81,17 @@ function drawChart(canvasId, data, options = {}) {
     }
 }
 
-// DATA BUFFERS ---------------------------------------------------------
+/* -------------------------------------------------------------
+   DATA BUFFERS
+------------------------------------------------------------- */
 
 let cpuHistory = [];
 let ramHistory = [];
 let earningsHistory = [];
 
-// UPDATE LOOP ----------------------------------------------------------
+/* -------------------------------------------------------------
+   CHART UPDATE LOOP
+------------------------------------------------------------- */
 
 async function updateCharts() {
     try {
@@ -87,8 +100,13 @@ async function updateCharts() {
 
         cpuHistory.push(sys.cpu);
         ramHistory.push(sys.ram);
-        earningsHistory.push(sys.earnings);
 
+        // Earnings may come from a different endpoint
+        const earnRes = await fetch("/api/earnings");
+        const earn = await earnRes.json();
+        earningsHistory.push(earn.today);
+
+        // Keep last 50 points
         if (cpuHistory.length > 50) cpuHistory.shift();
         if (ramHistory.length > 50) ramHistory.shift();
         if (earningsHistory.length > 50) earningsHistory.shift();
@@ -101,5 +119,9 @@ async function updateCharts() {
         console.error("Chart update failed:", err);
     }
 }
+
+/* -------------------------------------------------------------
+   START CHART UPDATES
+------------------------------------------------------------- */
 
 setInterval(updateCharts, 3000);
