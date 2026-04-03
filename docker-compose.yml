@@ -37,4 +37,13 @@ services:
     container_name: watchtower
     restart: unless-stopped
     command: --cleanup --interval 300
+
+    backend:
+  build: ./backend
+  env_file: .env
+  volumes:
+    - ./backend:/app
+    - ./data:/data
+    - /var/run/docker.sock:/var/run/docker.sock
+  restart: unless-stopped
     
