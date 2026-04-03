@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Logging library (environment variable)
-source "$LOG_LIB"
+source "$LOG::LIB"
 
 log::section "Power & Hardware Safety Check"
 
