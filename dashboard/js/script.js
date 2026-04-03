@@ -12,6 +12,14 @@ menuBtn.addEventListener("click", () => {
 // PAGE LOADER -----------------------------------------------------
 
 function loadPage(page) {
+    document.getElementById("chartsPage").style.display = "none";
+document.querySelector(".panel").style.display = "none";
+
+if (page === "charts") {
+    document.getElementById("chartsPage").style.display = "block";
+} else {
+    document.querySelector(".panel").style.display = "block";
+}
     document.getElementById("pageTitle").innerText =
         page.charAt(0).toUpperCase() + page.slice(1);
 
