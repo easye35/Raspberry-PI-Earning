@@ -1,48 +1,34 @@
 #!/usr/bin/env bash
-# Module 40: Mount external storage (reuse existing mount if present)
-
 set -Eeuo pipefail
 
-if [[ -n "${LOG_LIB:-}" && -f "$LOG_LIB" ]]; then source "$LOG_LIB"; else
-    log::info(){ echo "[INFO] $*"; }
-    log::warn(){ echo "[WARN] $*"; }
-    log::error(){ echo "[ERROR] $*"; }
-    log::success(){ echo "[SUCCESS] $*"; }
-    log::section(){ echo; echo "=== $* ==="; echo; }
-fi
+# Resolve module directory
+MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$MODULE_DIR/logging.sh"
+source "$MODULE_DIR/utils.sh"
+
+###############################################################################
+# Migrate data to external storage
+###############################################################################
 
 log::section "Mounting External Storage"
 
-STORAGE_ENV="/tmp/storage.env"
-source "$STORAGE_ENV"
+DEVICE="/dev/sda"
+PARTITION="/dev/sda1"
+MOUNT_POINT="/mnt/storage"
 
-if [[ -z "${PARTITION:-}" ]]; then
-    log::error "PARTITION not found in $STORAGE_ENV"
-    exit 1
+log::step "Verifying external storage mount"
+
+if ! mountpoint -q "$MOUNT_POINT"; then
+    log::fail "Expected $MOUNT_POINT to be mounted, but it is not."
 fi
 
-# Check if already mounted
-EXISTING_MOUNT="$(findmnt -rn -o TARGET "$PARTITION" 2>/dev/null || true)"
+log::ok "External storage is mounted at $MOUNT_POINT"
 
-if [[ -n "$EXISTING_MOUNT" ]]; then
-    MOUNT_POINT="$EXISTING_MOUNT"
-    log::info "Partition $PARTITION already mounted at $MOUNT_POINT — reusing."
-else
-    MOUNT_POINT="/mnt/storage"
-    mkdir -p "$MOUNT_POINT"
-    log::info "Mounting $PARTITION → $MOUNT_POINT"
-    mount "$PARTITION" "$MOUNT_POINT"
-fi
+###############################################################################
+# (Placeholder) Data migration logic
+# Here you’d rsync/move whatever needs to live on the HDD/SSD.
+###############################################################################
 
-UUID="$(blkid -s UUID -o value "$PARTITION")"
+log::step "No data migration steps defined yet — skipping."
 
-if ! grep -q "$UUID" /etc/fstab; then
-    log::info "Adding $PARTITION to /etc/fstab"
-    echo "UUID=$UUID  $MOUNT_POINT  ext4  defaults,noatime  0  2" >> /etc/fstab
-else
-    log::info "UUID already present in /etc/fstab — skipping."
-fi
-
-echo "MOUNT_POINT=$MOUNT_POINT" >> "$STORAGE_ENV"
-
-log::success "Mount step complete. Using $MOUNT_POINT as storage root."
+log::success_block "External storage is mounted and ready at $MOUNT_POINT"
