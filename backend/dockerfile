@@ -1,0 +1,19 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy package files first (better caching)
+COPY package.json package-lock.json* ./
+
+# Install dependencies
+RUN npm install --production || npm install --production --legacy-peer-deps
+
+# Copy backend source
+COPY . .
+
+# Allow access to Docker socket
+VOLUME ["/var/run/docker.sock"]
+
+EXPOSE 8080
+
+CMD ["npm", "start"]
