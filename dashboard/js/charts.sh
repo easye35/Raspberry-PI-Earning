@@ -1,3 +1,5 @@
+// Lightweight SVG-based chart renderer (no external libraries)
+
 const ChartsModule = (() => {
 
   // Draw a simple line chart using SVG
