@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Containers</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+  <aside class="sidebar">
+    <h2>EARNBOX</h2>
+    <a href="../index.html">Dashboard</a>
+    <a class="active" href="containers.html">Containers</a>
+    <a href="#">System</a>
+    <a href="#">Power</a>
+    <a href="#">Earnings</a>
+    <a href="#">Charts</a>
+    <a href="#">Settings</a>
+  </aside>
+
+  <main class="content">
+    <h1>CONTAINERS</h1>
+    <p class="subtitle">Tracked Docker services</p>
+
+    <button id="refreshBtn">Refresh</button>
+
+    <table id="containersTable">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>CPU</th>
+          <th>RAM</th>
+          <th>Restarts</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </main>
+
+  <script src="../js/containers.js"></script>
+</body>
+</html>
