@@ -13,38 +13,21 @@ COLOR_OK="\033[1;32m"
 COLOR_STEP="\033[1;36m"
 COLOR_SUBSTEP="\033[0;36m"
 COLOR_DEBUG="\033[0;90m"
+COLOR_SECTION="\033[1;35m"
+COLOR_HEADER="\033[1;37m"
 
 ###############################################################################
-# Logging Functions
+# Core Logging Functions
 ###############################################################################
 
-log::info() {
-    echo -e "${COLOR_INFO}[INFO]${COLOR_RESET} $*"
-}
+log::info()       { echo -e "${COLOR_INFO}[INFO]${COLOR_RESET} $*"; }
+log::warn()       { echo -e "${COLOR_WARN}[WARN]${COLOR_RESET} $*"; }
+log::error()      { echo -e "${COLOR_ERROR}[ERROR]${COLOR_RESET} $*"; }
+log::ok()         { echo -e "${COLOR_OK}[OK]${COLOR_RESET} $*"; }
+log::debug()      { echo -e "${COLOR_DEBUG}[DEBUG]${COLOR_RESET} $*"; }
 
-log::warn() {
-    echo -e "${COLOR_WARN}[WARN]${COLOR_RESET} $*"
-}
-
-log::error() {
-    echo -e "${COLOR_ERROR}[ERROR]${COLOR_RESET} $*"
-}
-
-log::ok() {
-    echo -e "${COLOR_OK}[OK]${COLOR_RESET} $*"
-}
-
-log::step() {
-    echo -e "${COLOR_STEP}==>${COLOR_RESET} $*"
-}
-
-log::substep() {
-    echo -e "${COLOR_SUBSTEP}  ->${COLOR_RESET} $*"
-}
-
-log::debug() {
-    echo -e "${COLOR_DEBUG}[DEBUG]${COLOR_RESET} $*"
-}
+log::step()       { echo -e "${COLOR_STEP}==>${COLOR_RESET} $*"; }
+log::substep()    { echo -e "${COLOR_SUBSTEP}  ->${COLOR_RESET} $*"; }
 
 log::fail() {
     echo -e "${COLOR_ERROR}[FAIL]${COLOR_RESET} $*"
@@ -56,11 +39,39 @@ log::die() {
     exit 1
 }
 
+###############################################################################
+# Section / Header / Banner Blocks
+###############################################################################
+
+log::section() {
+    echo -e "${COLOR_SECTION}"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  $*"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo -e "${COLOR_RESET}"
+}
+
+log::header() {
+    echo -e "${COLOR_HEADER}"
+    echo "--------------------------------------------------------------"
+    echo "  $*"
+    echo "--------------------------------------------------------------"
+    echo -e "${COLOR_RESET}"
+}
+
+log::banner() {
+    echo -e "${COLOR_OK}"
+    echo "=============================================================="
+    echo "  $*"
+    echo "=============================================================="
+    echo -e "${COLOR_RESET}"
+}
+
 log::success_block() {
     echo -e "${COLOR_OK}"
-    echo "========================================"
+    echo "=============================================================="
     echo "  $*"
-    echo "========================================"
+    echo "=============================================================="
     echo -e "${COLOR_RESET}"
 }
 
