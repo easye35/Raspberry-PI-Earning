@@ -1,8 +1,7 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Main installer for Raspberry-PI-docker-Earning
-# Automatically installs Bash if missing, then runs all modules using Bash.
 
-set -eu
+set -Eeuo pipefail
 
 ###############################################################################
 # 1. Ensure Bash is installed BEFORE running any modules
@@ -14,40 +13,38 @@ if ! command -v bash >/dev/null 2>&1; then
 fi
 
 ###############################################################################
-# 2. Load utilities (POSIX-safe)
+# 2. Load utilities (must be SOURCED, not executed)
 ###############################################################################
 UTILS="modules/utils.sh"
-if [ ! -f "$UTILS" ]; then
+
+if [[ ! -f "$UTILS" ]]; then
     echo "[ERROR] Missing $UTILS"
     exit 1
 fi
 
-# utils.sh is Bash, so load it with Bash
-bash "$UTILS" load || {
-    echo "[ERROR] Failed to load utils"
-    exit 1
-}
+# Correct way: source it into THIS shell
+source "$UTILS"
 
 ###############################################################################
-# 3. Module list (in order)
+# 3. Module list
 ###############################################################################
-MODULES="
-10-stop-and-clean.sh
-20-power-check.sh
-30-detect-storage.sh
-35-mount-and-prepare-storage.sh
-40-migrate-storage.sh
-45-migrate-docker.sh
-50-verify-storage.sh
-"
+MODULES=(
+    "10-stop-and-clean.sh"
+    "20-power-check.sh"
+    "30-detect-storage.sh"
+    "35-mount-and-prepare-storage.sh"
+    "40-migrate-storage.sh"
+    "45-migrate-docker.sh"
+    "50-verify-storage.sh"
+)
 
 ###############################################################################
 # 4. Run each module using Bash
 ###############################################################################
-for module in $MODULES; do
+for module in "${MODULES[@]}"; do
     path="modules/$module"
 
-    if [ ! -f "$path" ]; then
+    if [[ ! -f "$path" ]]; then
         echo "[ERROR] Missing module: $path"
         exit 1
     fi
@@ -55,9 +52,9 @@ for module in $MODULES; do
     echo "Running module: $module"
     echo "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒"
 
-    # Run module with Bash (now guaranteed to exist)
+    # Run module with Bash
     if ! bash "$path"; then
-        echo "❌ ERROR on line $LINENO: bash \"$path\""
+        echo "❌ ERROR running module: $module"
         exit 1
     fi
 done
