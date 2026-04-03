@@ -1,22 +1,21 @@
 /* ---------------------------------------------------------
-   EarnBox UI — Full Correct Stylesheet
-   Matches app.js + modules exactly
+   EarnBox UI — Restored Dark Theme (Original Look)
 ----------------------------------------------------------*/
 
 :root {
-  --bg: #0d1117;
-  --bg-panel: #161b22;
-  --bg-sidebar: #0b0e12;
+  --bg: #0a0c10;
+  --bg-panel: #111418;
+  --bg-sidebar: #0c0e12;
 
-  --text: #f0f6fc;
-  --text-muted: #8b949e;
+  --text: #c9d1d9;          /* slightly brighter than original */
+  --text-muted: #6e7681;
 
-  --accent: #58a6ff;
-  --accent-hover: #79b8ff;
+  --accent: #3b82f6;
+  --accent-hover: #60a5fa;
 
-  --border: #30363d;
+  --border: #1f242d;
 
-  --success: #3fb950;
+  --success: #2ea043;
   --warning: #d29922;
   --danger: #f85149;
 
@@ -39,6 +38,7 @@ body {
 .content {
   margin-left: 260px;
   padding: 24px;
+  padding-top: 80px;
 }
 
 /* Sidebar */
@@ -52,26 +52,29 @@ body {
   top: 0;
   padding: 20px;
   box-sizing: border-box;
+  border-right: 1px solid var(--border);
 }
 
 .sidebar-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .logo {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
+  letter-spacing: 1px;
 }
 
 .nav-item {
   padding: 12px 16px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   border-radius: var(--radius);
   cursor: pointer;
   color: var(--text-muted);
+  transition: 0.15s ease;
 }
 
 .nav-item:hover,
@@ -94,6 +97,7 @@ body {
   align-items: center;
   padding: 0 20px;
   box-sizing: border-box;
+  z-index: 10;
 }
 
 .page-title {
@@ -164,6 +168,7 @@ th {
   text-align: left;
   padding: 12px;
   border-bottom: 1px solid var(--border);
+  color: var(--text);
 }
 
 td {
@@ -173,7 +178,7 @@ td {
 }
 
 tr:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 /* Status */
@@ -220,6 +225,7 @@ tr:hover {
   padding: 8px 14px;
   border-radius: var(--radius);
   cursor: pointer;
+  transition: 0.15s ease;
 }
 
 .btn:hover {
