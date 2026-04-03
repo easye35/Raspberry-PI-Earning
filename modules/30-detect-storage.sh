@@ -11,6 +11,48 @@ source "$ROOT_DIR/lib/utils.sh"
 
 log::section "Detecting External Storage"
 
+# ---------------------------------------------------------
+# Auto‑Unmount Function (new)
+# ---------------------------------------------------------
+auto_unmount_drive() {
+    local dev="$1"
+
+    # Find all mountpoints for this device (system + user-session)
+    mapfile -t MOUNTS < <(lsblk -nrpo MOUNTPOINT "$dev" | grep -v '^$')
+
+    if [[ ${#MOUNTS[@]} -eq 0 ]]; then
+        log::ok "Drive is not mounted."
+        return 0
+    fi
+
+    log::warn "Drive is mounted at:"
+    for m in "${MOUNTS[@]}"; do
+        echo "   → $m"
+    done
+
+    log::info "Attempting safe auto‑unmount..."
+
+    for m in "${MOUNTS[@]}"; do
+        # Try udisks2 first (desktop auto-mount)
+        if command -v udisksctl >/dev/null 2>&1; then
+            if udisksctl unmount -b "$dev" >/dev/null 2>&1; then
+                log::ok "Unmounted via udisksctl: $m"
+                continue
+            fi
+        fi
+
+        # Fallback to sudo umount
+        if sudo umount "$m" >/dev/null 2>&1; then
+            log::ok "Unmounted: $m"
+        else
+            log::error "Failed to unmount $m"
+            return 1
+        fi
+    done
+
+    log::ok "Drive fully unmounted and ready."
+}
+
 main() {
     log::step "Scanning for USB storage devices"
 
@@ -31,17 +73,16 @@ main() {
         log::die "Detected SD card instead of USB drive."
     fi
 
-    # Ensure it's not mounted somewhere unexpected
-    if mount | grep -q "$part"; then
-        log::warn "Drive is currently mounted — will unmount in next module."
-    fi
+    # NEW: Auto‑unmount here instead of deferring
+    log::info "Checking mount status..."
+    auto_unmount_drive "$part"
 
     {
         echo "STORAGE_AVAILABLE=1"
         echo "STORAGE_DEVICE=$part"
     } > /tmp/storage.env
 
-    log::success_block "External storage detected: $part"
+    log::success_block "External storage ready: $part"
 }
 
 main "$@"
