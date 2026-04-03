@@ -1,72 +1,95 @@
-#!/bin/sh
-# Module 35: Prepare external drive (dynamic, POSIX-sh, non-destructive)
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
-set -eu
+log::section "Preparing External Storage (Smart Mode)"
 
-# Simple logging (POSIX-safe)
-log_info()    { printf '%s\n' "[INFO] $*"; }
-log_warn()    { printf '%s\n' "[WARN] $*"; }
-log_error()   { printf '%s\n' "[ERROR] $*"; }
-log_success() { printf '%s\n' "[SUCCESS] $*"; }
-log_section() { printf '\n=== %s ===\n\n' "$*"; }
+DEVICE="/dev/sda"
+PARTITION="/dev/sda1"
+MOUNT_POINT="/mnt/storage"
 
-log_section "Preparing External Storage (Dynamic)"
-
-STORAGE_ENV="/tmp/storage.env"
-
-if [ ! -f "$STORAGE_ENV" ]; then
-    log_error "Missing $STORAGE_ENV"
-    exit 1
-fi
-
-. "$STORAGE_ENV"
-
-if [ -z "${DEVICE:-}" ]; then
-    log_error "DEVICE not found in $STORAGE_ENV"
-    exit 1
-fi
-
-log_info "Using device: $DEVICE"
+log::info "Using device: $DEVICE"
 
 ###############################################################################
-# Detect existing partitions WITHOUT relying on TYPE (BusyBox-safe)
+# Detect existing partition
 ###############################################################################
-PARTITION="$(lsblk -n -o NAME "$DEVICE" | grep '^sda[0-9]' | head -n 1 || true)"
 
-if [ -n "$PARTITION" ]; then
-    PARTITION="/dev/$PARTITION"
-    log_info "Found existing partition: $PARTITION"
+if lsblk -no NAME "$DEVICE" | grep -q "sda1"; then
+    log::info "Existing partition detected: $PARTITION"
+    HAS_PARTITION=true
+else
+    log::warn "No partition detected on $DEVICE"
+    HAS_PARTITION=false
+fi
 
-    if blkid "$PARTITION" 2>/dev/null | grep -q 'TYPE="ext4"'; then
-        log_success "Partition already ext4 — reusing without formatting."
-        printf '%s\n' "PARTITION=$PARTITION" >> "$STORAGE_ENV"
-        exit 0
+###############################################################################
+# Detect if partition is mounted
+###############################################################################
+
+CURRENT_MOUNT="$(lsblk -no MOUNTPOINT "$PARTITION" || true)"
+
+if [[ -n "$CURRENT_MOUNT" ]]; then
+    log::warn "Partition is currently mounted at: $CURRENT_MOUNT"
+    log::info "Attempting safe unmount..."
+
+    if sudo umount "$PARTITION"; then
+        log::ok "Successfully unmounted $PARTITION"
     else
-        log_error "Partition exists but is not ext4 — refusing destructive format."
-        exit 1
+        log::fail "Unable to unmount $PARTITION — drive is busy."
     fi
+else
+    log::debug "Partition is not mounted."
 fi
 
 ###############################################################################
-# If no partition exists, create one (safe path)
+# Smart Mode Decision Logic
 ###############################################################################
-log_info "No partition found — creating GPT + ext4 partition"
 
-parted -s "$DEVICE" mklabel gpt
-parted -s "$DEVICE" mkpart primary ext4 0% 100%
-sleep 2
+if [[ "$HAS_PARTITION" == true ]]; then
+    log::ok "Partition exists — skipping partition creation."
 
-PARTITION="$(lsblk -n -o NAME "$DEVICE" | grep '^sda[0-9]' | head -n 1 || true)"
+else
+    log::step "Creating new GPT partition table"
+    sudo parted -s "$DEVICE" mklabel gpt
 
-if [ -z "$PARTITION" ]; then
-    log_error "Failed to detect new partition on $DEVICE"
-    exit 1
+    log::step "Creating primary ext4 partition"
+    sudo parted -s "$DEVICE" mkpart primary ext4 0% 100%
+
+    sleep 2  # allow kernel to refresh partition table
+
+    log::step "Formatting $PARTITION as ext4"
+    sudo mkfs.ext4 -F "$PARTITION"
+
+    log::success "Fresh ext4 filesystem created."
 fi
 
-PARTITION="/dev/$PARTITION"
+###############################################################################
+# Mounting the drive
+###############################################################################
 
-log_info "Formatting $PARTITION as ext4"
-mkfs.ext4 -F "$PARTITION"
+log::step "Ensuring mount point exists: $MOUNT_POINT"
+sudo mkdir -p "$MOUNT_POINT"
 
-printf '%s\n' "PARTITION=$PARTITION" >> "$STORAGE_ENV"
-log_success "Partition + Format complete."
+log::step "Mounting $PARTITION to $MOUNT_POINT"
+sudo mount "$PARTITION" "$MOUNT_POINT"
+
+log::ok "Drive mounted successfully."
+
+###############################################################################
+# Persist mount in /etc/fstab
+###############################################################################
+
+UUID=$(blkid -s UUID -o value "$PARTITION")
+
+if grep -q "$UUID" /etc/fstab; then
+    log::debug "fstab entry already exists."
+else
+    log::step "Adding persistent mount entry to /etc/fstab"
+    echo "UUID=$UUID  $MOUNT_POINT  ext4  defaults,noatime  0  2" | sudo tee -a /etc/fstab >/dev/null
+    log::ok "fstab updated."
+fi
+
+###############################################################################
+# Final confirmation
+###############################################################################
+
+log::success_block "External storage is ready at $MOUNT_POINT"
