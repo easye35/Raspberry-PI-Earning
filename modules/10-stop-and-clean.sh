@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
-# Load shared utilities
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/../lib/logging.sh"
-source "$SCRIPT_DIR/../lib/utils.sh"
+# Resolve module directory
+MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Load logging
+source "$MODULE_DIR/logging.sh"
+
+# Load utils
+source "$MODULE_DIR/utils.sh"
 
 ###############################################################################
 # Module 10: Stop containers and clean Docker environment
