@@ -1,65 +1,99 @@
 #!/usr/bin/env bash
-# Main installer for Raspberry-PI-docker-Earning
-
 set -Eeuo pipefail
 
 ###############################################################################
-# 1. Ensure Bash is installed BEFORE running any modules
+# Earnbox Installer — Full Appliance Setup
+# HDD-aware, modular, safe, and idempotent
 ###############################################################################
-if ! command -v bash >/dev/null 2>&1; then
-    echo "[INFO] Bash not found — installing it now..."
-    apt update && apt install -y bash
-    echo "[INFO] Bash installed successfully."
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MODULE_DIR="$SCRIPT_DIR/modules"
+
+###############################################################################
+# Logging helpers
+###############################################################################
+
+log_section() {
+  echo
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "  $1"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo
+}
+
+log_step()   { echo "[STEP] $1"; }
+log_info()   { echo "[INFO] $1"; }
+log_ok()     { echo "[OK]   $1"; }
+log_warn()   { echo "[WARN] $1"; }
+log_fail()   { echo "[FAIL] $1"; exit 1; }
+
+###############################################################################
+# Module runner
+###############################################################################
+
+run_module() {
+  local module="$1"
+  local path="$MODULE_DIR/$module"
+
+  if [[ ! -f "$path" ]]; then
+    log_warn "Module not found: $module — skipping."
+    return
+  fi
+
+  echo
+  echo "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒"
+  echo "  Running module: $module"
+  echo "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒"
+  echo
+
+  bash "$path"
+}
+
+###############################################################################
+# Detect HDD vs no-HDD
+###############################################################################
+
+DATA_ROOT="/mnt/storage"
+if ! mountpoint -q /mnt/storage 2>/dev/null; then
+  log_warn "/mnt/storage is not mounted — falling back to /opt/earnbox"
+  DATA_ROOT="/opt/earnbox"
 fi
 
-###############################################################################
-# 2. Load utilities (must be SOURCED, not executed)
-###############################################################################
-UTILS="modules/utils.sh"
-
-if [[ ! -f "$UTILS" ]]; then
-    echo "[ERROR] Missing $UTILS"
-    exit 1
-fi
-
-# Correct: load logging + helpers into THIS shell
-source "$UTILS"
+log_info "Using data root: $DATA_ROOT"
 
 ###############################################################################
-# 3. Module list
+# Installer Start
 ###############################################################################
-MODULES=(
-    "10-stop-and-clean.sh"
-    "20-power-check.sh"
-    "30-detect-storage.sh"
-    "35-mount-and-prepare-storage.sh"
-    "40-migrate-storage.sh"
-    "45-migrate-docker.sh"
-    "50-verify-storage.sh"
-)
+
+START_TIME="$(date)"
+log_section "Earnbox Installer Started — $START_TIME"
 
 ###############################################################################
-# 4. Run each module using Bash
+# Core system prep
 ###############################################################################
-for module in "${MODULES[@]}"; do
-    path="modules/$module"
 
-    if [[ ! -f "$path" ]]; then
-        echo "[ERROR] Missing module: $path"
-        exit 1
-    fi
-
-    echo "Running module: $module"
-    echo "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒"
-
-    # Run module with Bash (now guaranteed to exist)
-    if ! bash "$path"; then
-        echo "❌ ERROR running module: $module"
-        exit 1
-    fi
-done
+run_module "10-stop-and-clean.sh"
+run_module "20-power-check.sh"
+run_module "30-detect-storage.sh"
+run_module "35-mount-and-prepare-storage.sh"
+run_module "40-migrate-storage.sh"
+run_module "45-migrate-docker.sh"
+run_module "50-verify-storage.sh"
 
 ###############################################################################
-# 5. Final message
+# New earning-appliance modules
 ###############################################################################
-echo "=== Resync complete: $(date) ==="
+
+run_module "60-install-containers.sh"
+run_module "70-dashboard.sh"
+run_module "80-diagnostics.sh"
+run_module "90-self-heal.sh"
+
+###############################################################################
+# Done
+###############################################################################
+
+END_TIME="$(date)"
+echo
+echo "=== Earnbox installation complete: $END_TIME ==="
+echo
