@@ -18,7 +18,7 @@ ROOT_DIR="$(cd "$MODULES_DIR/.." && pwd)"
 source "$ROOT_DIR/lib/logging.sh"
 source "$ROOT_DIR/lib/utils.sh"
 
-log_section "Module 10: Stopping containers and cleaning environment"
+log::section "Module 10: Stopping containers and cleaning environment"
 
 ###############################################################################
 # Safety checks
