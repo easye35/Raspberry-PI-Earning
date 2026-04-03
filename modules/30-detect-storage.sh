@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Module 30: Detect external storage and persist selection
+# Module 30: Detect external storage and persist selection (POSIX-safe)
 
 set -Eeuo pipefail
 
@@ -8,12 +8,12 @@ if [[ -n "${LOG_LIB:-}" && -f "$LOG_LIB" ]]; then
     # shellcheck source=/dev/null
     source "$LOG_LIB"
 else
-    echo "[WARN] LOG_LIB not set or logging.sh missing — using fallback logger"
+    echo "[WARN] LOG_LIB missing — using fallback logger"
     log::info()    { echo "[INFO] $*"; }
     log::warn()    { echo "[WARN] $*"; }
     log::error()   { echo "[ERROR] $*"; }
     log::success() { echo "[SUCCESS] $*"; }
-    log::section() { echo; echo "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒"; echo "  $*"; echo "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒"; echo; }
+    log::section() { echo; echo "=== $* ==="; echo; }
 fi
 
 log::section "Detecting External Storage"
@@ -27,40 +27,43 @@ chmod 600 "$STORAGE_ENV"
 
 log::info "[Step] Scanning for USB storage devices"
 
-# List block devices, filter for /dev/sdX (USB/SATA) but ignore root FS if on USB
-# You can refine this later; for now we assume /dev/sda is the external drive.
-DEVICE=""
-PARTITION=""
+###############################################################################
+# DEVICE DETECTION (POSIX-safe)
+###############################################################################
 
-# Prefer lsblk JSON if available
-if command -v lsblk >/dev/null 2>&1; then
-    # Get all /dev/sdX devices
-    MAPFILE -t CANDIDATES < <(lsblk -ndo NAME,TYPE | awk '$2=="disk"{print "/dev/"$1}' | grep -E '^/dev/sd')
-else
-    CANDIDATES=()
-fi
+# Find all /dev/sdX disks (ignore partitions)
+CANDIDATES="$(lsblk -ndo NAME,TYPE 2>/dev/null | awk '$2=="disk"{print "/dev/"$1}' | grep -E '^/dev/sd' || true)"
 
-if [[ "${#CANDIDATES[@]}" -eq 0 ]]; then
-    log::error "No /dev/sdX disks detected. Plug in your HDD/SSD and rerun the installer."
+if [[ -z "$CANDIDATES" ]]; then
+    log::error "No /dev/sdX disks detected. Plug in your HDD/SSD and rerun."
     exit 1
 fi
 
-# For now, pick the first candidate as the external device
-DEVICE="${CANDIDATES[0]}"
+# Pick the first detected disk
+DEVICE="$(echo "$CANDIDATES" | head -n 1)"
 
-# Find first partition on that device (e.g., /dev/sda1)
-if lsblk -ndo NAME,TYPE "$DEVICE" | awk '$2=="part"{exit 0} END{exit 1}'; then
-    PARTITION="/dev/$(lsblk -ndo NAME,TYPE "$DEVICE" | awk '$2=="part"{print $1; exit}')"
-else
-    log::error "No partition found on $DEVICE. You may need to partition/format it first."
+log::info "Detected disk: $DEVICE"
+
+###############################################################################
+# PARTITION DETECTION (POSIX-safe)
+###############################################################################
+
+# Find first partition on the device
+PARTITION="$(lsblk -ndo NAME,TYPE "$DEVICE" 2>/dev/null | awk '$2=="part"{print "/dev/"$1; exit}')"
+
+if [[ -z "$PARTITION" ]]; then
+    log::error "No partitions found on $DEVICE. You may need to format it first."
     exit 1
 fi
 
 echo "    → Detected partition: $PARTITION"
 
+###############################################################################
+# MOUNT CHECK
+###############################################################################
+
 log::info "[INFO] Checking mount status..."
 
-# Check if partition is already mounted
 if findmnt -rn "$PARTITION" >/dev/null 2>&1; then
     MOUNT_POINT="$(findmnt -rn -o TARGET "$PARTITION")"
     log::warn "[WARN] $PARTITION is already mounted at $MOUNT_POINT"
@@ -68,7 +71,10 @@ else
     log::success "[OK] Drive is not mounted."
 fi
 
-# Persist selection to /tmp/storage.env
+###############################################################################
+# WRITE RESULTS TO /tmp/storage.env
+###############################################################################
+
 {
     echo "DEVICE=$DEVICE"
     echo "PARTITION=$PARTITION"
