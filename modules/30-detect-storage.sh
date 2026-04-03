@@ -18,8 +18,7 @@ auto_unmount_drive() {
     local dev="$1"
 
     # Find all mountpoints for this device (system + user-session)
-    mapfile -t MOUNTS < <(lsblk -nrpo MOUNTPOINT "$dev" | grep -v '^$')
-
+mapfile -t MOUNTS < <(mount | awk -v d="$dev" '$1==d {print $3}')
     if [[ ${#MOUNTS[@]} -eq 0 ]]; then
         log::ok "Drive is not mounted."
         return 0
