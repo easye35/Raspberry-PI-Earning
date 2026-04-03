@@ -1,45 +1,51 @@
 #!/usr/bin/env bash
-# Utility module (appliance‑grade, safe under set -euo pipefail)
+set -Eeuo pipefail
 
-# ---------------------------------------------------------
-# Safe mkdir
-# ---------------------------------------------------------
-utils::mkdir_safe() {
-    local dir="$1"
-    [[ -d "$dir" ]] || mkdir -p "$dir"
-}
+###############################################################################
+# Logging Library Loader
+###############################################################################
 
-# ---------------------------------------------------------
-# Initialization (SAFE: no exits under set -euo pipefail)
-# ---------------------------------------------------------
-utils::init() {
-    log::info "Initializing utility module…"
+# Determine absolute path to this directory
+UTILS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-    # Dependency check — NEVER fail the installer
-    local cmds=(curl wget jq git)
-    for cmd in "${cmds[@]}"; do
-        if ! command -v "$cmd" >/dev/null 2>&1; then
-            log::warn "Missing dependency: $cmd"
-        fi
-    done
+# Path to logging library
+LOG_LIB="$UTILS_DIR/logging.sh"
+export LOG_LIB
 
-    log::ok "Utilities initialized."
-}
+# Load logging functions
+if [[ -f "$LOG_LIB" ]]; then
+    source "$LOG_LIB"
+else
+    echo "[ERROR] Logging library not found at: $LOG_LIB"
+    exit 1
+fi
 
-# ---------------------------------------------------------
-# Require root (safe)
-# ---------------------------------------------------------
+###############################################################################
+# Shared Utility Functions
+###############################################################################
+
+# Example shared function (extend as needed)
 utils::require_root() {
-    if [[ ${EUID:-999} -ne 0 ]]; then
-        log::die "This action requires root privileges (sudo)."
+    if [[ "$EUID" -ne 0 ]]; then
+        log::fail "This installer must be run as root."
+        exit 1
     fi
 }
 
-# ---------------------------------------------------------
-# Confirmation prompt
-# ---------------------------------------------------------
-utils::confirm() {
-    local prompt="$1"
-    read -r -p "$prompt [y/N]: " ans
-    [[ "$ans" =~ ^[Yy]$ ]]
+utils::file_exists() {
+    local f="$1"
+    [[ -f "$f" ]]
 }
+
+utils::dir_exists() {
+    local d="$1"
+    [[ -d "$d" ]]
+}
+
+utils::pause() {
+    read -rp "Press Enter to continue..."
+}
+
+###############################################################################
+# End of utils.sh
+###############################################################################
