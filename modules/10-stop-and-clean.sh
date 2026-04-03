@@ -1,44 +1,41 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Logging library (provided by install.sh via LOG_LIB)
-source "$LOG_LIB"
+# Resolve module directory
+MODULES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-log::section "Stopping Docker & Cleaning Previous State"
+# Load shared libraries
+source "$MODULES_DIR/00-logging.sh"
+source "$MODULES_DIR/00-utils.sh"
 
-# Stop Docker safely
-log::step "Stopping Docker service (if running)"
-if systemctl is-active --quiet docker; then
-    sudo systemctl stop docker
-    log::ok "Docker stopped"
+log_info "Module 10: Stopping containers and cleaning environment"
+
+# Stop all containers safely
+log_info "Stopping all running containers..."
+if docker ps -q | grep -q .; then
+    docker stop $(docker ps -q) || log_warn "Some containers failed to stop"
 else
-    log::info "Docker was not running"
+    log_info "No running containers found"
 fi
 
-# Kill any leftover dockerd processes
-log::step "Killing any leftover dockerd processes"
-sudo pkill -f dockerd 2>/dev/null || true
-log::ok "No active dockerd processes remain"
-
-# Remove stale mounts
-log::step "Cleaning stale mounts under /mnt/appliance-data"
-if mountpoint -q /mnt/appliance-data; then
-    sudo umount -l /mnt/appliance-data || true
-    log::ok "Unmounted /mnt/appliance-data"
+# Remove stopped containers
+log_info "Removing stopped containers..."
+if docker ps -aq | grep -q .; then
+    docker rm $(docker ps -aq) || log_warn "Some containers failed to remove"
 else
-    log::info "/mnt/appliance-data was not mounted"
+    log_info "No containers to remove"
 fi
 
-# Ensure directory exists
-sudo mkdir -p /mnt/appliance-data
+# Remove unused images
+log_info "Removing unused Docker images..."
+docker image prune -af || log_warn "Image prune encountered issues"
 
-# Remove old Docker data on SD card (if present)
-if [ -d /var/lib/docker ]; then
-    log::step "Removing old Docker data from SD card (/var/lib/docker)"
-    sudo rm -rf /var/lib/docker
-    log::ok "Old Docker data removed"
-else
-    log::info "No existing Docker data found on SD card"
-fi
+# Remove unused volumes
+log_info "Removing unused Docker volumes..."
+docker volume prune -f || log_warn "Volume prune encountered issues"
 
-log::ok "Environment cleaned and ready for HDD preparation"
+# Remove unused networks
+log_info "Removing unused Docker networks..."
+docker network prune -f || log_warn "Network prune encountered issues"
+
+log_success "Module 10 completed successfully"
