@@ -12,13 +12,14 @@ source "$ROOT_DIR/lib/utils.sh"
 log::section "Detecting External Storage"
 
 # ---------------------------------------------------------
-# Auto‑Unmount Function (new)
+# Auto‑Unmount Function (corrected)
 # ---------------------------------------------------------
 auto_unmount_drive() {
     local dev="$1"
 
     # Find all mountpoints for this device (system + user-session)
-mapfile -t MOUNTS < <(mount | awk -v d="$dev" '$1==d {print $3}')
+    mapfile -t MOUNTS < <(mount | awk -v d="$dev" '$1==d {print $3}')
+
     if [[ ${#MOUNTS[@]} -eq 0 ]]; then
         log::ok "Drive is not mounted."
         return 0
