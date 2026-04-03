@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Module 40: Mount external storage and persist in fstab
+# Module 40: Mount external storage (reuse existing mount if present)
 
 set -Eeuo pipefail
 
@@ -16,22 +16,33 @@ log::section "Mounting External Storage"
 STORAGE_ENV="/tmp/storage.env"
 source "$STORAGE_ENV"
 
-MOUNT_POINT="/mnt/storage"
+if [[ -z "${PARTITION:-}" ]]; then
+    log::error "PARTITION not found in $STORAGE_ENV"
+    exit 1
+fi
 
-mkdir -p "$MOUNT_POINT"
+# Check if already mounted
+EXISTING_MOUNT="$(findmnt -rn -o TARGET "$PARTITION" 2>/dev/null || true)"
 
-if ! mount | grep -q "$PARTITION"; then
+if [[ -n "$EXISTING_MOUNT" ]]; then
+    MOUNT_POINT="$EXISTING_MOUNT"
+    log::info "Partition $PARTITION already mounted at $MOUNT_POINT — reusing."
+else
+    MOUNT_POINT="/mnt/storage"
+    mkdir -p "$MOUNT_POINT"
     log::info "Mounting $PARTITION → $MOUNT_POINT"
     mount "$PARTITION" "$MOUNT_POINT"
-else
-    log::warn "$PARTITION already mounted."
 fi
 
 UUID="$(blkid -s UUID -o value "$PARTITION")"
 
-grep -q "$UUID" /etc/fstab || {
-    log::info "Adding to /etc/fstab"
+if ! grep -q "$UUID" /etc/fstab; then
+    log::info "Adding $PARTITION to /etc/fstab"
     echo "UUID=$UUID  $MOUNT_POINT  ext4  defaults,noatime  0  2" >> /etc/fstab
-}
+else
+    log::info "UUID already present in /etc/fstab — skipping."
+fi
 
-log::success "Mount + fstab complete."
+echo "MOUNT_POINT=$MOUNT_POINT" >> "$STORAGE_ENV"
+
+log::success "Mount step complete. Using $MOUNT_POINT as storage root."
