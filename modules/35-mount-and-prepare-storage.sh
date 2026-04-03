@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 # Module 35: Prepare external drive (dynamic, BusyBox-safe, non-destructive)
 
 set -Eeuo pipefail
