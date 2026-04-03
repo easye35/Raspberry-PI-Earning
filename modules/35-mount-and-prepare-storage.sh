@@ -1,93 +1,66 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source "$LOG_LIB"
+MODULES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$MODULES_DIR/.." && pwd)"
 
-log::section "Preparing External Storage for Appliance"
+source "$ROOT_DIR/lib/logging.sh"
+source "$ROOT_DIR/lib/utils.sh"
 
-DEVICE="/dev/sda1"
-MOUNTPOINT="/mnt/appliance-data"
+log::section "Mounting and Preparing External Storage"
 
-
-create_mountpoint() {
-    log::step "Ensuring mountpoint exists"
-    sudo mkdir -p "$MOUNTPOINT"
-    log::ok "Mountpoint ready: $MOUNTPOINT"
-}
-detect_existing_mounts() {
-    log::step "Checking for auto-mounted HDD"
-
-    local auto
-    auto=$(mount | grep "$DEVICE" | awk '{print $3}' || true)
-
-    if [[ -n "$auto" && "$auto" != "$MOUNTPOINT" ]]; then
-        log::warn "Drive is auto-mounted at: $auto"
-
-        # Try normal unmount
-        if ! sudo umount "$auto" 2>/dev/null; then
-            log::warn "Normal unmount failed, trying lazy unmount"
-            
-            # Try lazy unmount
-            if ! sudo umount -l "$auto" 2>/dev/null; then
-                log::warn "Lazy unmount failed, forcing unmount"
-
-                # Try forced unmount
-                sudo umount -f "$auto" 2>/dev/null || \
-                    log::die "Unable to unmount $auto — please close any file managers or terminals using it."
-            fi
-        fi
-
-        log::ok "Drive unmounted successfully."
-    else
-        log::substep "No conflicting auto-mounts."
-    fi
-}
-mount_drive() {
-    log::step "Mounting HDD to appliance mountpoint"
-
-    log::spinner "Mounting $DEVICE" sudo mount "$DEVICE" "$MOUNTPOINT"
-
-    if mount | grep -q "$MOUNTPOINT"; then
-        log::ok "Drive mounted successfully."
-    else
-        log::die "Failed to mount HDD."
-    fi
-}
-
-write_fstab() {
-    log::step "Writing persistent fstab entry"
-
-    local uuid
-    uuid=$(blkid -s UUID -o value "$DEVICE")
-
-    log::substep "UUID: $uuid"
-
-    # Remove old entries
-    sudo sed -i '/appliance-data/d' /etc/fstab
-
-    # Add new entry
-    echo "UUID=$uuid $MOUNTPOINT ext4 defaults,noatime 0 2" | sudo tee -a /etc/fstab >/dev/null
-
-    log::ok "fstab updated."
-}
-
-prepare_directories() {
-    log::step "Preparing directory structure on HDD"
-
-    sudo mkdir -p "$MOUNTPOINT/docker"
-    sudo mkdir -p "$MOUNTPOINT/logs"
-
-    log::ok "Directories ready."
-}
+STORAGE_ENV="/tmp/storage.env"
 
 main() {
-    detect_existing_mounts
-    create_mountpoint
-    mount_drive
-    write_fstab
-    prepare_directories
+    if [[ ! -f "$STORAGE_ENV" ]]; then
+        log::warn "No storage env file found. Skipping storage preparation."
+        return 0
+    fi
 
-    log::success_block "HDD prepared and mounted at $MOUNTPOINT"
+    # shellcheck disable=SC1090
+    source "$STORAGE_ENV"
+
+    if [[ "${STORAGE_AVAILABLE:-0}" -ne 1 ]]; then
+        log::warn "No external storage available. Skipping mount and prepare."
+        return 0
+    fi
+
+    local dev="${STORAGE_DEVICE:?}"
+    local mount_point="/mnt/external-storage"
+
+    log::step "Preparing mount point: $mount_point"
+    sudo mkdir -p "$mount_point"
+
+    # Check if filesystem exists
+    local fstype
+    fstype=$(blkid -o value -s TYPE "$dev" || true)
+
+    if [[ -z "$fstype" ]]; then
+        log::warn "No filesystem detected on $dev — creating ext4 filesystem."
+        sudo mkfs.ext4 -F "$dev"
+        log::ok "Filesystem created on $dev"
+    else
+        log::info "Detected filesystem on $dev: $fstype"
+    fi
+
+    # Ensure not already mounted
+    if mount | awk -v m="$mount_point" '$3==m {found=1} END{exit !found}'; then
+        log::warn "Mount point $mount_point already in use. Unmounting."
+        sudo umount "$mount_point"
+    fi
+
+    log::step "Mounting $dev to $mount_point"
+    sudo mount "$dev" "$mount_point"
+
+    log::ok "Mounted $dev at $mount_point"
+
+    {
+        echo "STORAGE_AVAILABLE=1"
+        echo "STORAGE_DEVICE=$dev"
+        echo "STORAGE_MOUNT_POINT=$mount_point"
+    } > "$STORAGE_ENV"
+
+    log::success_block "External storage mounted and ready at: $mount_point"
 }
 
 main "$@"
