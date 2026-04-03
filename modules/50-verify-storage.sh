@@ -1,50 +1,69 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
-MODULES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "$MODULES_DIR/.." && pwd)"
+# Resolve module directory
+MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$MODULE_DIR/logging.sh"
+source "$MODULE_DIR/utils.sh"
 
-source "$ROOT_DIR/lib/logging.sh"
-source "$ROOT_DIR/lib/utils.sh"
+###############################################################################
+# Verify External Storage & Docker Migration
+###############################################################################
 
 log::section "Verifying External Storage & Docker Migration"
 
-STORAGE_ENV="/tmp/storage.env"
+DEVICE="/dev/sda"
+PARTITION="/dev/sda1"
+MOUNT_POINT="/mnt/storage"
+DOCKER_ROOT="/var/lib/docker"
+TARGET_ROOT="$MOUNT_POINT/docker"
 
-main() {
-    if [[ ! -f "$STORAGE_ENV" ]]; then
-        log::warn "No storage env file found. Skipping verification."
-        return 0
-    fi
+###############################################################################
+# Verify external storage mount
+###############################################################################
 
-    # shellcheck disable=SC1090
-    source "$STORAGE_ENV"
+log::step "Checking if external storage is mounted"
 
-    if [[ "${STORAGE_AVAILABLE:-0}" -ne 1 ]]; then
-        log::warn "No external storage available. Skipping verification."
-        return 0
-    fi
+if ! mountpoint -q "$MOUNT_POINT"; then
+    log::fail "External storage is NOT mounted at $MOUNT_POINT"
+fi
 
-    local dev="${STORAGE_DEVICE:?}"
-    local mount_point="${STORAGE_MOUNT_POINT:-/mnt/external-storage}"
+log::ok "External storage is mounted at $MOUNT_POINT"
 
-    log::step "Verifying mount: $mount_point"
-    if ! mount | awk -v m="$mount_point" '$3==m {found=1} END{exit !found}'; then
-        log::die "External storage is not mounted at $mount_point"
-    fi
-    log::ok "External storage is mounted at $mount_point"
+###############################################################################
+# Verify Docker migration
+###############################################################################
 
-    log::step "Checking free space on external storage"
-    df -h "$mount_point" | sed -n '1,2p'
+log::step "Checking Docker data-root"
 
-    log::step "Running quick read/write test"
-    local test_file="$mount_point/.storage_test_$$"
-    echo "storage test $(date)" | sudo tee "$test_file" >/dev/null
-    sudo cat "$test_file" >/dev/null
-    sudo rm -f "$test_file"
-    log::ok "Read/write test passed on $mount_point"
+CONFIGURED_ROOT=$(jq -r '.["data-root"] // empty' /etc/docker/daemon.json 2>/dev/null || true)
 
-    log::success_block "External storage and Docker migration verified successfully."
-}
+if [[ -z "$CONFIGURED_ROOT" ]]; then
+    log::fail "Docker daemon.json does not define data-root"
+fi
 
-main "$@"
+log::substep "Docker data-root: $CONFIGURED_ROOT"
+
+if [[ "$CONFIGURED_ROOT" != "$TARGET_ROOT" ]]; then
+    log::fail "Docker is NOT using external storage. Expected: $TARGET_ROOT"
+fi
+
+log::ok "Docker is correctly configured to use $TARGET_ROOT"
+
+###############################################################################
+# Verify Docker is running
+###############################################################################
+
+log::step "Checking Docker service status"
+
+if ! systemctl is-active --quiet docker; then
+    log::fail "Docker service is NOT running"
+fi
+
+log::ok "Docker service is running"
+
+###############################################################################
+# Final confirmation
+###############################################################################
+
+log::success_block "External storage and Docker migration verified successfully."
