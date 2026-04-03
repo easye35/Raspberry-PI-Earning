@@ -1,93 +1,57 @@
 #!/usr/bin/env bash
-set -euo pipefail
+# Module 35: Partition + Format external drive (POSIX-safe)
 
-# Load shared utilities
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+set -Eeuo pipefail
 
-source "$ROOT_DIR/lib/logging.sh"
-source "$ROOT_DIR/lib/utils.sh"
+# Load logging
+if [[ -n "${LOG_LIB:-}" && -f "$LOG_LIB" ]]; then source "$LOG_LIB"; else
+    log::info(){ echo "[INFO] $*"; }
+    log::warn(){ echo "[WARN] $*"; }
+    log::error(){ echo "[ERROR] $*"; }
+    log::success(){ echo "[SUCCESS] $*"; }
+    log::section(){ echo; echo "=== $* ==="; echo; }
+fi
 
-log::section "Mounting and Preparing External Storage"
+log::section "Partitioning & Formatting External Drive"
 
-DEVICE="/dev/sda"
-PARTITION="/dev/sda1"
-MOUNT_POINT="/mnt/external-storage"
+STORAGE_ENV="/tmp/storage.env"
+source "$STORAGE_ENV"
 
-# ---------------------------------------------------------
-# Detect base device
-# ---------------------------------------------------------
-if [[ ! -e "$DEVICE" ]]; then
-    log::error "No external storage detected at $DEVICE"
+if [[ -z "${DEVICE:-}" ]]; then
+    log::error "DEVICE not found in $STORAGE_ENV"
     exit 1
 fi
 
-log::info "Detected external device: $DEVICE"
+log::info "Using device: $DEVICE"
 
-# ---------------------------------------------------------
-# Create partition if missing
-# ---------------------------------------------------------
-if [[ ! -e "$PARTITION" ]]; then
-    log::warn "No partition found on $DEVICE — creating GPT + primary partition"
+# Check if partition already exists
+PARTITION="$(lsblk -ndo NAME,TYPE "$DEVICE" | awk '$2=="part"{print "/dev/"$1; exit}')"
+
+if [[ -z "$PARTITION" ]]; then
+    log::info "No partition found — creating GPT + ext4 partition"
 
     parted -s "$DEVICE" mklabel gpt
     parted -s "$DEVICE" mkpart primary ext4 0% 100%
 
-    log::info "Partition table created — forcing kernel to re-read"
-    partprobe "$DEVICE"
     sleep 2
+
+    PARTITION="$(lsblk -ndo NAME,TYPE "$DEVICE" | awk '$2=="part"{print "/dev/"$1; exit}')"
+    if [[ -z "$PARTITION" ]]; then
+        log::error "Partition creation failed."
+        exit 1
+    fi
+else
+    log::info "Partition already exists: $PARTITION"
 fi
 
-# Verify partition exists
-if [[ ! -e "$PARTITION" ]]; then
-    log::error "Partition $PARTITION still does not exist after creation"
-    exit 1
-fi
-
-log::ok "Partition detected: $PARTITION"
-
-# ---------------------------------------------------------
-# Create filesystem if missing
-# ---------------------------------------------------------
-if ! blkid "$PARTITION" >/dev/null 2>&1; then
-    log::warn "No filesystem detected on $PARTITION — creating ext4 filesystem"
+# Format if needed
+if ! blkid "$PARTITION" | grep -q ext4; then
+    log::info "Formatting $PARTITION as ext4"
     mkfs.ext4 -F "$PARTITION"
 else
-    log::info "Filesystem already present on $PARTITION"
+    log::info "$PARTITION already formatted."
 fi
 
-# ---------------------------------------------------------
-# Ensure mount point exists
-# ---------------------------------------------------------
-if [[ ! -d "$MOUNT_POINT" ]]; then
-    log::info "Creating mount point: $MOUNT_POINT"
-    mkdir -p "$MOUNT_POINT"
-fi
+echo "PARTITION=$PARTITION" >> "$STORAGE_ENV"
 
-# ---------------------------------------------------------
-# Mount the partition
-# ---------------------------------------------------------
-log::info "Mounting $PARTITION to $MOUNT_POINT"
-
-if mountpoint -q "$MOUNT_POINT"; then
-    log::info "Mount point already active — unmounting first"
-    umount "$MOUNT_POINT"
-fi
-
-mount "$PARTITION" "$MOUNT_POINT"
-
-log::ok "Mounted $PARTITION at $MOUNT_POINT"
-
-# ---------------------------------------------------------
-# Ensure fstab entry
-# ---------------------------------------------------------
-UUID=$(blkid -s UUID -o value "$PARTITION")
-
-if ! grep -q "$UUID" /etc/fstab; then
-    log::info "Adding fstab entry for persistent mounting"
-    echo "UUID=$UUID  $MOUNT_POINT  ext4  defaults,noatime  0  2" >> /etc/fstab
-else
-    log::info "fstab entry already exists"
-fi
-
-log::success "External storage is ready for use"
+log::success "Partition + Format complete."
