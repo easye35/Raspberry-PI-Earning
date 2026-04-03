@@ -1,90 +1,79 @@
 #!/usr/bin/env bash
-set -euo pipefail
+# Module 30: Detect external storage and persist selection
 
-MODULES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "$MODULES_DIR/.." && pwd)"
+set -Eeuo pipefail
 
-source "$ROOT_DIR/lib/logging.sh"
-
-# utils.sh may contain risky code under -euo
-set +e
-[[ -f "$ROOT_DIR/lib/utils.sh" ]] && source "$ROOT_DIR/lib/utils.sh"
-set -e
+# Load logging library if available
+if [[ -n "${LOG_LIB:-}" && -f "$LOG_LIB" ]]; then
+    # shellcheck source=/dev/null
+    source "$LOG_LIB"
+else
+    echo "[WARN] LOG_LIB not set or logging.sh missing — using fallback logger"
+    log::info()    { echo "[INFO] $*"; }
+    log::warn()    { echo "[WARN] $*"; }
+    log::error()   { echo "[ERROR] $*"; }
+    log::success() { echo "[SUCCESS] $*"; }
+    log::section() { echo; echo "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒"; echo "  $*"; echo "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒"; echo; }
+fi
 
 log::section "Detecting External Storage"
 
-# ---------------------------------------------------------
-# Safe lsblk wrapper (prevents silent exits)
-# ---------------------------------------------------------
-safe_lsblk() {
-    lsblk "$@" 2>/dev/null || true
-}
+STORAGE_ENV="/tmp/storage.env"
 
-# ---------------------------------------------------------
-# Auto‑Unmount Function
-# ---------------------------------------------------------
-auto_unmount_drive() {
-    local dev="$1"
+# Always recreate storage env file with safe permissions
+rm -f "$STORAGE_ENV"
+touch "$STORAGE_ENV"
+chmod 600 "$STORAGE_ENV"
 
-    mapfile -t MOUNTS < <(mount | awk -v d="$dev" '$1==d {print $3}')
+log::info "[Step] Scanning for USB storage devices"
 
-    if [[ ${#MOUNTS[@]} -eq 0 ]]; then
-        log::ok "Drive is not mounted."
-        return 0
-    fi
+# List block devices, filter for /dev/sdX (USB/SATA) but ignore root FS if on USB
+# You can refine this later; for now we assume /dev/sda is the external drive.
+DEVICE=""
+PARTITION=""
 
-    log::warn "Drive is mounted at:"
-    printf "   → %s\n" "${MOUNTS[@]}"
+# Prefer lsblk JSON if available
+if command -v lsblk >/dev/null 2>&1; then
+    # Get all /dev/sdX devices
+    MAPFILE -t CANDIDATES < <(lsblk -ndo NAME,TYPE | awk '$2=="disk"{print "/dev/"$1}' | grep -E '^/dev/sd')
+else
+    CANDIDATES=()
+fi
 
-    log::info "Attempting safe auto‑unmount..."
+if [[ "${#CANDIDATES[@]}" -eq 0 ]]; then
+    log::error "No /dev/sdX disks detected. Plug in your HDD/SSD and rerun the installer."
+    exit 1
+fi
 
-    for m in "${MOUNTS[@]}"; do
-        if command -v udisksctl >/dev/null 2>&1; then
-            if udisksctl unmount -b "$dev" >/dev/null 2>&1; then
-                log::ok "Unmounted via udisksctl: $m"
-                continue
-            fi
-        fi
+# For now, pick the first candidate as the external device
+DEVICE="${CANDIDATES[0]}"
 
-        if sudo umount "$m" >/dev/null 2>&1; then
-            log::ok "Unmounted: $m"
-        else
-            log::error "Failed to unmount $m"
-            return 1
-        fi
-    done
+# Find first partition on that device (e.g., /dev/sda1)
+if lsblk -ndo NAME,TYPE "$DEVICE" | awk '$2=="part"{exit 0} END{exit 1}'; then
+    PARTITION="/dev/$(lsblk -ndo NAME,TYPE "$DEVICE" | awk '$2=="part"{print $1; exit}')"
+else
+    log::error "No partition found on $DEVICE. You may need to partition/format it first."
+    exit 1
+fi
 
-    log::ok "Drive fully unmounted and ready."
-}
+echo "    → Detected partition: $PARTITION"
 
-main() {
-    log::step "Scanning for USB storage devices"
+log::info "[INFO] Checking mount status..."
 
-    # SAFE: lsblk cannot kill the script now
-    local part
-    part=$(safe_lsblk -p -o NAME,TYPE | awk '$2=="part" && $1 ~ "/dev/sd"{print $1; exit}')
+# Check if partition is already mounted
+if findmnt -rn "$PARTITION" >/dev/null 2>&1; then
+    MOUNT_POINT="$(findmnt -rn -o TARGET "$PARTITION")"
+    log::warn "[WARN] $PARTITION is already mounted at $MOUNT_POINT"
+else
+    log::success "[OK] Drive is not mounted."
+fi
 
-    if [[ -z "$part" ]]; then
-        log::warn "No external HDD/SSD detected."
-        echo "STORAGE_AVAILABLE=0" > /tmp/storage.env
-        return 0
-    fi
+# Persist selection to /tmp/storage.env
+{
+    echo "DEVICE=$DEVICE"
+    echo "PARTITION=$PARTITION"
+} >> "$STORAGE_ENV"
 
-    log::substep "Detected partition: $part"
-
-    if [[ "$part" == *"mmcblk0"* ]]; then
-        log::die "Detected SD card instead of USB drive."
-    fi
-
-    log::info "Checking mount status..."
-    auto_unmount_drive "$part"
-
-    {
-        echo "STORAGE_AVAILABLE=1"
-        echo "STORAGE_DEVICE=$part"
-    } > /tmp/storage.env
-
-    log::success_block "External storage ready: $part"
-}
-
-main "$@"
+log::success "Storage detection complete."
+log::info "Persisted to $STORAGE_ENV:"
+cat "$STORAGE_ENV"
