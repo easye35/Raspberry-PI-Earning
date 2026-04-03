@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-log::section "Preparing External Storage (Smart Mode)"
+# Resolve module directory
+MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-DEVICE="/dev/sda"
-PARTITION="/dev/sda1"
-MOUNT_POINT="/mnt/storage"
+# Load logging
+source "$MODULE_DIR/logging.sh"
 
-log::info "Using device: $DEVICE"
+# Load utils
+source "$MODULE_DIR/utils.sh"
 
 ###############################################################################
 # Detect existing partition
