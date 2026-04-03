@@ -1,73 +1,72 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source "$LOG_LIB"
+MODULES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$MODULES_DIR/.." && pwd)"
 
-MOUNTPOINT="/mnt/appliance-data"
-NEW_ROOT="$MOUNTPOINT/docker"
-OLD_ROOT="/var/lib/docker"
+source "$ROOT_DIR/lib/logging.sh"
+source "$ROOT_DIR/lib/utils.sh"
+source "$ROOT_DIR/lib/docker.sh"
 
 log::section "Migrating Docker to External Storage"
 
-stop_docker() {
-    log::step "Stopping Docker"
-    log::spinner "Stopping Docker service" sudo systemctl stop docker || true
-
-    if pgrep dockerd >/dev/null; then
-        log::warn "dockerd still running — forcing kill"
-        sudo killall dockerd || true
-    fi
-}
-
-migrate_data() {
-    log::step "Migrating Docker data"
-
-    if [[ -d "$OLD_ROOT" ]]; then
-        log::spinner "Copying Docker data" sudo rsync -aHAX "$OLD_ROOT/" "$NEW_ROOT/"
-    else
-        log::warn "Old Docker root not found — skipping copy."
-    fi
-}
-
-write_daemon_json() {
-    log::step "Updating Docker daemon.json"
-
-    sudo mkdir -p /etc/docker
-
-    cat <<EOF | sudo tee /etc/docker/daemon.json >/dev/null
-{
-  "data-root": "$NEW_ROOT"
-}
-EOF
-
-    log::ok "daemon.json updated."
-}
-
-start_docker() {
-    log::step "Restarting Docker"
-    log::spinner "Starting Docker service" sudo systemctl start docker
-}
-
-verify() {
-    log::step "Verifying Docker root"
-
-    local root
-    root=$(docker info 2>/dev/null | grep "Docker Root Dir" | awk -F': ' '{print $2}' || true)
-
-    if [[ "$root" == "$NEW_ROOT" ]]; then
-        log::success_block "Docker is now using the HDD ✔"
-    else
-        log::fail "Docker is still using: $root"
-        log::die "Migration failed."
-    fi
-}
+STORAGE_ENV="/tmp/storage.env"
 
 main() {
-    stop_docker
-    migrate_data
-    write_daemon_json
-    start_docker
-    verify
+    if [[ ! -f "$STORAGE_ENV" ]]; then
+        log::warn "No storage env file found. Skipping Docker migration."
+        return 0
+    fi
+
+    # shellcheck disable=SC1090
+    source "$STORAGE_ENV"
+
+    if [[ "${STORAGE_AVAILABLE:-0}" -ne 1 ]]; then
+        log::warn "No external storage available. Skipping Docker migration."
+        return 0
+    fi
+
+    local dev="${STORAGE_DEVICE:?}"
+    local mount_point="${STORAGE_MOUNT_POINT:-/mnt/external-storage}"
+    local docker_dir="${mount_point}/docker"
+    local docker_service="/etc/docker/daemon.json"
+
+    log::step "Ensuring Docker is stopped"
+    docker::stop || true
+
+    log::step "Preparing Docker directory on external storage: $docker_dir"
+    sudo mkdir -p "$docker_dir"
+    sudo chown root:root "$docker_dir"
+
+    local current_root
+    current_root=$(docker::get_data_root || echo "/var/lib/docker")
+
+    log::info "Current Docker data-root: $current_root"
+    log::info "Target Docker data-root:  $docker_dir"
+
+    if [[ -d "$current_root" && ! -L "$current_root" ]]; then
+        log::step "Migrating existing Docker data to external storage"
+        sudo rsync -aHAX --delete "$current_root"/ "$docker_dir"/
+        log::ok "Docker data migrated to $docker_dir"
+    else
+        log::info "No existing Docker data to migrate or already symlinked."
+    fi
+
+    log::step "Updating Docker daemon configuration"
+
+    sudo mkdir -p "$(dirname "$docker_service")"
+    sudo bash -c "cat > '$docker_service' <<EOF
+{
+  \"data-root\": \"$docker_dir\"
+}
+EOF"
+
+    log::ok "Docker daemon.json updated."
+
+    log::step "Restarting Docker with new data-root"
+    docker::restart
+
+    log::success_block "Docker is now using external storage at: $docker_dir"
 }
 
 main "$@"
