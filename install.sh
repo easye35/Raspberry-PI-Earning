@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Appliance-grade installer orchestrator for this repo
 
-set -euo pipefail
+set -Eeuo pipefail
+trap 'echo "❌ Error on line $LINENO: $BASH_COMMAND"' ERR
+
 if [[ $EUID -ne 0 ]]; then
     echo "Installer is not running as root — elevating..."
     exec sudo -E bash "$0" "$@"
