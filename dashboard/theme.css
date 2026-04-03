@@ -1,0 +1,244 @@
+/* ============================================================
+   Raspberry Pi Docker Appliance — Dashboard Theme
+   Modern Dark UI • Animated • Card-Based • Appliance-Grade
+   ============================================================ */
+
+/* ------------------------------
+   Root Theme Variables
+------------------------------ */
+:root {
+    --bg: #0d0f12;
+    --bg-alt: #14171c;
+    --bg-card: #1a1e24;
+    --bg-hover: #1f242c;
+
+    --border: #2a3039;
+    --border-light: #3a424e;
+
+    --text: #e6e9ef;
+    --text-dim: #a8b0bd;
+    --text-muted: #7c8594;
+
+    --accent: #4da3ff;
+    --accent-glow: rgba(77, 163, 255, 0.35);
+
+    --success: #4cd964;
+    --warning: #ffcc00;
+    --danger: #ff453a;
+
+    --radius: 12px;
+    --radius-sm: 8px;
+
+    --transition: 180ms ease;
+    --transition-fast: 120ms ease;
+}
+
+/* ------------------------------
+   Global Reset
+------------------------------ */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Inter", "Segoe UI", sans-serif;
+    height: 100%;
+    overflow-x: hidden;
+}
+
+a {
+    color: var(--accent);
+    text-decoration: none;
+    transition: color var(--transition);
+}
+
+a:hover {
+    color: #82c3ff;
+}
+
+/* ------------------------------
+   Layout
+------------------------------ */
+.dashboard-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 32px;
+    max-width: 1400px;
+    margin: auto;
+}
+
+/* ------------------------------
+   Section Headers
+------------------------------ */
+.section-title {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text);
+}
+
+/* ------------------------------
+   Cards
+------------------------------ */
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    transition: background var(--transition), border var(--transition), transform var(--transition-fast);
+    box-shadow: 0 0 0 rgba(0,0,0,0);
+}
+
+.card:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-light);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+}
+
+/* ------------------------------
+   Grid Layouts
+------------------------------ */
+.grid-2 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+}
+
+.grid-3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 24px;
+}
+
+/* ------------------------------
+   Status Badges
+------------------------------ */
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-success {
+    background: rgba(76, 217, 100, 0.15);
+    color: var(--success);
+}
+
+.badge-warning {
+    background: rgba(255, 204, 0, 0.15);
+    color: var(--warning);
+}
+
+.badge-danger {
+    background: rgba(255, 69, 58, 0.15);
+    color: var(--danger);
+}
+
+/* ------------------------------
+   Animated Accent Glow
+------------------------------ */
+.glow {
+    position: relative;
+}
+
+.glow::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--accent-glow);
+    opacity: 0;
+    filter: blur(18px);
+    transition: opacity var(--transition);
+    z-index: -1;
+}
+
+.glow:hover::after {
+    opacity: 1;
+}
+
+/* ------------------------------
+   Tables
+------------------------------ */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+}
+
+.table th, .table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+}
+
+.table th {
+    text-align: left;
+    color: var(--text-dim);
+    font-weight: 600;
+}
+
+.table tr:hover td {
+    background: var(--bg-hover);
+}
+
+/* ------------------------------
+   Buttons
+------------------------------ */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-light);
+    background: var(--bg-alt);
+    color: var(--text);
+    cursor: pointer;
+    transition: background var(--transition), border var(--transition), transform var(--transition-fast);
+}
+
+.btn:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent);
+    transform: translateY(-1px);
+}
+
+.btn-accent {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+}
+
+.btn-accent:hover {
+    background: #6bb8ff;
+    border-color: #6bb8ff;
+}
+
+/* ------------------------------
+   Charts
+------------------------------ */
+.chart-container {
+    position: relative;
+    height: 260px;
+    width: 100%;
+}
+
+/* ------------------------------
+   Footer
+------------------------------ */
+.footer {
+    margin-top: 40px;
+    padding: 20px 0;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
