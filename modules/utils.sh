@@ -2,10 +2,12 @@
 set -Eeuo pipefail
 
 ###############################################################################
-# Load Logging Library FIRST (so all modules have logging)
+# Load Logging Library (correct path)
 ###############################################################################
 
-LOG_LIB="$(dirname "$0")/logging.sh"
+# Always load logging from the modules directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_LIB="$SCRIPT_DIR/logging.sh"
 
 if [[ -f "$LOG_LIB" ]]; then
     source "$LOG_LIB"
