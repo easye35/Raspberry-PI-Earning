@@ -22,7 +22,7 @@ if [[ ! -f "$UTILS" ]]; then
     exit 1
 fi
 
-# Correct way: source it into THIS shell
+# Correct: load logging + helpers into THIS shell
 source "$UTILS"
 
 ###############################################################################
@@ -52,7 +52,7 @@ for module in "${MODULES[@]}"; do
     echo "Running module: $module"
     echo "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒"
 
-    # Run module with Bash
+    # Run module with Bash (now guaranteed to exist)
     if ! bash "$path"; then
         echo "❌ ERROR running module: $module"
         exit 1
