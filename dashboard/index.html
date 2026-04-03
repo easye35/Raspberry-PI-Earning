@@ -9,13 +9,13 @@
 <body>
 
     <!-- Sidebar -->
-    <div id="sidebar" class="sidebar">
+    <aside id="sidebar" class="sidebar">
         <div class="sidebar-header">
             <div class="logo">EARNBOX</div>
             <button id="closeSidebar" class="icon-btn">✕</button>
         </div>
 
-        <div class="nav">
+        <nav class="nav">
             <div class="nav-item" data-page="dashboard">Dashboard</div>
             <div class="nav-item" data-page="containers">Containers</div>
             <div class="nav-item" data-page="system">System</div>
@@ -23,11 +23,11 @@
             <div class="nav-item" data-page="earnings">Earnings</div>
             <div class="nav-item" data-page="charts">Charts</div>
             <div class="nav-item" data-page="settings">Settings</div>
-        </div>
-    </div>
+        </nav>
+    </aside>
 
     <!-- Top Bar -->
-    <div class="topbar">
+    <header class="topbar">
         <button id="openSidebar" class="icon-btn">☰</button>
         <div id="pageTitle" class="page-title">Dashboard</div>
 
@@ -35,10 +35,10 @@
             <div id="refreshStatus" class="refresh-status">Auto-refresh: 5s</div>
             <button id="themeToggle" class="icon-btn">🌓</button>
         </div>
-    </div>
+    </header>
 
-    <!-- Main Content -->
-    <div id="content" class="content"></div>
+    <!-- Main Content Wrapper -->
+    <main id="content" class="content"></main>
 
     <!-- JS Modules -->
     <script src="js/system.js"></script>
