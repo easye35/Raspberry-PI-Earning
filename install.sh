@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Appliance-grade installer orchestrator for this repo
 
-set -e
+set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LIB_DIR="${ROOT_DIR}/lib"
@@ -12,10 +12,7 @@ export LOG_LIB="${LIB_DIR}/logging.sh"
 export SYS_LIB="${LIB_DIR}/system.sh"
 export DOCKER_LIB="${LIB_DIR}/docker.sh"
 
-# ---------------------------------------------------------
-# Load core libraries FIRST (logging must exist before use)
-# ---------------------------------------------------------
-
+# Load core libraries
 source "${LIB_DIR}/logging.sh"
 source "${LIB_DIR}/system.sh"
 source "${LIB_DIR}/docker.sh"
