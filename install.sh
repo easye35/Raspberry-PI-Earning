@@ -1,99 +1,110 @@
 #!/usr/bin/env bash
-set -Eeuo pipefail
-
-###############################################################################
-# Earnbox Installer — Full Appliance Setup
-# HDD-aware, modular, safe, and idempotent
-###############################################################################
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MODULE_DIR="$SCRIPT_DIR/modules"
-
-###############################################################################
-# Logging helpers
-###############################################################################
-
-log_section() {
-  echo
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo "  $1"
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo
-}
-
-log_step()   { echo "[STEP] $1"; }
-log_info()   { echo "[INFO] $1"; }
-log_ok()     { echo "[OK]   $1"; }
-log_warn()   { echo "[WARN] $1"; }
-log_fail()   { echo "[FAIL] $1"; exit 1; }
-
-###############################################################################
-# Module runner
-###############################################################################
-
-run_module() {
-  local module="$1"
-  local path="$MODULE_DIR/$module"
-
-  if [[ ! -f "$path" ]]; then
-    log_warn "Module not found: $module — skipping."
-    return
-  fi
-
-  echo
-  echo "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒"
-  echo "  Running module: $module"
-  echo "▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒"
-  echo
-
-  bash "$path"
-}
-
-###############################################################################
-# Detect HDD vs no-HDD
-###############################################################################
+set -e
 
 DATA_ROOT="/mnt/storage"
-if ! mountpoint -q /mnt/storage 2>/dev/null; then
-  log_warn "/mnt/storage is not mounted — falling back to /opt/earnbox"
-  DATA_ROOT="/opt/earnbox"
+REPO_ROOT="$HOME/Raspberry-PI-docker-Earning"
+COMPOSE_FILE="$REPO_ROOT/docker-compose.yml"
+
+echo "[INFO] Using data root: $DATA_ROOT"
+
+read -rp "Install EarnApp? (Y/n): " INSTALL_EARNAPP
+INSTALL_EARNAPP=${INSTALL_EARNAPP:-Y}
+
+read -rp "Install Honeygain? (Y/n): " INSTALL_HONEYGAIN
+INSTALL_HONEYGAIN=${INSTALL_HONEYGAIN:-Y}
+
+HONEYGAIN_EMAIL=""
+HONEYGAIN_PASSWORD=""
+
+if [[ "$INSTALL_HONEYGAIN" =~ ^[Yy]$ ]]; then
+  read -rp "Enter your Honeygain email: " HONEYGAIN_EMAIL
+  read -rsp "Enter your Honeygain password: " HONEYGAIN_PASSWORD
+  echo
 fi
 
-log_info "Using data root: $DATA_ROOT"
+mkdir -p "$DATA_ROOT/earnapp" "$DATA_ROOT/honeygain" \
+         "$DATA_ROOT/netdata" "$DATA_ROOT/portainer"
 
-###############################################################################
-# Installer Start
-###############################################################################
+cat > "$COMPOSE_FILE" <<EOF
+services:
+EOF
 
-START_TIME="$(date)"
-log_section "Earnbox Installer Started — $START_TIME"
+if [[ "$INSTALL_EARNAPP" =~ ^[Yy]$ ]]; then
+  echo "[OK] EarnApp will be installed."
+  cat >> "$COMPOSE_FILE" <<'EOF'
 
-###############################################################################
-# Core system prep
-###############################################################################
+  earnapp:
+    image: fazalfarhan01/earnapp:latest
+    container_name: earnapp
+    restart: always
+    volumes:
+      - /mnt/storage/earnapp:/etc/earnapp
+EOF
+else
+  echo "[WARN] EarnApp installation skipped."
+fi
 
-run_module "10-stop-and-clean.sh"
-run_module "20-power-check.sh"
-run_module "30-detect-storage.sh"
-run_module "35-mount-and-prepare-storage.sh"
-run_module "40-migrate-storage.sh"
-run_module "45-migrate-docker.sh"
-run_module "50-verify-storage.sh"
+if [[ "$INSTALL_HONEYGAIN" =~ ^[Yy]$ && -n "$HONEYGAIN_EMAIL" && -n "$HONEYGAIN_PASSWORD" ]]; then
+  echo "[OK] Honeygain will be installed."
+  cat >> "$COMPOSE_FILE" <<EOF
 
-###############################################################################
-# New earning-appliance modules
-###############################################################################
+  honeygain:
+    image: honeygain/honeygain:latest
+    container_name: honeygain
+    restart: always
+    command: -tou-accept -email $HONEYGAIN_EMAIL -pass $HONEYGAIN_PASSWORD -device earnbox
+    volumes:
+      - /mnt/storage/honeygain:/data
+EOF
+else
+  echo "[WARN] Honeygain installation skipped."
+fi
 
-run_module "60-install-containers.sh"
-run_module "70-dashboard.sh"
-run_module "80-diagnostics.sh"
-run_module "90-self-heal.sh"
+cat >> "$COMPOSE_FILE" <<'EOF'
 
-###############################################################################
-# Done
-###############################################################################
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./dashboard:/usr/share/nginx/html:ro
 
-END_TIME="$(date)"
-echo
-echo "=== Earnbox installation complete: $END_TIME ==="
-echo
+  netdata:
+    image: netdata/netdata:stable
+    container_name: netdata
+    restart: always
+    ports:
+      - "19999:19999"
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - /mnt/storage/netdata:/var/lib/netdata
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: always
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /mnt/storage/portainer:/data
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    restart: always
+    command: --cleanup --schedule "0 0 * * *"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+EOF
+
+echo "==> Pulling and starting containers via docker compose"
+cd "$REPO_ROOT"
+docker compose pull
+docker compose up -d
+echo "[OK] Deployment complete."
