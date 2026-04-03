@@ -4,7 +4,7 @@ set -euo pipefail
 # ____________________________________________
 # Logging Normalization Script
 # Converts all modules to use:
-#   log::section / log::info / log::warn / log::error
+#   log::section / log::info / log::warn / log::error / log::success
 # ____________________________________________
 
 RED="\033[0;31m"
@@ -40,11 +40,23 @@ declare -A REPLACEMENTS=(
     ["ERROR:"]="log::error"
     ["SECTION:"]="log::section"
 
-    # underscore-style legacy functions
-    ["log_section"]="log::section"
-    ["log_info"]="log::info"
-    ["log_warn"]="log::warn"
-    ["log_error"]="log::error"
+    # underscore-style legacy calls (function-call aware)
+    ["log_section "]="log::section "
+    ["log_info "]="log::info "
+    ["log_warn "]="log::warn "
+    ["log_success "]="log::success "
+
+    # indented variants
+    ["    log_section "]="    log::section "
+    ["    log_info "]="    log::info "
+    ["    log_warn "]="    log::warn "
+    ["    log_success "]="    log::success "
+
+    # double-indent variants
+    ["        log_section "]="        log::section "
+    ["        log_info "]="        log::info "
+    ["        log_warn "]="        log::warn "
+    ["        log_success "]="        log::success "
 )
 
 # Track changes
