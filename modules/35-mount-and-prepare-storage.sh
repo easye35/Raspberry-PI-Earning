@@ -1,66 +1,93 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-MODULES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "$MODULES_DIR/.." && pwd)"
+# Load shared utilities
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 source "$ROOT_DIR/lib/logging.sh"
 source "$ROOT_DIR/lib/utils.sh"
 
 log::section "Mounting and Preparing External Storage"
 
-STORAGE_ENV="/tmp/storage.env"
+DEVICE="/dev/sda"
+PARTITION="/dev/sda1"
+MOUNT_POINT="/mnt/external-storage"
 
-main() {
-    if [[ ! -f "$STORAGE_ENV" ]]; then
-        log::warn "No storage env file found. Skipping storage preparation."
-        return 0
-    fi
+# ---------------------------------------------------------
+# Detect base device
+# ---------------------------------------------------------
+if [[ ! -e "$DEVICE" ]]; then
+    log::error "No external storage detected at $DEVICE"
+    exit 1
+fi
 
-    # shellcheck disable=SC1090
-    source "$STORAGE_ENV"
+log::info "Detected external device: $DEVICE"
 
-    if [[ "${STORAGE_AVAILABLE:-0}" -ne 1 ]]; then
-        log::warn "No external storage available. Skipping mount and prepare."
-        return 0
-    fi
+# ---------------------------------------------------------
+# Create partition if missing
+# ---------------------------------------------------------
+if [[ ! -e "$PARTITION" ]]; then
+    log::warn "No partition found on $DEVICE — creating GPT + primary partition"
 
-    local dev="${STORAGE_DEVICE:?}"
-    local mount_point="/mnt/external-storage"
+    parted -s "$DEVICE" mklabel gpt
+    parted -s "$DEVICE" mkpart primary ext4 0% 100%
 
-    log::step "Preparing mount point: $mount_point"
-    sudo mkdir -p "$mount_point"
+    log::info "Partition table created — forcing kernel to re-read"
+    partprobe "$DEVICE"
+    sleep 2
+fi
 
-    # Check if filesystem exists
-    local fstype
-    fstype=$(blkid -o value -s TYPE "$dev" || true)
+# Verify partition exists
+if [[ ! -e "$PARTITION" ]]; then
+    log::error "Partition $PARTITION still does not exist after creation"
+    exit 1
+fi
 
-    if [[ -z "$fstype" ]]; then
-        log::warn "No filesystem detected on $dev — creating ext4 filesystem."
-        sudo mkfs.ext4 -F "$dev"
-        log::ok "Filesystem created on $dev"
-    else
-        log::info "Detected filesystem on $dev: $fstype"
-    fi
+log::ok "Partition detected: $PARTITION"
 
-    # Ensure not already mounted
-    if mount | awk -v m="$mount_point" '$3==m {found=1} END{exit !found}'; then
-        log::warn "Mount point $mount_point already in use. Unmounting."
-        sudo umount "$mount_point"
-    fi
+# ---------------------------------------------------------
+# Create filesystem if missing
+# ---------------------------------------------------------
+if ! blkid "$PARTITION" >/dev/null 2>&1; then
+    log::warn "No filesystem detected on $PARTITION — creating ext4 filesystem"
+    mkfs.ext4 -F "$PARTITION"
+else
+    log::info "Filesystem already present on $PARTITION"
+fi
 
-    log::step "Mounting $dev to $mount_point"
-    sudo mount "$dev" "$mount_point"
+# ---------------------------------------------------------
+# Ensure mount point exists
+# ---------------------------------------------------------
+if [[ ! -d "$MOUNT_POINT" ]]; then
+    log::info "Creating mount point: $MOUNT_POINT"
+    mkdir -p "$MOUNT_POINT"
+fi
 
-    log::ok "Mounted $dev at $mount_point"
+# ---------------------------------------------------------
+# Mount the partition
+# ---------------------------------------------------------
+log::info "Mounting $PARTITION to $MOUNT_POINT"
 
-    {
-        echo "STORAGE_AVAILABLE=1"
-        echo "STORAGE_DEVICE=$dev"
-        echo "STORAGE_MOUNT_POINT=$mount_point"
-    } > "$STORAGE_ENV"
+if mountpoint -q "$MOUNT_POINT"; then
+    log::info "Mount point already active — unmounting first"
+    umount "$MOUNT_POINT"
+fi
 
-    log::success_block "External storage mounted and ready at: $mount_point"
-}
+mount "$PARTITION" "$MOUNT_POINT"
 
-main "$@"
+log::ok "Mounted $PARTITION at $MOUNT_POINT"
+
+# ---------------------------------------------------------
+# Ensure fstab entry
+# ---------------------------------------------------------
+UUID=$(blkid -s UUID -o value "$PARTITION")
+
+if ! grep -q "$UUID" /etc/fstab; then
+    log::info "Adding fstab entry for persistent mounting"
+    echo "UUID=$UUID  $MOUNT_POINT  ext4  defaults,noatime  0  2" >> /etc/fstab
+else
+    log::info "fstab entry already exists"
+fi
+
+log::success "External storage is ready for use"
