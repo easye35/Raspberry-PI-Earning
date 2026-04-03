@@ -45,7 +45,7 @@ Clone the repo:
 git clone https://github.com/easye35/Raspberry-PI-docker-Earning
 cd Raspberry-PI-docker-Earning
 chmod +x install.sh
-./install.sh
+sudo ./install.sh
 ```
 ## 🧩 The installer will prompt you for:
 ### 🐝 Honeygain  
