@@ -7,7 +7,15 @@ ROOT_DIR="$(cd "$MODULES_DIR/.." && pwd)"
 
 # Load shared libraries
 source "$ROOT_DIR/lib/logging.sh"
-source "$ROOT_DIR/lib/utils.sh"
+
+# utils.sh might contain risky code under set -euo pipefail,
+# so we source it in a safer context.
+set +e
+if [[ -f "$ROOT_DIR/lib/utils.sh" ]]; then
+    # shellcheck disable=SC1091
+    source "$ROOT_DIR/lib/utils.sh"
+fi
+set -e
 
 log::section "Detecting External Storage"
 
