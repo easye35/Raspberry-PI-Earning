@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-# Module 35: Partition + Format external drive (self‑healing, POSIX-safe)
+# Module 35: Partition + Format external drive (dynamic, non-destructive when possible)
 
 set -Eeuo pipefail
 
-# Load logging
 if [[ -n "${LOG_LIB:-}" && -f "$LOG_LIB" ]]; then source "$LOG_LIB"; else
     log::info(){ echo "[INFO] $*"; }
     log::warn(){ echo "[WARN] $*"; }
@@ -12,7 +11,7 @@ if [[ -n "${LOG_LIB:-}" && -f "$LOG_LIB" ]]; then source "$LOG_LIB"; else
     log::section(){ echo; echo "=== $* ==="; echo; }
 fi
 
-log::section "Partitioning & Formatting External Drive"
+log::section "Partitioning & Formatting External Drive (Dynamic)"
 
 STORAGE_ENV="/tmp/storage.env"
 source "$STORAGE_ENV"
@@ -24,65 +23,31 @@ fi
 
 log::info "Using device: $DEVICE"
 
-###############################################################################
-# STEP 1 — Unmount anything using the disk
-###############################################################################
-log::info "Ensuring $DEVICE is not mounted"
+# Detect first partition on the device
+PARTITION="$(lsblk -ndo NAME,TYPE "$DEVICE" | awk '$2=="part"{print "/dev/"$1; exit}')"
 
-# Unmount all partitions on the disk
-for p in $(lsblk -ndo NAME "$DEVICE" | tail -n +2); do
-    PART="/dev/$p"
-    if mount | grep -q "$PART"; then
-        log::warn "Unmounting $PART"
-        umount -f "$PART" || true
+if [[ -n "$PARTITION" ]]; then
+    # Partition exists — check filesystem
+    if blkid "$PARTITION" | grep -q ext4; then
+        log::info "Found existing ext4 partition: $PARTITION — reusing as storage."
+        echo "PARTITION=$PARTITION" >> "$STORAGE_ENV"
+        log::success "Partition + Format step skipped (already suitable)."
+        exit 0
+    else
+        log::warn "Partition $PARTITION exists but is not ext4 — would require destructive format."
+        # You can choose to fail here instead of auto-wiping:
+        log::error "Refusing to auto-wipe non-ext4 partition. Please back up and clean the disk."
+        exit 1
     fi
-done
-
-###############################################################################
-# STEP 2 — Kill processes holding the disk
-###############################################################################
-log::info "Checking for processes using $DEVICE"
-
-if command -v fuser >/dev/null 2>&1; then
-    fuser -km "$DEVICE" 2>/dev/null || true
 fi
 
-###############################################################################
-# STEP 3 — Wipe signatures (RAID, LVM, old filesystems)
-###############################################################################
-log::info "Wiping old filesystem signatures"
-wipefs -a "$DEVICE" || true
+# No partition found — destructive path (only if truly empty)
+log::info "No partition found — creating GPT + ext4 partition"
 
-###############################################################################
-# STEP 4 — Wipe partition table
-###############################################################################
-log::info "Wiping partition table"
-dd if=/dev/zero of="$DEVICE" bs=1M count=10 status=none || true
-
-sync
-sleep 1
-
-###############################################################################
-# STEP 5 — Force kernel to re-scan the disk
-###############################################################################
-log::info "Rescanning kernel block devices"
-partprobe "$DEVICE" 2>/dev/null || true
-sleep 1
-
-###############################################################################
-# STEP 6 — Create GPT + ext4 partition
-###############################################################################
-log::info "Creating GPT partition table"
 parted -s "$DEVICE" mklabel gpt
-
-log::info "Creating primary ext4 partition"
 parted -s "$DEVICE" mkpart primary ext4 0% 100%
-
 sleep 2
 
-###############################################################################
-# STEP 7 — Detect new partition
-###############################################################################
 PARTITION="$(lsblk -ndo NAME,TYPE "$DEVICE" | awk '$2=="part"{print "/dev/"$1; exit}')"
 
 if [[ -z "$PARTITION" ]]; then
@@ -92,12 +57,8 @@ fi
 
 log::success "Created partition: $PARTITION"
 
-###############################################################################
-# STEP 8 — Format ext4
-###############################################################################
 log::info "Formatting $PARTITION as ext4"
 mkfs.ext4 -F "$PARTITION"
 
 echo "PARTITION=$PARTITION" >> "$STORAGE_ENV"
-
 log::success "Partition + Format complete."
