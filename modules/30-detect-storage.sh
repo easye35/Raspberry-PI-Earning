@@ -1,23 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Resolve directories
 MODULES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$MODULES_DIR/.." && pwd)"
 
-# Load shared libraries
 source "$ROOT_DIR/lib/logging.sh"
 
-# utils.sh might contain risky code under set -euo pipefail,
-# so we source it in a safer context.
+# utils.sh may contain risky code under -euo
 set +e
-if [[ -f "$ROOT_DIR/lib/utils.sh" ]]; then
-    # shellcheck disable=SC1091
-    source "$ROOT_DIR/lib/utils.sh"
-fi
+[[ -f "$ROOT_DIR/lib/utils.sh" ]] && source "$ROOT_DIR/lib/utils.sh"
 set -e
 
 log::section "Detecting External Storage"
+
+# ---------------------------------------------------------
+# Safe lsblk wrapper (prevents silent exits)
+# ---------------------------------------------------------
+safe_lsblk() {
+    lsblk "$@" 2>/dev/null || true
+}
 
 # ---------------------------------------------------------
 # Auto‑Unmount Function
@@ -25,7 +26,6 @@ log::section "Detecting External Storage"
 auto_unmount_drive() {
     local dev="$1"
 
-    # Find all mountpoints for this device (system + user-session)
     mapfile -t MOUNTS < <(mount | awk -v d="$dev" '$1==d {print $3}')
 
     if [[ ${#MOUNTS[@]} -eq 0 ]]; then
@@ -34,14 +34,11 @@ auto_unmount_drive() {
     fi
 
     log::warn "Drive is mounted at:"
-    for m in "${MOUNTS[@]}"; do
-        echo "   → $m"
-    done
+    printf "   → %s\n" "${MOUNTS[@]}"
 
     log::info "Attempting safe auto‑unmount..."
 
     for m in "${MOUNTS[@]}"; do
-        # Try udisks2 first (desktop auto-mount)
         if command -v udisksctl >/dev/null 2>&1; then
             if udisksctl unmount -b "$dev" >/dev/null 2>&1; then
                 log::ok "Unmounted via udisksctl: $m"
@@ -49,7 +46,6 @@ auto_unmount_drive() {
             fi
         fi
 
-        # Fallback to sudo umount
         if sudo umount "$m" >/dev/null 2>&1; then
             log::ok "Unmounted: $m"
         else
@@ -64,9 +60,9 @@ auto_unmount_drive() {
 main() {
     log::step "Scanning for USB storage devices"
 
-    # Find first USB partition (sda1, sdb1, etc)
+    # SAFE: lsblk cannot kill the script now
     local part
-    part=$(lsblk -p -o NAME,TYPE | awk '$2=="part" && $1 ~ "/dev/sd"{print $1; exit}')
+    part=$(safe_lsblk -p -o NAME,TYPE | awk '$2=="part" && $1 ~ "/dev/sd"{print $1; exit}')
 
     if [[ -z "$part" ]]; then
         log::warn "No external HDD/SSD detected."
@@ -76,7 +72,6 @@ main() {
 
     log::substep "Detected partition: $part"
 
-    # Validate that it's not the SD card
     if [[ "$part" == *"mmcblk0"* ]]; then
         log::die "Detected SD card instead of USB drive."
     fi
