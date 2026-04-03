@@ -1,179 +1,238 @@
 /* ---------------------------------------------------------
-   EarnBox Dashboard — Full Modern Dark Theme
-   Complete replacement for style.css
+   EarnBox UI — Full Correct Stylesheet
+   Matches app.js + modules exactly
 ----------------------------------------------------------*/
 
 :root {
-    --bg-color: #0f1117;
-    --panel-color: #1a1d24;
-    --sidebar-color: #14171d;
+  --bg: #0d1117;
+  --bg-panel: #161b22;
+  --bg-sidebar: #0b0e12;
 
-    --text-color: #e8e8e8;
-    --text-muted: #9aa0ac;
+  --text: #f0f6fc;
+  --text-muted: #8b949e;
 
-    --accent: #4f8cff;
-    --accent-hover: #6fa0ff;
+  --accent: #58a6ff;
+  --accent-hover: #79b8ff;
 
-    --border-color: #2a2d36;
+  --border: #30363d;
 
-    --success: #4caf50;
-    --warning: #ffb74d;
-    --danger: #ef5350;
+  --success: #3fb950;
+  --warning: #d29922;
+  --danger: #f85149;
 
-    --font-main: "Inter", sans-serif;
+  --radius: 8px;
+  --font: "Inter", sans-serif;
 }
 
-/* ---------------------------------------------------------
-   Base Layout
-----------------------------------------------------------*/
+/* Base */
 
 body {
-    background: var(--bg-color);
-    color: var(--text-color);
-    font-family: var(--font-main);
-    margin: 0;
-    padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  margin: 0;
+  padding: 0;
 }
 
-h1, h2, h3, h4 {
-    color: var(--text-color);
-    margin: 0 0 12px 0;
+/* Layout */
+
+.content {
+  margin-left: 260px;
+  padding: 24px;
 }
 
-/* ---------------------------------------------------------
-   Sidebar
-----------------------------------------------------------*/
+/* Sidebar */
 
 .sidebar {
-    width: 240px;
-    background: var(--sidebar-color);
-    height: 100vh;
-    position: fixed;
-    left: 0;
-    top: 0;
-    padding-top: 20px;
-    display: flex;
-    flex-direction: column;
+  width: 260px;
+  background: var(--bg-sidebar);
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
-.sidebar a {
-    color: var(--text-muted);
-    text-decoration: none;
-    padding: 14px 20px;
-    display: block;
-    font-size: 15px;
-    transition: 0.2s;
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
 }
 
-.sidebar a:hover,
-.sidebar a.active {
-    background: var(--panel-color);
-    color: var(--accent);
+.logo {
+  font-size: 20px;
+  font-weight: 700;
 }
 
-/* ---------------------------------------------------------
-   Main Content
-----------------------------------------------------------*/
-
-.main {
-    margin-left: 240px;
-    padding: 24px;
+.nav-item {
+  padding: 12px 16px;
+  margin-bottom: 4px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  color: var(--text-muted);
 }
 
-/* ---------------------------------------------------------
-   Panels
-----------------------------------------------------------*/
-
-.panel {
-    background: var(--panel-color);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 24px;
+.nav-item:hover,
+.nav-item.active {
+  background: var(--bg-panel);
+  color: var(--accent);
 }
 
-/* ---------------------------------------------------------
-   Tables
-----------------------------------------------------------*/
+/* Topbar */
+
+.topbar {
+  position: fixed;
+  left: 260px;
+  right: 0;
+  top: 0;
+  height: 60px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  box-sizing: border-box;
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin-left: 12px;
+}
+
+.topbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  color: var(--text);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+/* Cards */
+
+.card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0;
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.card-body {
+  padding: 16px;
+}
+
+/* Grid */
+
+.grid {
+  display: grid;
+  gap: 20px;
+}
+
+.grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* Tables */
 
 table {
-    width: 100%;
-    border-collapse: collapse;
-    color: var(--text-color);
-    font-size: 14px;
+  width: 100%;
+  border-collapse: collapse;
 }
 
 th {
-    background: var(--panel-color);
-    color: var(--text-color);
-    font-weight: 600;
-    padding: 12px;
-    border-bottom: 1px solid var(--border-color);
-    text-align: left;
+  text-align: left;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
 }
 
 td {
-    padding: 10px;
-    border-bottom: 1px solid var(--border-color);
-    color: var(--text-muted);
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
 }
 
 tr:hover {
-    background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.05);
 }
 
-/* ---------------------------------------------------------
-   Status Badges
-----------------------------------------------------------*/
+/* Status */
 
-.status-running {
-    color: var(--success);
-    font-weight: 600;
+.status-running { color: var(--success); }
+.status-warning { color: var(--warning); }
+.status-error { color: var(--danger); }
+
+/* Pills */
+
+.metric-pill {
+  background: var(--bg-panel);
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.status-warning {
-    color: var(--warning);
-    font-weight: 600;
+/* Settings */
+
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
 }
 
-.status-error {
-    color: var(--danger);
-    font-weight: 600;
+.settings-label {
+  color: var(--text-muted);
 }
 
-/* ---------------------------------------------------------
-   Buttons
-----------------------------------------------------------*/
+.settings-control .btn {
+  margin-right: 8px;
+}
 
-button,
+/* Buttons */
+
 .btn {
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    padding: 10px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: 0.2s;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  cursor: pointer;
 }
 
-button:hover,
 .btn:hover {
-    background: var(--accent-hover);
+  background: var(--accent-hover);
 }
 
-/* ---------------------------------------------------------
-   Utility
-----------------------------------------------------------*/
+/* Animations */
 
-.text-muted {
-    color: var(--text-muted);
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
 }
 
-.center {
-    text-align: center;
-}
-
-.right {
-    text-align: right;
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
