@@ -1,96 +1,105 @@
-// Lightweight SVG-based chart renderer (no external libraries)
+// ADVANCED CANVAS CHART ENGINE -----------------------------------------
 
-const ChartsModule = (() => {
+function drawChart(canvasId, data, options = {}) {
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext("2d");
 
-  // Draw a simple line chart using SVG
-  function renderLineChart(containerId, points) {
-    const el = document.getElementById(containerId);
-    if (!el) return;
+    const {
+        color = "#00aaff",
+        gridColor = "#333",
+        animate = true,
+        tooltip = true
+    } = options;
 
-    const width = el.clientWidth || 320;
-    const height = el.clientHeight || 200;
-    const padding = 20;
+    const width = canvas.width;
+    const height = canvas.height;
 
-    const max = Math.max(...points, 1);
-    const min = Math.min(...points, 0);
+    ctx.clearRect(0, 0, width, height);
 
-    const svgNS = "http://www.w3.org/2000/svg";
-    const svg = document.createElementNS(svgNS, "svg");
-    svg.setAttribute("width", width);
-    svg.setAttribute("height", height);
+    const max = Math.max(...data, 1);
+    const stepX = width / (data.length - 1);
 
-    const path = document.createElementNS(svgNS, "path");
-    let d = "";
+    // GRIDLINES ---------------------------------------------------------
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 1;
 
-    points.forEach((v, i) => {
-      const x = padding + (i / (points.length - 1 || 1)) * (width - padding * 2);
-      const y = height - padding - ((v - min) / (max - min || 1)) * (height - padding * 2);
-      d += (i === 0 ? "M" : "L") + x + " " + y + " ";
+    for (let i = 0; i <= 5; i++) {
+        const y = (height / 5) * i;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+    }
+
+    // LINE --------------------------------------------------------------
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+
+    data.forEach((value, i) => {
+        const x = i * stepX;
+        const y = height - (value / max) * height;
+
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
     });
 
-    path.setAttribute("d", d);
-    path.setAttribute("fill", "none");
-    path.setAttribute("stroke", "rgba(168,85,247,0.9)");
-    path.setAttribute("stroke-width", "2");
+    ctx.stroke();
 
-    svg.appendChild(path);
-    el.innerHTML = "";
-    el.appendChild(svg);
-  }
+    // TOOLTIP -----------------------------------------------------------
+    if (tooltip) {
+        canvas.onmousemove = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
 
-  // Generate random data for placeholder charts
-  function randomSeries(len, min, max) {
-    const arr = [];
-    for (let i = 0; i < len; i++) {
-      arr.push(Math.random() * (max - min) + min);
+            const index = Math.round(mouseX / stepX);
+            const value = data[index];
+
+            if (value !== undefined) {
+                ctx.clearRect(0, 0, width, height);
+                drawChart(canvasId, data, { color, gridColor, animate: false, tooltip: false });
+
+                ctx.fillStyle = "#fff";
+                ctx.font = "14px Arial";
+                ctx.fillText(value, mouseX + 10, 20);
+
+                ctx.beginPath();
+                ctx.arc(index * stepX, height - (value / max) * height, 4, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+            }
+        };
     }
-    return arr;
-  }
+}
 
-  // --- FULL CHARTS PAGE ---
-  function renderChartsPage() {
-    const root = document.createElement("div");
-    root.className = "grid grid-2";
+// DATA BUFFERS ---------------------------------------------------------
 
-    const cpuCard = document.createElement("div");
-    cpuCard.className = "card";
-    cpuCard.innerHTML = `
-      <div class="card-header">
-        <div class="card-title">CPU Load</div>
-      </div>
-      <div class="card-body">
-        <div id="cpuChart" class="chart-container"></div>
-      </div>
-    `;
-    root.appendChild(cpuCard);
+let cpuHistory = [];
+let ramHistory = [];
+let earningsHistory = [];
 
-    const tempCard = document.createElement("div");
-    tempCard.className = "card";
-    tempCard.innerHTML = `
-      <div class="card-header">
-        <div class="card-title">Temperature</div>
-      </div>
-      <div class="card-body">
-        <div id="tempChart" class="chart-container"></div>
-      </div>
-    `;
-    root.appendChild(tempCard);
+// UPDATE LOOP ----------------------------------------------------------
 
-    setTimeout(() => {
-      renderLineChart("cpuChart", randomSeries(20, 5, 60));
-      renderLineChart("tempChart", randomSeries(20, 40, 70));
-    }, 0);
+async function updateCharts() {
+    try {
+        const res = await fetch("/api/system");
+        const sys = await res.json();
 
-    return root;
-  }
+        cpuHistory.push(sys.cpu);
+        ramHistory.push(sys.ram);
+        earningsHistory.push(sys.earnings);
 
-  // --- EARNINGS CHART ---
-  function renderEarningsChart(containerId) {
-    renderLineChart(containerId, randomSeries(14, 0.05, 0.4));
-  }
+        if (cpuHistory.length > 50) cpuHistory.shift();
+        if (ramHistory.length > 50) ramHistory.shift();
+        if (earningsHistory.length > 50) earningsHistory.shift();
 
-  return {
-    renderChartsPage,
-    renderEarningsChart
-  };
-})();
+        drawChart("cpuChart", cpuHistory, { color: "#00aaff" });
+        drawChart("ramChart", ramHistory, { color: "#ffaa00" });
+        drawChart("earningsChart", earningsHistory, { color: "#00ff88" });
+
+    } catch (err) {
+        console.error("Chart update failed:", err);
+    }
+}
+
+setInterval(updateCharts, 3000);
