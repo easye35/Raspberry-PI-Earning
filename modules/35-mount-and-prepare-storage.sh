@@ -34,22 +34,41 @@ else
 fi
 
 ###############################################################################
-# Detect if partition is mounted
+# Check if mount point is already mounted
 ###############################################################################
 
 CURRENT_MOUNT="$(lsblk -no MOUNTPOINT "$PARTITION" || true)"
 
-if [[ -n "$CURRENT_MOUNT" ]]; then
-    log::warn "Partition is currently mounted at: $CURRENT_MOUNT"
-    log::info "Attempting safe unmount..."
+if [[ "$CURRENT_MOUNT" == "$MOUNT_POINT" ]]; then
+    log::info "Partition is already mounted at $MOUNT_POINT"
 
-    if sudo umount "$PARTITION"; then
-        log::ok "Successfully unmounted $PARTITION"
+    # Check if mount is busy
+    if lsof +f -- "$MOUNT_POINT" >/dev/null 2>&1; then
+        log::warn "Mount point is busy — skipping unmount and preparation."
+        log::success_block "External storage is already active and in use."
+        exit 0
     else
-        log::fail "Unable to unmount $PARTITION — drive is busy."
+        log::info "Mount point is idle — safe to unmount."
+        sudo umount "$PARTITION"
+        CURRENT_MOUNT=""
     fi
-else
-    log::debug "Partition is not mounted."
+fi
+
+###############################################################################
+# If mounted somewhere else, attempt safe unmount
+###############################################################################
+
+if [[ -n "$CURRENT_MOUNT" ]]; then
+    log::warn "Partition is mounted at unexpected location: $CURRENT_MOUNT"
+
+    if lsof +f -- "$CURRENT_MOUNT" >/dev/null 2>&1; then
+        log::warn "Mount is busy — skipping unmount and preparation."
+        log::success_block "External storage is already active and in use."
+        exit 0
+    fi
+
+    log::info "Attempting safe unmount..."
+    sudo umount "$PARTITION" || log::fail "Unable to unmount $PARTITION"
 fi
 
 ###############################################################################
@@ -58,7 +77,6 @@ fi
 
 if [[ "$HAS_PARTITION" == true ]]; then
     log::ok "Partition exists — skipping partition creation."
-
 else
     log::step "Creating new GPT partition table"
     sudo parted -s "$DEVICE" mklabel gpt
@@ -66,7 +84,7 @@ else
     log::step "Creating primary ext4 partition"
     sudo parted -s "$DEVICE" mkpart primary ext4 0% 100%
 
-    sleep 2  # allow kernel to refresh partition table
+    sleep 2
 
     log::step "Formatting $PARTITION as ext4"
     sudo mkfs.ext4 -F "$PARTITION"
