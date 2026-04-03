@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
-# Logging library (environment variable)
-source "$LOG_LIB"
+# Resolve module directory
+MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Load logging
+source "$MODULE_DIR/logging.sh"
+
+# Load utils
+source "$MODULE_DIR/utils.sh"
 
 log::section "Power & Hardware Safety Check"
 
