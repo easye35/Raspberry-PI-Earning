@@ -1,55 +1,40 @@
+version: "3.9"
+
 services:
-  earnapp:
-    image: fazalfarhan01/earnapp:latest
-    container_name: earnapp
-    restart: always
-    volumes:
-      - /mnt/storage/earnapp:/etc/earnapp
-
-  honeygain:
-    image: honeygain/honeygain:latest
-    container_name: honeygain
-    restart: always
-    command: -tou-accept -email ${HONEYGAIN_EMAIL} -pass ${HONEYGAIN_PASSWORD} -device earnbox
-    volumes:
-      - /mnt/storage/honeygain:/data
-
   nginx:
     image: nginx:alpine
     container_name: nginx
-    restart: always
     ports:
       - "80:80"
     volumes:
       - ./dashboard:/usr/share/nginx/html:ro
 
+  earnapp:
+    image: fazalfarhan01/earnapp:latest
+    container_name: earnapp
+    restart: unless-stopped
+    privileged: true
+
+  honeygain:
+    image: honeygain/honeygain:latest
+    container_name: honeygain
+    restart: unless-stopped
+    command: ["./honeygain", "-tou-accept", "-email", "${HG_EMAIL}", "-pass", "${HG_PASS}"]
+
   netdata:
     image: netdata/netdata:stable
     container_name: netdata
-    restart: always
     ports:
       - "19999:19999"
     cap_add:
       - SYS_PTRACE
     security_opt:
       - apparmor:unconfined
-    volumes:
-      - /mnt/storage/netdata:/var/lib/netdata
-
-  portainer:
-    image: portainer/portainer-ce:latest
-    container_name: portainer
-    restart: always
-    ports:
-      - "9000:9000"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /mnt/storage/portainer:/data
+    restart: unless-stopped
 
   watchtower:
     image: containrrr/watchtower:latest
     container_name: watchtower
-    restart: always
-    command: --cleanup --schedule "0 0 * * *"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    command: --cleanup --interval 300
+    

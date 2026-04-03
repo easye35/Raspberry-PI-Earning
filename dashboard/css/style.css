@@ -1,255 +1,205 @@
-/* ---------------------------------------------------------
-   EarnBox UI — Original Theme (the one you liked)
-----------------------------------------------------------*/
-
-:root {
-  --bg: #0b0e11;
-  --bg-panel: #111418;
-  --bg-sidebar: #0a0c0f;
-
-  --text: #d0d4da;
-  --text-muted: #7a8088;
-
-  --accent: #3b82f6;
-  --accent-hover: #60a5fa;
-
-  --border: #1c1f26;
-
-  --success: #2ea043;
-  --warning: #d29922;
-  --danger: #f85149;
-
-  --radius: 10px;
-  --font: "Inter", sans-serif;
-}
-
-/* Base */
+/* GLOBAL ------------------------------------------------------ */
 
 body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font);
-  margin: 0;
-  padding: 0;
-  -webkit-font-smoothing: antialiased;
+    margin: 0;
+    padding: 0;
+    background: #0f0f0f;
+    color: #e5e5e5;
+    font-family: Arial, sans-serif;
+    overflow-x: hidden;
 }
 
-/* Sidebar */
+h1, h2, h3 {
+    margin: 0;
+    padding: 0;
+}
+
+p {
+    margin: 4px 0;
+}
+
+/* SIDEBAR ------------------------------------------------------ */
 
 .sidebar {
-  width: 240px;
-  background: var(--bg-sidebar);
-  height: 100vh;
-  position: fixed;
-  left: 0;
-  top: 0;
-  padding: 22px;
-  box-sizing: border-box;
-  border-right: 1px solid var(--border);
-  transition: transform 0.25s ease;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 230px;
+    height: 100vh;
+    background: #141414;
+    border-right: 1px solid #222;
+    transform: translateX(-230px);
+    transition: transform 0.25s ease;
+    z-index: 1000;
 }
 
-.sidebar.hidden {
-  transform: translateX(-260px);
+.sidebar.open {
+    transform: translateX(0);
 }
 
-.sidebar-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 28px;
+.sidebar-title {
+    font-size: 22px;
+    font-weight: bold;
+    padding: 20px;
+    background: #1c1c1c;
+    border-bottom: 1px solid #222;
 }
 
-.logo {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: 1px;
+.sidebar-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
 
-.nav-item {
-  padding: 12px 16px;
-  margin-bottom: 6px;
-  border-radius: var(--radius);
-  cursor: pointer;
-  color: var(--text-muted);
-  transition: background 0.15s ease, color 0.15s ease;
+.sidebar-menu li {
+    padding: 15px 20px;
+    cursor: pointer;
+    border-bottom: 1px solid #1a1a1a;
+    transition: background 0.2s;
 }
 
-.nav-item:hover {
-  background: #15191f;
-  color: var(--accent);
+.sidebar-menu li:hover {
+    background: #1f1f1f;
 }
 
-.nav-item.active {
-  background: #1a1f26;
-  color: var(--accent);
-}
-
-/* Topbar */
+/* TOPBAR ------------------------------------------------------ */
 
 .topbar {
-  position: fixed;
-  left: 240px;
-  right: 0;
-  top: 0;
-  height: 60px;
-  background: var(--bg-panel);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  padding: 0 20px;
-  box-sizing: border-box;
-  z-index: 10;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 55px;
+    background: #1a1a1a;
+    border-bottom: 1px solid #222;
+    display: flex;
+    align-items: center;
+    padding-left: 60px;
+    z-index: 900;
 }
 
-.page-title {
-  font-size: 20px;
-  font-weight: 600;
-  margin-left: 12px;
+.menu-btn {
+    position: absolute;
+    left: 15px;
+    top: 12px;
+    font-size: 26px;
+    background: none;
+    border: none;
+    color: #e5e5e5;
+    cursor: pointer;
 }
 
-.topbar-right {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.icon-btn {
-  background: none;
-  border: none;
-  color: var(--text);
-  font-size: 20px;
-  cursor: pointer;
-}
-
-/* Content */
+/* CONTENT ------------------------------------------------------ */
 
 .content {
-  margin-left: 240px;
-  padding: 24px;
-  padding-top: 80px;
+    margin-top: 70px;
+    padding: 20px;
+    transition: margin-left 0.25s ease;
 }
 
-/* Cards */
-
-.card {
-  background: var(--bg-panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0;
-  overflow: hidden;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+.content.shift {
+    margin-left: 230px;
 }
 
-.card-header {
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
-  font-size: 16px;
-  font-weight: 600;
+/* PANELS ------------------------------------------------------- */
+
+.panel {
+    background: #161616;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #222;
 }
 
-.card-body {
-  padding: 16px;
+/* DASHBOARD GRID ---------------------------------------------- */
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
 }
 
-/* Grid */
-
-.grid {
-  display: grid;
-  gap: 20px;
+.dash-card {
+    background: #141414;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #222;
 }
 
-.grid-2 {
-  grid-template-columns: repeat(2, 1fr);
+.status-good {
+    color: #00ff88;
+    font-weight: bold;
 }
 
-.grid-3 {
-  grid-template-columns: repeat(3, 1fr);
+/* CONTAINERS TABLE -------------------------------------------- */
+
+.refresh-btn {
+    background: #007bff;
+    border: none;
+    padding: 10px 18px;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 15px;
 }
 
-/* Tables */
-
-table {
-  width: 100%;
-  border-collapse: collapse;
+.refresh-btn:hover {
+    background: #0066d6;
 }
 
-th {
-  text-align: left;
-  padding: 12px;
-  border-bottom: 1px solid var(--border);
-  color: var(--text);
+.container-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
 }
 
-td {
-  padding: 10px;
-  border-bottom: 1px solid var(--border);
-  color: var(--text-muted);
+.container-table th,
+.container-table td {
+    padding: 12px;
+    border-bottom: 1px solid #222;
 }
 
-tr:hover {
-  background: rgba(255, 255, 255, 0.04);
+.container-table th {
+    background: #1c1c1c;
 }
 
-/* Status */
-
-.status-running { color: var(--success); }
-.status-warning { color: var(--warning); }
-.status-error { color: var(--danger); }
-
-/* Pills */
-
-.metric-pill {
-  background: var(--bg-panel);
-  padding: 6px 12px;
-  border-radius: 20px;
-  border: 1px solid var(--border);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+.container-table tr:hover {
+    background: #1a1a1a;
 }
 
-/* Settings */
+/* CHARTS ------------------------------------------------------- */
 
-.settings-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border);
+.chart-block {
+    margin-top: 25px;
+    padding: 20px;
+    background: #141414;
+    border: 1px solid #222;
+    border-radius: 8px;
 }
 
-.settings-label {
-  color: var(--text-muted);
+canvas {
+    background: #0f0f0f;
+    border: 1px solid #222;
+    border-radius: 6px;
 }
 
-.settings-control .btn {
-  margin-right: 8px;
+/* POWER BUTTONS ------------------------------------------------ */
+
+.power-btn {
+    background: #cc0000;
+    border: none;
+    padding: 12px 20px;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-right: 10px;
 }
 
-/* Buttons */
-
-.btn {
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  padding: 8px 14px;
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: 0.15s ease;
+.power-btn:hover {
+    background: #aa0000;
 }
 
-.btn:hover {
-  background: var(--accent-hover);
-}
+/* SETTINGS ----------------------------------------------------- */
 
-/* Animations */
-
-.fade-in {
-  animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+#settingsPage p {
+    margin-top: 10px;
 }
