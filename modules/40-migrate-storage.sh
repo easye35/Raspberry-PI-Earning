@@ -1,86 +1,37 @@
 #!/usr/bin/env bash
-set -euo pipefail
+# Module 40: Mount external storage and persist in fstab
 
-source "$LOG_LIB"
+set -Eeuo pipefail
 
-log::section "Migrating Appliance Data to External Storage"
+if [[ -n "${LOG_LIB:-}" && -f "$LOG_LIB" ]]; then source "$LOG_LIB"; else
+    log::info(){ echo "[INFO] $*"; }
+    log::warn(){ echo "[WARN] $*"; }
+    log::error(){ echo "[ERROR] $*"; }
+    log::success(){ echo "[SUCCESS] $*"; }
+    log::section(){ echo; echo "=== $* ==="; echo; }
+fi
 
-load_env() {
-    if [[ ! -f /tmp/storage.env ]]; then
-        log::die "Missing storage detection info — aborting."
-    fi
-    source /tmp/storage.env
+log::section "Mounting External Storage"
+
+STORAGE_ENV="/tmp/storage.env"
+source "$STORAGE_ENV"
+
+MOUNT_POINT="/mnt/storage"
+
+mkdir -p "$MOUNT_POINT"
+
+if ! mount | grep -q "$PARTITION"; then
+    log::info "Mounting $PARTITION → $MOUNT_POINT"
+    mount "$PARTITION" "$MOUNT_POINT"
+else
+    log::warn "$PARTITION already mounted."
+fi
+
+UUID="$(blkid -s UUID -o value "$PARTITION")"
+
+grep -q "$UUID" /etc/fstab || {
+    log::info "Adding to /etc/fstab"
+    echo "UUID=$UUID  $MOUNT_POINT  ext4  defaults,noatime  0  2" >> /etc/fstab
 }
 
-format_drive() {
-    local dev="$1"
-    log::step "Formatting $dev as ext4"
-
-    log::spinner "Formatting drive" mkfs.ext4 -F "$dev"
-}
-
-mount_drive() {
-    local dev="$1"
-
-    log::step "Mounting drive at /mnt/appliance-data"
-    mkdir -p /mnt/appliance-data
-
-    local uuid
-    uuid=$(blkid -s UUID -o value "$dev")
-
-    log::substep "UUID: $uuid"
-
-    mount "$dev" /mnt/appliance-data
-
-    log::substep "Updating /etc/fstab"
-    echo "UUID=$uuid /mnt/appliance-data ext4 defaults,noatime 0 2" >> /etc/fstab
-}
-
-migrate_docker() {
-    log::step "Migrating Docker data"
-
-    log::spinner "Stopping Docker" systemctl stop docker
-
-    mkdir -p /mnt/appliance-data/docker
-
-    log::spinner "Copying Docker data" rsync -aHAX /var/lib/docker/ /mnt/appliance-data/docker/
-
-    log::substep "Updating Docker daemon.json"
-    mkdir -p /etc/docker
-    cat >/etc/docker/daemon.json <<EOF
-{
-  "data-root": "/mnt/appliance-data/docker"
-}
-EOF
-
-    log::spinner "Restarting Docker" systemctl start docker
-}
-
-migrate_diagnostics() {
-    log::step "Migrating diagnostics logs"
-
-    mkdir -p /mnt/appliance-data/logs
-    log::spinner "Copying logs" rsync -a /var/log/appliance/ /mnt/appliance-data/logs/
-}
-
-main() {
-    load_env
-
-    if [[ "$STORAGE_AVAILABLE" -eq 0 ]]; then
-        log::warn "No storage available — skipping migration."
-        return 0
-    fi
-
-    local dev="$STORAGE_DEVICE"
-
-    log::title "Beginning migration to $dev"
-
-    format_drive "$dev"
-    mount_drive "$dev"
-    migrate_docker
-    migrate_diagnostics
-
-    log::success_block "Storage migration completed successfully."
-}
-
-main "$@"
+log::success "Mount + fstab complete."
