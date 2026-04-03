@@ -2,12 +2,16 @@
 set -Eeuo pipefail
 
 ###############################################################################
-# Load Logging Library (correct path)
+# Resolve module directory (always correct, no matter where installer runs)
 ###############################################################################
 
-# Always load logging from the modules directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOG_LIB="$SCRIPT_DIR/logging.sh"
+MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+###############################################################################
+# Load logging library (namespace style: log::info, log::section, etc.)
+###############################################################################
+
+LOG_LIB="$MODULE_DIR/logging.sh"
 
 if [[ -f "$LOG_LIB" ]]; then
     source "$LOG_LIB"
