@@ -1,38 +1,35 @@
 #!/bin/bash
 set -e
 
-echo "🔍 Auto-detecting Raspberry Pi on the network..."
+echo "🔍 Scanning network for Raspberry Pi..."
 
-# --- 1. Try to detect Pi via ARP scan (MAC prefix for Raspberry Pi Foundation: B8:27:EB or DC:A6:32 or E4:5F:01) ---
-PI_IP=$(arp -an | grep -Ei 'b8:27:eb|dc:a6:32|e4:5f:01' | awk '{print $2}' | tr -d '()' | head -n 1)
+# Detect local subnet (e.g., 192.168.1.0/24)
+SUBNET=$(ip route | awk '/src/ {print $1}' | head -n 1)
 
-# --- 2. If not found, try scanning common hostnames ---
-if [ -z "$PI_IP" ]; then
-    for host in raspberrypi earnbox pi-host; do
-        if ping -c1 -W1 "$host" >/dev/null 2>&1; then
-            PI_IP="$host"
-            break
-        fi
-    done
+if [ -z "$SUBNET" ]; then
+    echo "❌ Could not determine local subnet."
+    exit 1
 fi
 
-# --- 3. If still not found, try SSH known hosts ---
-if [ -z "$PI_IP" ]; then
-    PI_IP=$(grep -E "raspberrypi|earnbox" ~/.ssh/known_hosts | awk '{print $1}' | head -n 1)
-fi
+echo "🌐 Subnet detected: $SUBNET"
+echo "🔎 Running nmap scan (this may take ~5 seconds)..."
 
-# --- 4. If still nothing, fail gracefully ---
+# Scan for Raspberry Pi MAC prefixes
+PI_IP=$(sudo nmap -sn "$SUBNET" \
+    | awk '
+        /Nmap scan report/{ip=$5}
+        /MAC Address:/{if ($3 ~ /B8:27:EB|DC:A6:32|E4:5F:01|28:CD:C1|D8:3A:DD/) print ip}
+    ' \
+    | head -n 1)
+
 if [ -z "$PI_IP" ]; then
     echo "❌ Could not auto-detect Raspberry Pi on the network."
-    echo "Make sure the Pi is online and reachable."
     exit 1
 fi
 
 echo "✅ Raspberry Pi detected at: $PI_IP"
 
-# --- 5. Use detected host for SSH ---
 PI_HOST="pi@$PI_IP"
-
 BASE_DIR="earnbox"
 TARGET_DIR="$BASE_DIR/dashboard"
 
