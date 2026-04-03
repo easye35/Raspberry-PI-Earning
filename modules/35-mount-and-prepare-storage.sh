@@ -8,6 +8,12 @@ log::section "Preparing External Storage for Appliance"
 DEVICE="/dev/sda1"
 MOUNTPOINT="/mnt/appliance-data"
 
+
+create_mountpoint() {
+    log::step "Ensuring mountpoint exists"
+    sudo mkdir -p "$MOUNTPOINT"
+    log::ok "Mountpoint ready: $MOUNTPOINT"
+}
 detect_existing_mounts() {
     log::step "Checking for auto-mounted HDD"
 
@@ -16,18 +22,26 @@ detect_existing_mounts() {
 
     if [[ -n "$auto" && "$auto" != "$MOUNTPOINT" ]]; then
         log::warn "Drive is auto-mounted at: $auto"
-        log::spinner "Unmounting auto-mount" sudo umount "$auto"
+
+        # Try normal unmount
+        if ! sudo umount "$auto" 2>/dev/null; then
+            log::warn "Normal unmount failed, trying lazy unmount"
+            
+            # Try lazy unmount
+            if ! sudo umount -l "$auto" 2>/dev/null; then
+                log::warn "Lazy unmount failed, forcing unmount"
+
+                # Try forced unmount
+                sudo umount -f "$auto" 2>/dev/null || \
+                    log::die "Unable to unmount $auto — please close any file managers or terminals using it."
+            fi
+        fi
+
+        log::ok "Drive unmounted successfully."
     else
         log::substep "No conflicting auto-mounts."
     fi
 }
-
-create_mountpoint() {
-    log::step "Ensuring mountpoint exists"
-    sudo mkdir -p "$MOUNTPOINT"
-    log::ok "Mountpoint ready: $MOUNTPOINT"
-}
-
 mount_drive() {
     log::step "Mounting HDD to appliance mountpoint"
 
