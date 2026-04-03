@@ -1,0 +1,121 @@
+/* ============================================================
+   Raspberry Pi Docker Appliance — Layout & Utility Styles
+   Complements theme.css • Modern • Minimal • Responsive
+   ============================================================ */
+
+/* ------------------------------
+   Typography
+------------------------------ */
+h1, h2, h3 {
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+p, span, td, th {
+    font-size: 0.95rem;
+    color: var(--text);
+}
+
+.text-muted {
+    color: var(--text-muted);
+}
+
+/* ------------------------------
+   Stat Values
+------------------------------ */
+.stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-top: 6px;
+    color: var(--accent);
+    text-shadow: 0 0 12px var(--accent-glow);
+}
+
+/* ------------------------------
+   Navigation (if added later)
+------------------------------ */
+.navbar {
+    display: flex;
+    gap: 20px;
+    padding: 12px 0;
+}
+
+.nav-link {
+    color: var(--text-dim);
+    font-weight: 500;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    transition: color var(--transition), background var(--transition);
+}
+
+.nav-link:hover {
+    background: var(--bg-hover);
+    color: var(--accent);
+}
+
+.nav-link.active {
+    background: var(--accent);
+    color: #000;
+}
+
+/* ------------------------------
+   Cards (extra polish)
+------------------------------ */
+.card h3 {
+    font-size: 1.1rem;
+    margin-bottom: 4px;
+    color: var(--text-dim);
+}
+
+.card p {
+    margin-top: 4px;
+}
+
+/* ------------------------------
+   Responsive Tweaks
+------------------------------ */
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 20px;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+    }
+}
+
+/* ------------------------------
+   Smooth Fade-In Animation
+------------------------------ */
+.fade-in {
+    opacity: 0;
+    transform: translateY(6px);
+    animation: fadeIn 0.4s ease forwards;
+}
+
+@keyframes fadeIn {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ------------------------------
+   Loading Skeletons
+------------------------------ */
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        var(--bg-alt),
+        var(--bg-hover),
+        var(--bg-alt)
+    );
+    background-size: 200% 100%;
+    animation: skeleton 1.4s ease infinite;
+    border-radius: var(--radius-sm);
+}
+
+@keyframes skeleton {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
