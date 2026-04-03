@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>EarnBox Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar glass">
+        <div class="sidebar-header">
+            <div class="logo neon">EARNBOX</div>
+            <button id="closeSidebar" class="icon-btn">✕</button>
+        </div>
+
+        <nav class="nav">
+            <div class="nav-item" data-page="dashboard">Dashboard</div>
+            <div class="nav-item" data-page="containers">Containers</div>
+            <div class="nav-item" data-page="system">System</div>
+            <div class="nav-item" data-page="power">Power</div>
+            <div class="nav-item" data-page="earnings">Earnings</div>
+            <div class="nav-item" data-page="charts">Charts</div>
+            <div class="nav-item" data-page="settings">Settings</div>
+        </nav>
+    </aside>
+
+    <!-- Top Bar -->
+    <header class="topbar glass">
+        <button id="openSidebar" class="icon-btn">☰</button>
+        <div id="pageTitle" class="page-title neon">Dashboard</div>
+
+        <div class="topbar-right">
+            <div id="refreshStatus" class="refresh-status">Auto-refresh: 5s</div>
+            <button id="themeToggle" class="icon-btn">🌓</button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="content" class="content"></main>
+
+    <!-- JS Modules -->
+    <script src="js/system.js"></script>
+    <script src="js/containers.js"></script>
+    <script src="js/earnings.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/app.js"></script>
+
+</body>
+</html>
