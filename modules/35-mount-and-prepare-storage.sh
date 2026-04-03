@@ -1,14 +1,25 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Resolve module directory
+###############################################################################
+# Resolve module directory and load shared libraries
+###############################################################################
+
 MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Load logging
 source "$MODULE_DIR/logging.sh"
-
-# Load utils
 source "$MODULE_DIR/utils.sh"
+
+###############################################################################
+# Smart‑Mode External Storage Preparation
+###############################################################################
+
+log::section "Preparing External Storage (Smart Mode)"
+
+DEVICE="/dev/sda"
+PARTITION="/dev/sda1"
+MOUNT_POINT="/mnt/storage"
+
+log::info "Using device: $DEVICE"
 
 ###############################################################################
 # Detect existing partition
