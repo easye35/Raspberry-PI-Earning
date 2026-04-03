@@ -1,17 +1,14 @@
 #!/usr/bin/env bash
-# Module 30: Detect external storage (POSIX-safe)
-
 set -Eeuo pipefail
 
-# Load logging
-if [[ -n "${LOG_LIB:-}" && -f "$LOG_LIB" ]]; then source "$LOG_LIB"; else
-    log::info(){ echo "[INFO] $*"; }
-    log::warn(){ echo "[WARN] $*"; }
-    log::error(){ echo "[ERROR] $*"; }
-    log::success(){ echo "[SUCCESS] $*"; }
-    log::section(){ echo; echo "=== $* ==="; echo; }
-fi
+# Resolve module directory
+MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Load logging
+source "$MODULE_DIR/logging.sh"
+
+# Load utils
+source "$MODULE_DIR/utils.sh"
 log::section "Detecting External Storage"
 
 STORAGE_ENV="/tmp/storage.env"
