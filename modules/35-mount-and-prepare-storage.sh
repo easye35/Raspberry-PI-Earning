@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Module 35: Partition + Format external drive (dynamic, BusyBox-safe)
+# Module 35: Prepare external drive (dynamic, BusyBox-safe, non-destructive)
 
 set -Eeuo pipefail
 
@@ -12,7 +12,7 @@ if [[ -n "${LOG_LIB:-}" && -f "$LOG_LIB" ]]; then source "$LOG_LIB"; else
     log::section(){ echo; echo "=== $* ==="; echo; }
 fi
 
-log::section "Partitioning & Formatting External Drive (Dynamic)"
+log::section "Preparing External Storage (Dynamic)"
 
 STORAGE_ENV="/tmp/storage.env"
 source "$STORAGE_ENV"
@@ -25,7 +25,7 @@ fi
 log::info "Using device: $DEVICE"
 
 ###############################################################################
-# NEW: BusyBox-safe partition detection (no TYPE column needed)
+# Detect existing partitions WITHOUT relying on TYPE (BusyBox-safe)
 ###############################################################################
 PARTITION="$(lsblk -n -o NAME "$DEVICE" | grep -E '^sda[0-9]+' | head -n 1)"
 
@@ -44,7 +44,7 @@ if [[ -n "$PARTITION" ]]; then
 fi
 
 ###############################################################################
-# If we reach here, the disk truly has no partitions — safe to create one
+# If no partition exists, create one (safe path)
 ###############################################################################
 log::info "No partition found — creating GPT + ext4 partition"
 
