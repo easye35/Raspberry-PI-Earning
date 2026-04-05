@@ -1,68 +1,68 @@
 #!/usr/bin/env bash
-# EarnApp module (native binary, official installer)
-# Requires: lib/logging.sh, lib/system.sh
+set -euo pipefail
 
-EARNAPP_BIN="/usr/bin/earnapp"
-EARNAPP_SERVICE="earnapp"
-EARNAPP_DIR="/var/lib/earnapp"
+MODULE_NAME="EarnApp"
+LOG_FILE="/var/log/earnbox/installer.log"
 
-##############################################
-# Internal helpers
-##############################################
-
-earnapp::_install_native() {
-  log::info "Installing EarnApp using official BrightData installer…"
-
-  wget -qO- https://brightdata.com/static/earnapp/install.sh | sudo bash || \
-    log::die "EarnApp installation failed."
-
-  log::ok "EarnApp installed successfully."
+log() {
+    echo "[$MODULE_NAME] $1" | tee -a "$LOG_FILE"
 }
 
-earnapp::_ensure_service() {
-  log::info "Ensuring EarnApp systemd service is enabled…"
+install_earnapp() {
+    log "Starting EarnApp installation..."
 
-  systemctl enable "${EARNAPP_SERVICE}" >/dev/null 2>&1 || true
-  systemctl restart "${EARNAPP_SERVICE}" || \
-    log::die "Failed to start EarnApp service."
+    # Ensure wget exists
+    if ! command -v wget >/dev/null 2>&1; then
+        log "wget not found, installing..."
+        sudo apt-get update -y >> "$LOG_FILE" 2>&1
+        sudo apt-get install -y wget >> "$LOG_FILE" 2>&1
+    fi
 
-  log::ok "EarnApp service is running."
+    # Download installer
+    TMP_SCRIPT="/tmp/earnapp.sh"
+    log "Downloading EarnApp installer..."
+    wget -qO- https://brightdata.com/static/earnapp/install.sh > "$TMP_SCRIPT"
+
+    # Basic sanity check
+    if ! grep -q "earnapp" "$TMP_SCRIPT"; then
+        log "ERROR: Installer script failed sanity check. Aborting."
+        exit 1
+    fi
+
+    # Run installer
+    log "Running EarnApp installer..."
+    sudo bash "$TMP_SCRIPT" >> "$LOG_FILE" 2>&1
+
+    log "EarnApp installation complete."
 }
 
-earnapp::_verify() {
-  if [[ ! -f "${EARNAPP_BIN}" ]]; then
-    log::fail "EarnApp binary missing."
-    return 1
-  fi
+health_check() {
+    log "Running EarnApp health check..."
 
-  log::info "EarnApp version: $(${EARNAPP_BIN} --version 2>/dev/null || echo 'unknown')"
+    if systemctl is-active --quiet earnapp; then
+        log "EarnApp service is active."
+    else
+        log "EarnApp service is NOT active. Attempting restart..."
+        sudo systemctl restart earnapp || true
+    fi
+
+    if systemctl is-active --quiet earnapp; then
+        log "EarnApp is healthy."
+    else
+        log "EarnApp is still not running. Manual intervention required."
+    fi
 }
 
-##############################################
-# Public API
-##############################################
-
-earnapp::install() {
-  log::section "EarnApp (Native Binary) – Install"
-
-  earnapp::_install_native
-  earnapp::_ensure_service
-  earnapp::_verify
-}
-
-earnapp::update() {
-  log::section "EarnApp – Update"
-
-  earnapp::_install_native
-  earnapp::_ensure_service
-  earnapp::_verify
-}
-
-earnapp::register() {
-  system::register_container "earnapp" "EarnApp native earning service"
-}
-
-earnapp::init() {
-  earnapp::install
-  earnapp::register
-}
+case "${1:-}" in
+    install)
+        install_earnapp
+        health_check
+        ;;
+    health)
+        health_check
+        ;;
+    *)
+        echo "Usage: $0 {install|health}"
+        exit 1
+        ;;
+esac
