@@ -2,6 +2,52 @@
 set -e
 
 ###############################################
+# Docker Preflight + Auto‑Installer
+###############################################
+
+install_docker() {
+  info "Installing Docker..."
+  curl -fsSL https://get.docker.com | sudo sh || err "Docker installation failed."
+  ok "Docker installed."
+}
+
+ensure_docker_group() {
+  if ! groups "$USER" | grep -q docker; then
+    info "Adding user '$USER' to docker group..."
+    sudo usermod -aG docker "$USER"
+    ok "User added to docker group."
+    info "Reloading group membership..."
+    exec sg docker "$0" "$@"
+  fi
+}
+
+check_docker() {
+  if ! command -v docker >/dev/null 2>&1; then
+    warn "Docker not found."
+    install_docker
+  else
+    ok "Docker is installed."
+  fi
+}
+
+check_compose() {
+  if ! docker compose version >/dev/null 2>&1; then
+    warn "Docker Compose v2 not found."
+    info "Installing Docker Compose plugin..."
+    sudo apt-get update -y
+    sudo apt-get install -y docker-compose-plugin || err "Failed to install docker-compose-plugin."
+  else
+    ok "Docker Compose v2 is installed."
+  fi
+}
+
+# Run checks
+check_docker
+ensure_docker_group
+check_compose
+
+ok "Docker environment ready."
+###############################################
 #  EarnBox Appliance‑Grade Installer
 #  Self‑locating, sudo‑safe, zero‑touch
 ###############################################
