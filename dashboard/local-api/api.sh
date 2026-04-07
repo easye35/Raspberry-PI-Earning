@@ -33,18 +33,18 @@ CONTAINER_JSON="${CONTAINER_JSON%,}"
 
 
 # ---------------------------------------------------------
-# EARNAPP STATUS
+# EarnApp Cloud API (Native Linux Install)
 # ---------------------------------------------------------
 
-EARNAPP_EARNINGS="0.00"
-EARNAPP_STATUS="unknown"
-EARNAPP_LAST="unknown"
+EARNAPP_TOKEN=$(cat /etc/earnapp/tracking_id)
 
-if docker ps --format '{{.Names}}' | grep -q "earnapp"; then
-    EARNAPP_EARNINGS=$(docker exec earnapp cat /app/data/earnings.txt 2>/dev/null | head -n 1)
-    EARNAPP_STATUS=$(docker exec earnapp cat /app/data/status.txt 2>/dev/null | head -n 1)
-    EARNAPP_LAST=$(docker exec earnapp cat /app/data/last_checkin.txt 2>/dev/null | head -n 1)
-fi
+EARNAPP_JSON=$(curl -s -H "Authorization: Bearer $EARNAPP_TOKEN" \
+    https://earnapp.com/api/sdk/v1/devices)
+
+# Parse fields
+EARNAPP_EARNINGS=$(echo "$EARNAPP_JSON" | jq -r '.devices[0].earnings.total // "0.00"')
+EARNAPP_STATUS=$(echo "$EARNAPP_JSON" | jq -r '.devices[0].status // "unknown"')
+EARNAPP_LAST=$(echo "$EARNAPP_JSON" | jq -r '.devices[0].last_checkin // "unknown"')
 
 
 # ---------------------------------------------------------
