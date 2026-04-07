@@ -1,0 +1,226 @@
+/* ---------------------------------------------------------
+   CYBERPUNK GLASS-NEON THEME
+   EarnBox Dashboard — Floating Sidebar SPA
+--------------------------------------------------------- */
+
+/* Global Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Segoe UI", Roboto, sans-serif;
+}
+
+/* Background — Dark Cyberpunk Gradient */
+body {
+    background: radial-gradient(circle at top left, #1a002b, #05010a 60%, #000000);
+    color: #e0d7ff;
+    overflow-x: hidden;
+    height: 100vh;
+}
+
+/* ---------------------------------------------------------
+   FLOATING GLASS SIDEBAR
+--------------------------------------------------------- */
+
+.sidebar {
+    position: fixed;
+    top: 50%;
+    left: 30px;
+    transform: translateY(-50%);
+    width: 240px;
+    padding: 20px;
+    background: rgba(40, 0, 70, 0.35);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(180, 0, 255, 0.4);
+    border-radius: 20px;
+    box-shadow: 0 0 25px rgba(180, 0, 255, 0.4);
+    transition: all 0.4s ease;
+    z-index: 1000;
+}
+
+.sidebar.collapsed {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-50%) scale(0.8);
+}
+
+/* Sidebar Header */
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.sidebar-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #d28aff;
+    text-shadow: 0 0 10px #b300ff;
+}
+
+.sidebar-toggle {
+    cursor: pointer;
+    font-size: 1.4rem;
+    color: #e0d7ff;
+    transition: 0.3s;
+}
+
+.sidebar-toggle:hover {
+    color: #d28aff;
+    text-shadow: 0 0 10px #b300ff;
+}
+
+/* Sidebar Buttons */
+.sidebar-links {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.nav-btn {
+    padding: 12px 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(180, 0, 255, 0.3);
+    border-radius: 12px;
+    color: #e0d7ff;
+    cursor: pointer;
+    font-size: 1rem;
+    text-align: left;
+    transition: all 0.25s ease;
+}
+
+.nav-btn:hover {
+    background: rgba(180, 0, 255, 0.2);
+    box-shadow: 0 0 12px rgba(180, 0, 255, 0.5);
+}
+
+.nav-btn.active {
+    background: rgba(180, 0, 255, 0.35);
+    box-shadow: 0 0 15px rgba(180, 0, 255, 0.7);
+}
+
+/* ---------------------------------------------------------
+   NEON ORB (Collapsed Sidebar)
+--------------------------------------------------------- */
+
+.sidebar-orb {
+    position: fixed;
+    top: 50%;
+    left: 30px;
+    transform: translateY(-50%);
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    background: rgba(40, 0, 70, 0.5);
+    border: 2px solid rgba(180, 0, 255, 0.6);
+    box-shadow: 0 0 25px rgba(180, 0, 255, 0.7);
+    backdrop-filter: blur(10px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    color: #e0d7ff;
+    font-size: 1.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 1001;
+}
+
+.sidebar-orb.visible {
+    display: flex;
+}
+
+.sidebar-orb:hover {
+    box-shadow: 0 0 35px rgba(180, 0, 255, 1);
+    transform: translateY(-50%) scale(1.1);
+}
+
+/* ---------------------------------------------------------
+   MAIN VIEW CONTAINER
+--------------------------------------------------------- */
+
+.view-container {
+    margin-left: 320px;
+    padding: 40px;
+    transition: margin-left 0.4s ease;
+}
+
+.sidebar.collapsed ~ .view-container {
+    margin-left: 120px;
+}
+
+/* ---------------------------------------------------------
+   CARDS (Frosted Glass Panels)
+--------------------------------------------------------- */
+
+.card {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(180, 0, 255, 0.25);
+    border-radius: 18px;
+    padding: 20px;
+    margin-bottom: 25px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0 20px rgba(180, 0, 255, 0.25);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 0 30px rgba(180, 0, 255, 0.45);
+    transform: translateY(-3px);
+}
+
+/* Card Title */
+.card-title {
+    font-size: 1.3rem;
+    margin-bottom: 10px;
+    color: #d28aff;
+    text-shadow: 0 0 8px #b300ff;
+}
+
+/* Value Change Animation */
+.value-updated {
+    animation: glowPulse 0.8s ease;
+}
+
+@keyframes glowPulse {
+    0% { text-shadow: 0 0 0px #b300ff; }
+    50% { text-shadow: 0 0 15px #b300ff; }
+    100% { text-shadow: 0 0 0px #b300ff; }
+}
+
+/* ---------------------------------------------------------
+   LOG VIEWER
+--------------------------------------------------------- */
+
+.log-box {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(180, 0, 255, 0.3);
+    border-radius: 12px;
+    padding: 15px;
+    height: 350px;
+    overflow-y: auto;
+    font-family: monospace;
+    color: #d8caff;
+    white-space: pre-wrap;
+}
+
+/* ---------------------------------------------------------
+   RESPONSIVE
+--------------------------------------------------------- */
+
+@media (max-width: 900px) {
+    .view-container {
+        margin-left: 40px;
+        padding: 20px;
+    }
+
+    .sidebar {
+        left: 10px;
+        width: 200px;
+    }
+
+    .sidebar-orb {
+        left: 10px;
+    }
+}
