@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EarnBox Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <!-- Floating Glass Sidebar -->
+    <div id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title">EarnBox</div>
+            <div id="sidebarToggle" class="sidebar-toggle">☰</div>
+        </div>
+
+        <div class="sidebar-links">
+            <button class="nav-btn" data-view="dashboard">Dashboard</button>
+            <button class="nav-btn" data-view="containers">Containers</button>
+            <button class="nav-btn" data-view="system">System</button>
+            <button class="nav-btn" data-view="earnings">Earnings</button>
+            <button class="nav-btn" data-view="logs">Logs</button>
+        </div>
+    </div>
+
+    <!-- Neon Orb (collapsed sidebar) -->
+    <div id="sidebarOrb" class="sidebar-orb">☰</div>
+
+    <!-- Main Content -->
+    <div id="view-container" class="view-container">
+        <!-- JS will inject views here -->
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
