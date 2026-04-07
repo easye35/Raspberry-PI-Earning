@@ -126,7 +126,7 @@ install_earnapp_native() {
   fi
 }
 
-install_earnapp_native()
+install_earnapp_native
 
 ###############################################
 # User Prompts for Docker Services
