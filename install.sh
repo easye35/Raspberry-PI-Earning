@@ -102,28 +102,22 @@ install_earnapp_native() {
   wget -qO- https://brightdata.com/static/earnapp/install.sh > /tmp/earnapp_install.sh \
     || err "Failed to download EarnApp installer."
 
-  sudo bash /tmp/earnapp_install.sh \
+  # Capture installer output
+  INSTALL_OUTPUT=$(sudo bash /tmp/earnapp_install.sh 2>&1) \
     || err "EarnApp installer failed."
+
+  echo "$INSTALL_OUTPUT"
 
   ok "EarnApp installed."
 
-  info "Checking EarnApp service status..."
-  if systemctl is-active --quiet earnapp; then
-    ok "EarnApp service is running."
-  else
-    warn "EarnApp service is not running. Attempting to start..."
-    sudo systemctl start earnapp || err "Failed to start EarnApp service."
-  fi
+  # Extract pairing URL directly from installer output
+  EARNAPP_PAIR_URL=$(echo "$INSTALL_OUTPUT" | grep -o 'https://earnapp\.com[^ ]*' | tail -n 1)
 
-  info "Retrieving EarnApp pairing URL..."
-  PAIR_URL=$(sudo journalctl -u earnapp -n 200 | grep -o 'https://app\.earnapp\.com/device/[^ ]*' | tail -n 1 || true)
-
-  if [[ -z "$PAIR_URL" ]]; then
+  if [[ -z "$EARNAPP_PAIR_URL" ]]; then
     warn "Could not automatically detect EarnApp pairing URL."
     echo "You can view it manually with:"
     echo "  sudo journalctl -u earnapp -f"
   else
-    EARNAPP_PAIR_URL="$PAIR_URL"
     ok "EarnApp pairing URL captured."
   fi
 }
