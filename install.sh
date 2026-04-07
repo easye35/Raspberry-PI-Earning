@@ -23,19 +23,32 @@ install_docker() {
   ok "Docker installed."
 }
 
+###############################################
+# Correct User Detection (sudo‑safe)
+###############################################
+
+# Detect the REAL user, even when script is run with sudo
+REAL_USER="${SUDO_USER:-$USER}"
+
+info "Detected invoking user: $REAL_USER"
+
+###############################################
+# Docker Group Fix (for REAL user)
+###############################################
+
 ensure_docker_group() {
-  # If already in docker group, do nothing
-  if groups "$USER" | grep -q '\bdocker\b'; then
-    ok "User '$USER' is already in docker group."
+  if groups "$REAL_USER" | grep -q '\bdocker\b'; then
+    ok "User '$REAL_USER' already in docker group."
     return
   fi
 
-  info "Adding user '$USER' to docker group..."
-  sudo usermod -aG docker "$USER"
-  ok "User added to docker group."
+  info "Adding '$REAL_USER' to docker group..."
+  sudo usermod -aG docker "$REAL_USER"
+  ok "User '$REAL_USER' added to docker group."
 
-  info "Re-running script inside docker group..."
-  exec sg docker "$0"
+  info "Reloading group membership..."
+  # Restart the script as the REAL user inside the docker group
+  exec sudo -u "$REAL_USER" sg docker "$0"
 }
 
 check_docker() {
