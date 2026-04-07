@@ -248,6 +248,48 @@ docker compose -f "$COMPOSE_FILE" up -d
 
 ok "Docker stack deployment complete."
 
+echo ">>> Setting up EarnBox Dashboard API..."
+
+# Ensure local-api directory exists
+mkdir -p "$REPO_PATH/local-api"
+
+# Ensure api.sh is executable
+chmod +x "$REPO_PATH/local-api/api.sh"
+
+# Install systemd service
+sudo cp "$REPO_PATH/local-api/api.service" /etc/systemd/system/api.service
+sudo systemctl daemon-reload
+sudo systemctl enable api.service
+sudo systemctl restart api.service
+
+echo ">>> API service installed and running."
+
+# Install dependencies
+echo ">>> Installing required packages..."
+sudo apt-get update -y
+sudo apt-get install -y smartmontools
+
+# Ensure vcgencmd exists (Raspberry Pi OS)
+if ! command -v vcgencmd >/dev/null; then
+    echo ">>> WARNING: vcgencmd not found. Installing raspberrypi-utils..."
+    sudo apt-get install -y libraspberrypi-bin
+fi
+
+echo ">>> Dependencies installed."
+
+# Ensure dashboard is web-served
+if [ ! -d /var/www/html/dashboard ]; then
+    echo ">>> Linking dashboard to /var/www/html/dashboard..."
+    sudo ln -s "$REPO_PATH/dashboard" /var/www/html/dashboard
+fi
+
+# Ensure local-api is web-served
+if [ ! -d /var/www/html/local-api ]; then
+    echo ">>> Linking local-api to /var/www/html/local-api..."
+    sudo ln -s "$REPO_PATH/local-api" /var/www/html/local-api
+fi
+
+echo ">>> Dashboard and API are now web-accessible."
 ###############################################
 # Final Output
 ###############################################
