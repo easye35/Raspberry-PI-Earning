@@ -14,6 +14,13 @@ warn()  { echo -e "${YELLOW}[WARN]${RESET} $1"; }
 err()   { echo -e "${RED}[ERROR]${RESET} $1"; exit 1; }
 
 ###############################################
+# Correct User Detection (sudo‑safe)
+###############################################
+
+REAL_USER="${SUDO_USER:-$USER}"
+info "Detected invoking user: $REAL_USER"
+
+###############################################
 # Docker Preflight + Auto‑Installer
 ###############################################
 
@@ -22,19 +29,6 @@ install_docker() {
   curl -fsSL https://get.docker.com | sudo sh || err "Docker installation failed."
   ok "Docker installed."
 }
-
-###############################################
-# Correct User Detection (sudo‑safe)
-###############################################
-
-# Detect the REAL user, even when script is run with sudo
-REAL_USER="${SUDO_USER:-$USER}"
-
-info "Detected invoking user: $REAL_USER"
-
-###############################################
-# Docker Group Fix (for REAL user)
-###############################################
 
 ensure_docker_group() {
   if groups "$REAL_USER" | grep -q '\bdocker\b'; then
@@ -46,9 +40,8 @@ ensure_docker_group() {
   sudo usermod -aG docker "$REAL_USER"
   ok "User '$REAL_USER' added to docker group."
 
-  info "Reloading group membership..."
-  # Restart the script as the REAL user inside the docker group
-  exec sudo -u "$REAL_USER" sg docker "$0"
+  info "Re-running script inside docker group as '$REAL_USER'..."
+  exec sudo -u "$REAL_USER" sg docker "$0" "$@"
 }
 
 check_docker() {
@@ -71,7 +64,6 @@ check_compose() {
   fi
 }
 
-# Run checks
 check_docker
 check_compose
 ensure_docker_group
@@ -91,13 +83,58 @@ info "Repo root: $REPO_ROOT"
 info "Data root: $DATA_ROOT"
 
 ###############################################
-# User Prompts
+# Native EarnApp Installer (Official)
 ###############################################
 
-read -rp "Install EarnApp? (Y/n): " INSTALL_EARNAPP
-INSTALL_EARNAPP=${INSTALL_EARNAPP:-Y}
+EARNAPP_PAIR_URL=""
 
-read -rp "Install Honeygain? (Y/n): " INSTALL_HONEYGAIN
+install_earnapp_native() {
+  read -rp "Install EarnApp natively (official method)? (Y/n): " INSTALL_EARNAPP
+  INSTALL_EARNAPP=${INSTALL_EARNAPP:-Y}
+
+  if [[ ! "$INSTALL_EARNAPP" =~ ^[Yy]$ ]]; then
+    warn "Skipping native EarnApp installation."
+    return
+  fi
+
+  info "Installing EarnApp natively using the official installer..."
+
+  curl -fsSL https://app.earnapp.com/install.sh -o /tmp/earnapp_install.sh \
+    || err "Failed to download EarnApp installer."
+
+  sudo bash /tmp/earnapp_install.sh \
+    || err "EarnApp installer failed."
+
+  ok "EarnApp installed."
+
+  info "Checking EarnApp service status..."
+  if systemctl is-active --quiet earnapp; then
+    ok "EarnApp service is running."
+  else
+    warn "EarnApp service is not running. Attempting to start..."
+    sudo systemctl start earnapp || err "Failed to start EarnApp service."
+  fi
+
+  info "Retrieving EarnApp pairing URL..."
+  PAIR_URL=$(sudo journalctl -u earnapp -n 200 | grep -o 'https://app\.earnapp\.com/device/[^ ]*' | tail -n 1 || true)
+
+  if [[ -z "$PAIR_URL" ]]; then
+    warn "Could not automatically detect EarnApp pairing URL."
+    echo "You can view it manually with:"
+    echo "  sudo journalctl -u earnapp -f"
+  else
+    EARNAPP_PAIR_URL="$PAIR_URL"
+    ok "EarnApp pairing URL captured."
+  fi
+}
+
+install_earnapp_native
+
+###############################################
+# User Prompts for Docker Services
+###############################################
+
+read -rp "Install Honeygain in Docker? (Y/n): " INSTALL_HONEYGAIN
 INSTALL_HONEYGAIN=${INSTALL_HONEYGAIN:-Y}
 
 HONEYGAIN_EMAIL=""
@@ -113,73 +150,28 @@ fi
 # Data Directories
 ###############################################
 
-mkdir -p \
-  "$DATA_ROOT/earnapp" \
+sudo mkdir -p \
   "$DATA_ROOT/honeygain" \
   "$DATA_ROOT/netdata" \
-  "$DATA_ROOT/portainer"
+  "$DATA_ROOT/portainer" \
+  "$DATA_ROOT/diun"
 
-ok "Data directories created."
+sudo chown -R "$REAL_USER":"$REAL_USER" "$DATA_ROOT" || true
 
-###############################################
-# EarnApp Volume Permission Preflight
-###############################################
+ok "Data directories prepared."
 
-check_earnapp_permissions() {
-  local dir="$DATA_ROOT/earnapp"
-
-  info "Checking EarnApp volume permissions at: $dir"
-
-  # Ensure directory exists
-  sudo mkdir -p "$dir"
-
-  # Check if REAL_USER can write to it
-  if sudo -u "$REAL_USER" test -w "$dir"; then
-    ok "Host permissions OK for user '$REAL_USER'."
-  else
-    warn "User '$REAL_USER' cannot write to $dir. Fixing..."
-    sudo chown -R "$REAL_USER":"$REAL_USER" "$dir"
-    sudo chmod -R 775 "$dir"
-    ok "Permissions fixed."
-  fi
-
-  # Check if Docker can write to it (inside container)
-  info "Verifying Docker write access..."
-  if docker run --rm -v "$dir":/testdir alpine sh -c "touch /testdir/.write_test" 2>/dev/null; then
-    ok "Docker can write to EarnApp volume."
-  else
-    err "Docker CANNOT write to $dir. EarnApp would crash with exit code 255."
-  fi
-}
-
-check_earnapp_permissions
 ###############################################
 # Generate docker-compose.yml
 ###############################################
 
+info "Generating docker-compose.yml..."
 cat > "$COMPOSE_FILE" <<EOF
 services:
 EOF
 
-# EarnApp
-if [[ "$INSTALL_EARNAPP" =~ ^[Yy]$ ]]; then
-  ok "EarnApp will be installed."
-  cat >> "$COMPOSE_FILE" <<EOF
-
-  earnapp:
-    image: fazalfarhan01/earnapp:latest
-    container_name: earnapp
-    restart: always
-    volumes:
-      - $DATA_ROOT/earnapp:/etc/earnapp
-EOF
-else
-  warn "EarnApp installation skipped."
-fi
-
 # Honeygain
 if [[ "$INSTALL_HONEYGAIN" =~ ^[Yy]$ && -n "$HONEYGAIN_EMAIL" && -n "$HONEYGAIN_PASSWORD" ]]; then
-  ok "Honeygain will be installed."
+  ok "Honeygain will be installed in Docker."
   cat >> "$COMPOSE_FILE" <<EOF
 
   honeygain:
@@ -229,19 +221,25 @@ cat >> "$COMPOSE_FILE" <<EOF
       - /var/run/docker.sock:/var/run/docker.sock
       - $DATA_ROOT/portainer:/data
 
-  watchtower:
-    image: containrrr/watchtower:latest
-    container_name: watchtower
+  diun:
+    image: crazymax/diun:latest
+    container_name: diun
     restart: always
-    command: --cleanup --schedule "0 0 * * *"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - $DATA_ROOT/diun:/data
+    environment:
+      - TZ=America/Edmonton
+      - LOG_LEVEL=info
+      - DIUN_WATCH_WORKERS=20
+      - DIUN_WATCH_SCHEDULE=0 */6 * * *
+      - DIUN_PROVIDERS_DOCKER=true
 EOF
 
 ok "docker-compose.yml generated."
 
 ###############################################
-# Deploy Stack
+# Deploy Docker Stack
 ###############################################
 
 info "Pulling containers..."
@@ -250,9 +248,24 @@ docker compose -f "$COMPOSE_FILE" pull
 info "Starting containers..."
 docker compose -f "$COMPOSE_FILE" up -d
 
-ok "Deployment complete."
+ok "Docker stack deployment complete."
+
+###############################################
+# Final Output
+###############################################
+
 echo
-ok "Your EarnBox stack is now running."
-echo "Dashboard: http://<your-pi-ip>"
-echo "Netdata:   http://<your-pi-ip>:19999"
-echo "Portainer: http://<your-pi-ip>:9000"
+ok "EarnBox installation complete."
+
+echo
+echo "Dashboard (nginx):  http://<your-pi-ip>/"
+echo "Netdata:            http://<your-pi-ip>:19999/"
+echo "Portainer:          http://<your-pi-ip>:9000/"
+
+if [[ -n "$EARNAPP_PAIR_URL" ]]; then
+  echo
+  echo -e "${GREEN}EarnApp Pairing URL:${RESET}"
+  echo "$EARNAPP_PAIR_URL"
+  echo
+  echo "Open this link in your browser to activate EarnApp on this device."
+fi
