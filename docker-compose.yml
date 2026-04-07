@@ -57,9 +57,17 @@ services:
       - apparmor:unconfined
     restart: unless-stopped
 
-  watchtower:
-    image: containrrr/watchtower:latest
-    container_name: watchtower
-    restart: unless-stopped
-    command: --cleanup --interval 300
+   diun:
+    image: crazymax/diun:latest
+    container_name: diun
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - $DATA_ROOT/diun:/data
+    environment:
+      - TZ=America/Edmonton
+      - LOG_LEVEL=info
+      - DIUN_WATCH_WORKERS=20
+      - DIUN_WATCH_SCHEDULE=0 */6 * * *
+      - DIUN_PROVIDERS_DOCKER=true
     
