@@ -1,12 +1,40 @@
 #!/usr/bin/env bash
 set -e
 
-DATA_ROOT="/mnt/storage"
-REPO_ROOT="$HOME/Raspberry-PI-docker-Earning"
+###############################################
+#  EarnBox Appliance‑Grade Installer
+#  Self‑locating, sudo‑safe, zero‑touch
+###############################################
+
+# --- Color Output ---
+RED="\e[31m"; GREEN="\e[32m"; YELLOW="\e[33m"; BLUE="\e[34m"; RESET="\e[0m"
+
+info()  { echo -e "${BLUE}[INFO]${RESET} $1"; }
+ok()    { echo -e "${GREEN}[OK]${RESET} $1"; }
+warn()  { echo -e "${YELLOW}[WARN]${RESET} $1"; }
+err()   { echo -e "${RED}[ERROR]${RESET} $1"; exit 1; }
+
+# --- Self‑locating repo root ---
+SCRIPT_DIR="$(realpath "$(dirname "$0")")"
+REPO_ROOT="$SCRIPT_DIR"
 COMPOSE_FILE="$REPO_ROOT/docker-compose.yml"
 
-echo "[INFO] Using data root: $DATA_ROOT"
+# --- Data root ---
+DATA_ROOT="/mnt/storage"
 
+info "Repo root: $REPO_ROOT"
+info "Data root: $DATA_ROOT"
+
+# --- Validate Docker ---
+if ! command -v docker >/dev/null 2>&1; then
+  err "Docker is not installed. Install Docker first."
+fi
+
+if ! docker compose version >/dev/null 2>&1; then
+  err "Docker Compose v2 is not installed."
+fi
+
+# --- User prompts ---
 read -rp "Install EarnApp? (Y/n): " INSTALL_EARNAPP
 INSTALL_EARNAPP=${INSTALL_EARNAPP:-Y}
 
@@ -22,30 +50,43 @@ if [[ "$INSTALL_HONEYGAIN" =~ ^[Yy]$ ]]; then
   echo
 fi
 
-mkdir -p "$DATA_ROOT/earnapp" "$DATA_ROOT/honeygain" \
-         "$DATA_ROOT/netdata" "$DATA_ROOT/portainer"
+# --- Create data directories ---
+mkdir -p \
+  "$DATA_ROOT/earnapp" \
+  "$DATA_ROOT/honeygain" \
+  "$DATA_ROOT/netdata" \
+  "$DATA_ROOT/portainer"
 
+ok "Data directories created."
+
+# --- Begin writing docker-compose.yml ---
 cat > "$COMPOSE_FILE" <<EOF
 services:
 EOF
 
+###############################################
+# EarnApp
+###############################################
 if [[ "$INSTALL_EARNAPP" =~ ^[Yy]$ ]]; then
-  echo "[OK] EarnApp will be installed."
-  cat >> "$COMPOSE_FILE" <<'EOF'
+  ok "EarnApp will be installed."
+  cat >> "$COMPOSE_FILE" <<EOF
 
   earnapp:
     image: fazalfarhan01/earnapp:latest
     container_name: earnapp
     restart: always
     volumes:
-      - /mnt/storage/earnapp:/etc/earnapp
+      - $DATA_ROOT/earnapp:/etc/earnapp
 EOF
 else
-  echo "[WARN] EarnApp installation skipped."
+  warn "EarnApp installation skipped."
 fi
 
+###############################################
+# Honeygain
+###############################################
 if [[ "$INSTALL_HONEYGAIN" =~ ^[Yy]$ && -n "$HONEYGAIN_EMAIL" && -n "$HONEYGAIN_PASSWORD" ]]; then
-  echo "[OK] Honeygain will be installed."
+  ok "Honeygain will be installed."
   cat >> "$COMPOSE_FILE" <<EOF
 
   honeygain:
@@ -54,13 +95,16 @@ if [[ "$INSTALL_HONEYGAIN" =~ ^[Yy]$ && -n "$HONEYGAIN_EMAIL" && -n "$HONEYGAIN_
     restart: always
     command: -tou-accept -email $HONEYGAIN_EMAIL -pass $HONEYGAIN_PASSWORD -device earnbox
     volumes:
-      - /mnt/storage/honeygain:/data
+      - $DATA_ROOT/honeygain:/data
 EOF
 else
-  echo "[WARN] Honeygain installation skipped."
+  warn "Honeygain installation skipped."
 fi
 
-cat >> "$COMPOSE_FILE" <<'EOF'
+###############################################
+# Core Services (Dashboard, Netdata, Portainer, Watchtower)
+###############################################
+cat >> "$COMPOSE_FILE" <<EOF
 
   nginx:
     image: nginx:alpine
@@ -82,7 +126,7 @@ cat >> "$COMPOSE_FILE" <<'EOF'
     security_opt:
       - apparmor:unconfined
     volumes:
-      - /mnt/storage/netdata:/var/lib/netdata
+      - $DATA_ROOT/netdata:/var/lib/netdata
 
   portainer:
     image: portainer/portainer-ce:latest
@@ -92,7 +136,7 @@ cat >> "$COMPOSE_FILE" <<'EOF'
       - "9000:9000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /mnt/storage/portainer:/data
+      - $DATA_ROOT/portainer:/data
 
   watchtower:
     image: containrrr/watchtower:latest
@@ -103,8 +147,20 @@ cat >> "$COMPOSE_FILE" <<'EOF'
       - /var/run/docker.sock:/var/run/docker.sock
 EOF
 
-echo "==> Pulling and starting containers via docker compose"
-cd "$REPO_ROOT"
-docker compose pull
-docker compose up -d
-echo "[OK] Deployment complete."
+ok "docker-compose.yml generated."
+
+###############################################
+# Deploy
+###############################################
+info "Pulling containers..."
+docker compose -f "$COMPOSE_FILE" pull
+
+info "Starting containers..."
+docker compose -f "$COMPOSE_FILE" up -d
+
+ok "Deployment complete."
+echo
+ok "Your EarnBox appliance is now running."
+echo "Dashboard: http://<your-pi-ip>"
+echo "Netdata:   http://<your-pi-ip>:19999"
+echo "Portainer: http://<your-pi-ip>:9000"
