@@ -78,8 +78,8 @@ HDD_TEMP="unknown"
 HDD_FREE=$(df -h / | awk 'NR==2 {print $4}')
 
 if command -v smartctl >/dev/null; then
-    HDD_HEALTH=$(smartctl -H "$HDD_DEVICE" 2>/dev/null | grep "SMART overall-health" | awk '{print $6}')
-    HDD_TEMP=$(smartctl -A "$HDD_DEVICE" 2>/dev/null | grep Temperature | awk '{print $10 "C"}')
+    HDD_HEALTH=$(smartctl -d sat -H "$HDD_DEVICE" 2>/dev/null | grep "SMART overall-health" | awk '{print $6}')
+    HDD_TEMP=$(smartctl -d sat -A "$HDD_DEVICE" 2>/dev/null | grep Temperature | awk '{print $10 "C"}')
 fi
 
 
