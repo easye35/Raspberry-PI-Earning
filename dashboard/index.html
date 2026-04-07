@@ -10,16 +10,38 @@
     <h2>EARNBOX</h2>
     <a href="index.html">Dashboard</a>
     <a href="pages/containers.html">Containers</a>
-    <a href="#">System</a>
-    <a href="#">Power</a>
-    <a href="#">Earnings</a>
-    <a href="#">Charts</a>
-    <a href="#">Settings</a>
+    <a href="pages/system.html">System</a>
+    <a href="pages/power.html">Power</a>
+    <a href="pages/earnings.html">Earnings</a>
+    <a href="pages/charts.html">Charts</a>
+    <a href="pages/settings.html">Settings</a>
   </aside>
 
   <main class="content">
     <h1>Dashboard</h1>
-    <p>Welcome to your EARNBOX appliance.</p>
+
+    <div class="card">
+      <h3>Welcome</h3>
+      <p>Your EARNBOX appliance is running in static mode.</p>
+      <p>No backend services are required — all pages load instantly.</p>
+    </div>
+
+    <div class="card">
+      <h3>Quick Links</h3>
+      <ul>
+        <li><a href="http://192.168.1.103:19999" target="_blank">Netdata</a></li>
+        <li><a href="http://192.168.1.103:9000" target="_blank">Portainer</a></li>
+        <li><a href="https://earnapp.com/dashboard" target="_blank">EarnApp Dashboard</a></li>
+        <li><a href="https://dashboard.honeygain.com" target="_blank">Honeygain Dashboard</a></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>System Snapshot</h3>
+      <p>This dashboard is static. For live system metrics, use Netdata.</p>
+      <p>For container management, use Portainer.</p>
+    </div>
+
   </main>
 
 </body>
