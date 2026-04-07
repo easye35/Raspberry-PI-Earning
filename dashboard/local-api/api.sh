@@ -67,18 +67,32 @@ VOLTAGE=$(vcgencmd measure_volts 2>/dev/null | cut -d= -f2)
 
 
 # ---------------------------------------------------------
-# HDD SMART CHECK
+# HDD INFO (UNIVERSAL, NO SMART REQUIRED)
 # ---------------------------------------------------------
 
 HDD_DEVICE="/dev/sda"
 
-HDD_HEALTH="unknown"
-HDD_TEMP="unknown"
+# Model + serial via lsblk/udevadm
+HDD_MODEL=$(lsblk -no MODEL "$HDD_DEVICE" 2>/dev/null)
+HDD_SERIAL=$(lsblk -no SERIAL "$HDD_DEVICE" 2>/dev/null)
+
+# Free space
 HDD_FREE=$(df -h / | awk 'NR==2 {print $4}')
 
-if command -v smartctl >/dev/null; then
-    HDD_HEALTH=$(smartctl -d sat -H "$HDD_DEVICE" 2>/dev/null | grep "SMART overall-health" | awk '{print $6}')
-    HDD_TEMP=$(smartctl -d sat -A "$HDD_DEVICE" 2>/dev/null | grep Temperature | awk '{print $10 "C"}')
+# Temperature (USB enclosures often do NOT expose this)
+HDD_TEMP="unknown"
+if [ -f /sys/class/block/sda/device/hwmon/hwmon*/temp1_input ]; then
+    RAW_TEMP=$(cat /sys/class/block/sda/device/hwmon/hwmon*/temp1_input 2>/dev/null)
+    if [[ "$RAW_TEMP" =~ ^[0-9]+$ ]]; then
+        HDD_TEMP="$((RAW_TEMP / 1000))C"
+    fi
+fi
+
+# Health (filesystem-level check)
+if dmesg | grep -qi "I/O error"; then
+    HDD_HEALTH="io_errors_detected"
+else
+    HDD_HEALTH="ok"
 fi
 
 
