@@ -122,6 +122,38 @@ mkdir -p \
 ok "Data directories created."
 
 ###############################################
+# EarnApp Volume Permission Preflight
+###############################################
+
+check_earnapp_permissions() {
+  local dir="$DATA_ROOT/earnapp"
+
+  info "Checking EarnApp volume permissions at: $dir"
+
+  # Ensure directory exists
+  sudo mkdir -p "$dir"
+
+  # Check if REAL_USER can write to it
+  if sudo -u "$REAL_USER" test -w "$dir"; then
+    ok "Host permissions OK for user '$REAL_USER'."
+  else
+    warn "User '$REAL_USER' cannot write to $dir. Fixing..."
+    sudo chown -R "$REAL_USER":"$REAL_USER" "$dir"
+    sudo chmod -R 775 "$dir"
+    ok "Permissions fixed."
+  fi
+
+  # Check if Docker can write to it (inside container)
+  info "Verifying Docker write access..."
+  if docker run --rm -v "$dir":/testdir alpine sh -c "touch /testdir/.write_test" 2>/dev/null; then
+    ok "Docker can write to EarnApp volume."
+  else
+    err "Docker CANNOT write to $dir. EarnApp would crash with exit code 255."
+  fi
+}
+
+check_earnapp_permissions
+###############################################
 # Generate docker-compose.yml
 ###############################################
 
