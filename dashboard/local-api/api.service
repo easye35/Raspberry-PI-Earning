@@ -1,13 +1,14 @@
 [Unit]
-Description=EarnBox Local API Generator
-After=network.target docker.service
+Description=EarnBox Local API Server
+After=network.target
 
 [Service]
-Type=simple
-ExecStart=/bin/bash /home/easye35/Raspberry-PI-docker-Earning/local-api/api.sh
+ExecStart=/usr/bin/python3 /home/easye35/Raspberry-PI-docker-Earning/dashboard/local-api/api-server.py
+WorkingDirectory=/home/easye35/Raspberry-PI-docker-Earning/dashboard/local-api
 Restart=always
-RestartSec=5
+RestartSec=2
 User=easye35
+Environment=PYTHONUNBUFFERED=1
 
 [Install]
 WantedBy=multi-user.target
