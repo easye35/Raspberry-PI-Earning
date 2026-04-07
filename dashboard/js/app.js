@@ -77,9 +77,6 @@ function renderView() {
         case "system":
             renderSystem();
             break;
-        case "earnings":
-            renderEarnings();
-            break;
         case "logs":
             renderLogs();
             break;
@@ -92,11 +89,7 @@ function renderView() {
 
 function renderDashboard() {
     viewContainer.innerHTML = `
-        <div class="card">
-            <div class="card-title">EarnApp Earnings</div>
-            <div id="earningsValue">${apiData.earnapp.earnings} USD</div>
-        </div>
-
+        
         <div class="card">
             <div class="card-title">Container Status</div>
             <div>${Object.keys(apiData.containers).length} containers monitored</div>
@@ -163,20 +156,7 @@ function renderSystem() {
     `;
 }
 
-/* ---------------------------------------------------------
-   EARNINGS VIEW
---------------------------------------------------------- */
-
-function renderEarnings() {
-    viewContainer.innerHTML = `
-        <div class="card">
-            <div class="card-title">EarnApp Earnings</div>
-            <div>Total: ${apiData.earnapp.earnings} USD</div>
-            <div>Status: ${apiData.earnapp.device_status}</div>
-            <div>Last Check-in: ${apiData.earnapp.last_checkin}</div>
-        </div>
-    `;
-}
+/* 
 
 /* ---------------------------------------------------------
    LOGS VIEW
