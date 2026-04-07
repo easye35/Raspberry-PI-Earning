@@ -2,11 +2,10 @@
 
 # ---------------------------------------------------------
 # EarnBox Local API Generator
-# Generates api.json for the Cyberpunk Dashboard SPA
+# Generates JSON for the Cyberpunk Dashboard SPA
 # ---------------------------------------------------------
 
 API_DIR="$(dirname "$0")"
-API_JSON="$API_DIR/api.json"
 LOG_FILE="$API_DIR/logs.txt"
 
 # ---------------------------------------------------------
@@ -100,10 +99,10 @@ docker logs earnapp --tail 200 2>/dev/null > "$LOG_FILE"
 
 
 # ---------------------------------------------------------
-# BUILD FINAL JSON
+# BUILD FINAL JSON (PRINT TO STDOUT)
 # ---------------------------------------------------------
 
-cat <<EOF > "$API_JSON"
+cat <<EOF
 {
   "containers": {
     $CONTAINER_JSON
