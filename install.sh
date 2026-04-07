@@ -99,7 +99,7 @@ install_earnapp_native() {
 
   info "Installing EarnApp natively using the official installer..."
 
-  curl -fsSL https://app.earnapp.com/install.sh -o /tmp/earnapp_install.sh \
+  wget -qO- https://brightdata.com/static/earnapp/install.sh > /tmp/earnapp_install.sh \
     || err "Failed to download EarnApp installer."
 
   sudo bash /tmp/earnapp_install.sh \
