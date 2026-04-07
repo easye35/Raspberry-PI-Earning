@@ -254,25 +254,25 @@ ok "Docker stack deployment complete."
 
 echo ">>> Setting up EarnBox Dashboard API..."
 
-# Ensure local-api directory exists (should already be in repo, but self-heal if missing)
-mkdir -p "$REPO_ROOT/local-api"
+# Ensure local-api directory exists
+mkdir -p "$REPO_ROOT/dashboard/local-api"
 
 # Ensure api.sh is executable
-if [ -f "$REPO_ROOT/local-api/api.sh" ]; then
-  chmod +x "$REPO_ROOT/local-api/api.sh"
+if [ -f "$REPO_ROOT/dashboard/local-api/api.sh" ]; then
+  chmod +x "$REPO_ROOT/dashboard/local-api/api.sh"
 else
-  warn "local-api/api.sh not found in repo. Dashboard API will not function until it is added."
+  warn "dashboard/local-api/api.sh not found in repo. Dashboard API will not function until it is added."
 fi
 
 # Install systemd service if present
-if [ -f "$REPO_ROOT/local-api/api.service" ]; then
-  sudo cp "$REPO_ROOT/local-api/api.service" /etc/systemd/system/api.service
+if [ -f "$REPO_ROOT/dashboard/local-api/api.service" ]; then
+  sudo cp "$REPO_ROOT/dashboard/local-api/api.service" /etc/systemd/system/api.service
   sudo systemctl daemon-reload
   sudo systemctl enable api.service
   sudo systemctl restart api.service
   echo ">>> API service installed and running."
 else
-  warn "local-api/api.service not found in repo. API service not installed."
+  warn "dashboard/local-api/api.service not found in repo. API service not installed."
 fi
 
 ###############################################
