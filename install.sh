@@ -126,7 +126,7 @@ install_earnapp_native() {
   fi
 }
 
-install_earnapp_native
+install_earnapp_native()
 
 ###############################################
 # User Prompts for Docker Services
@@ -248,48 +248,67 @@ docker compose -f "$COMPOSE_FILE" up -d
 
 ok "Docker stack deployment complete."
 
+###############################################
+# Dashboard Local API Setup
+###############################################
+
 echo ">>> Setting up EarnBox Dashboard API..."
 
-# Ensure local-api directory exists
+# Ensure local-api directory exists (should already be in repo, but self-heal if missing)
 mkdir -p "$REPO_ROOT/local-api"
 
 # Ensure api.sh is executable
-chmod +x "$REPO_ROOT/local-api/api.sh"
+if [ -f "$REPO_ROOT/local-api/api.sh" ]; then
+  chmod +x "$REPO_ROOT/local-api/api.sh"
+else
+  warn "local-api/api.sh not found in repo. Dashboard API will not function until it is added."
+fi
 
-# Install systemd service
-sudo cp "$REPO_ROOT/local-api/api.service" /etc/systemd/system/api.service
-sudo systemctl daemon-reload
-sudo systemctl enable api.service
-sudo systemctl restart api.service
+# Install systemd service if present
+if [ -f "$REPO_ROOT/local-api/api.service" ]; then
+  sudo cp "$REPO_ROOT/local-api/api.service" /etc/systemd/system/api.service
+  sudo systemctl daemon-reload
+  sudo systemctl enable api.service
+  sudo systemctl restart api.service
+  echo ">>> API service installed and running."
+else
+  warn "local-api/api.service not found in repo. API service not installed."
+fi
 
-echo ">>> API service installed and running."
+###############################################
+# Dependencies for API (SMART + vcgencmd)
+###############################################
 
-# Install dependencies
 echo ">>> Installing required packages..."
 sudo apt-get update -y
 sudo apt-get install -y smartmontools
 
 # Ensure vcgencmd exists (Raspberry Pi OS)
 if ! command -v vcgencmd >/dev/null; then
-    echo ">>> WARNING: vcgencmd not found. Installing raspberrypi-utils..."
-    sudo apt-get install -y libraspberrypi-bin
+  echo ">>> WARNING: vcgencmd not found. Installing raspberrypi-utils..."
+  sudo apt-get install -y libraspberrypi-bin
 fi
 
 echo ">>> Dependencies installed."
 
+###############################################
+# Web Symlinks for Dashboard + API
+###############################################
+
 # Ensure dashboard is web-served
 if [ ! -d /var/www/html/dashboard ]; then
-    echo ">>> Linking dashboard to /var/www/html/dashboard..."
-    sudo ln -s "$REPO_ROOT/dashboard" /var/www/html/dashboard
+  echo ">>> Linking dashboard to /var/www/html/dashboard..."
+  sudo ln -s "$REPO_ROOT/dashboard" /var/www/html/dashboard
 fi
 
 # Ensure local-api is web-served
 if [ ! -d /var/www/html/local-api ]; then
-    echo ">>> Linking local-api to /var/www/html/local-api..."
-    sudo ln -s "$REPO_ROOT/local-api" /var/www/html/local-api
+  echo ">>> Linking local-api to /var/www/html/local-api..."
+  sudo ln -s "$REPO_ROOT/local-api" /var/www/html/local-api
 fi
 
 echo ">>> Dashboard and API are now web-accessible."
+
 ###############################################
 # Final Output
 ###############################################
