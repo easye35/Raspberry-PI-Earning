@@ -2,6 +2,18 @@
 set -e
 
 ###############################################
+#  EarnBox Appliance‑Grade Installer
+###############################################
+
+# --- Color Output ---
+RED="\e[31m"; GREEN="\e[32m"; YELLOW="\e[33m"; BLUE="\e[34m"; RESET="\e[0m"
+
+info()  { echo -e "${BLUE}[INFO]${RESET} $1"; }
+ok()    { echo -e "${GREEN}[OK]${RESET} $1"; }
+warn()  { echo -e "${YELLOW}[WARN]${RESET} $1"; }
+err()   { echo -e "${RED}[ERROR]${RESET} $1"; exit 1; }
+
+###############################################
 # Docker Preflight + Auto‑Installer
 ###############################################
 
@@ -12,13 +24,18 @@ install_docker() {
 }
 
 ensure_docker_group() {
-  if ! groups "$USER" | grep -q docker; then
-    info "Adding user '$USER' to docker group..."
-    sudo usermod -aG docker "$USER"
-    ok "User added to docker group."
-    info "Reloading group membership..."
-    exec sg docker "$0" "$@"
+  # If already in docker group, do nothing
+  if groups "$USER" | grep -q '\bdocker\b'; then
+    ok "User '$USER' is already in docker group."
+    return
   fi
+
+  info "Adding user '$USER' to docker group..."
+  sudo usermod -aG docker "$USER"
+  ok "User added to docker group."
+
+  info "Re-running script inside docker group..."
+  exec sg docker "$0"
 }
 
 check_docker() {
@@ -43,44 +60,27 @@ check_compose() {
 
 # Run checks
 check_docker
-ensure_docker_group
 check_compose
+ensure_docker_group
 
 ok "Docker environment ready."
+
 ###############################################
-#  EarnBox Appliance‑Grade Installer
-#  Self‑locating, sudo‑safe, zero‑touch
+# Paths and Repo Setup
 ###############################################
 
-# --- Color Output ---
-RED="\e[31m"; GREEN="\e[32m"; YELLOW="\e[33m"; BLUE="\e[34m"; RESET="\e[0m"
-
-info()  { echo -e "${BLUE}[INFO]${RESET} $1"; }
-ok()    { echo -e "${GREEN}[OK]${RESET} $1"; }
-warn()  { echo -e "${YELLOW}[WARN]${RESET} $1"; }
-err()   { echo -e "${RED}[ERROR]${RESET} $1"; exit 1; }
-
-# --- Self‑locating repo root ---
 SCRIPT_DIR="$(realpath "$(dirname "$0")")"
 REPO_ROOT="$SCRIPT_DIR"
-COMPOSE_FILE="$REPO_ROOT/docker-compose.yml"
-
-# --- Data root ---
 DATA_ROOT="/mnt/storage"
+COMPOSE_FILE="$REPO_ROOT/docker-compose.yml"
 
 info "Repo root: $REPO_ROOT"
 info "Data root: $DATA_ROOT"
 
-# --- Validate Docker ---
-if ! command -v docker >/dev/null 2>&1; then
-  err "Docker is not installed. Install Docker first."
-fi
+###############################################
+# User Prompts
+###############################################
 
-if ! docker compose version >/dev/null 2>&1; then
-  err "Docker Compose v2 is not installed."
-fi
-
-# --- User prompts ---
 read -rp "Install EarnApp? (Y/n): " INSTALL_EARNAPP
 INSTALL_EARNAPP=${INSTALL_EARNAPP:-Y}
 
@@ -96,7 +96,10 @@ if [[ "$INSTALL_HONEYGAIN" =~ ^[Yy]$ ]]; then
   echo
 fi
 
-# --- Create data directories ---
+###############################################
+# Data Directories
+###############################################
+
 mkdir -p \
   "$DATA_ROOT/earnapp" \
   "$DATA_ROOT/honeygain" \
@@ -105,14 +108,15 @@ mkdir -p \
 
 ok "Data directories created."
 
-# --- Begin writing docker-compose.yml ---
+###############################################
+# Generate docker-compose.yml
+###############################################
+
 cat > "$COMPOSE_FILE" <<EOF
 services:
 EOF
 
-###############################################
 # EarnApp
-###############################################
 if [[ "$INSTALL_EARNAPP" =~ ^[Yy]$ ]]; then
   ok "EarnApp will be installed."
   cat >> "$COMPOSE_FILE" <<EOF
@@ -128,9 +132,7 @@ else
   warn "EarnApp installation skipped."
 fi
 
-###############################################
 # Honeygain
-###############################################
 if [[ "$INSTALL_HONEYGAIN" =~ ^[Yy]$ && -n "$HONEYGAIN_EMAIL" && -n "$HONEYGAIN_PASSWORD" ]]; then
   ok "Honeygain will be installed."
   cat >> "$COMPOSE_FILE" <<EOF
@@ -147,9 +149,7 @@ else
   warn "Honeygain installation skipped."
 fi
 
-###############################################
-# Core Services (Dashboard, Netdata, Portainer, Watchtower)
-###############################################
+# Core services
 cat >> "$COMPOSE_FILE" <<EOF
 
   nginx:
@@ -196,8 +196,9 @@ EOF
 ok "docker-compose.yml generated."
 
 ###############################################
-# Deploy
+# Deploy Stack
 ###############################################
+
 info "Pulling containers..."
 docker compose -f "$COMPOSE_FILE" pull
 
@@ -206,7 +207,7 @@ docker compose -f "$COMPOSE_FILE" up -d
 
 ok "Deployment complete."
 echo
-ok "Your EarnBox appliance is now running."
+ok "Your EarnBox stack is now running."
 echo "Dashboard: http://<your-pi-ip>"
 echo "Netdata:   http://<your-pi-ip>:19999"
 echo "Portainer: http://<your-pi-ip>:9000"
