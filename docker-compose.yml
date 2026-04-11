@@ -1,12 +1,15 @@
 services:
+
   dashboard:
-  build:
-    context: ./dashboard
-  container_name: dashboard
-  ports:
-    - "80:80"
-  restart: unless-stopped
-  
+    build:
+      context: ./dashboard
+    container_name: dashboard
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    networks:
+      - earning_net
+
   honeygain:
     image: honeygain/honeygain
     container_name: honeygain
