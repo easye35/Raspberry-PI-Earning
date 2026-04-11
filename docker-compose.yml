@@ -9,7 +9,6 @@ services:
     restart: unless-stopped
     networks:
       - earning_net
-
   honeygain:
     image: honeygain/honeygain
     container_name: honeygain
