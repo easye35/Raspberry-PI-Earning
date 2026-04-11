@@ -2,57 +2,70 @@ version: "3.9"
 
 services:
 
-  nginx:
-    image: nginx:alpine
-    container_name: nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-    volumes:
-      - ./dashboard:/usr/share/nginx/html:ro
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+  # ------------------------------------------------------------
+  # PAWNS.APP
+  # ------------------------------------------------------------
+  pawns:
+    image: iproyal/pawns-cli:latest
+    container_name: pawns
+    restart: always
+    env_file:
+      - modules/.env
+    command: >
+      --email ${PAWNS_EMAIL}
+      --password ${PAWNS_PASSWORD}
+      --device-name ${PAWNS_DEVICE}
+    networks:
+      - earnbox
 
+  # ------------------------------------------------------------
+  # HONEYGAIN
+  # ------------------------------------------------------------
   honeygain:
     image: honeygain/honeygain:latest
     container_name: honeygain
     restart: always
-    command: -tou-accept -email ${HG_EMAIL} -pass ${HG_PASS} -device earnbox
-    volumes:
-      - /mnt/storage/honeygain:/data
+    env_file:
+      - modules/.env
+    command: >
+      -tou-accept
+      -email ${HONEYGAIN_EMAIL}
+      -password ${HONEYGAIN_PASSWORD}
+    networks:
+      - earnbox
 
-  netdata:
-    image: netdata/netdata:stable
-    container_name: netdata
+  # ------------------------------------------------------------
+  # EARNAPP
+  # ------------------------------------------------------------
+  earnapp:
+    image: earnapp/earnapp:latest
+    container_name: earnapp
     restart: always
-    ports:
-      - "19999:19999"
-    cap_add:
-      - SYS_PTRACE
-    security_opt:
-      - apparmor:unconfined
-    volumes:
-      - /mnt/storage/netdata:/var/lib/netdata
-
-  portainer:
-    image: portainer/portainer-ce:latest
-    container_name: portainer
-    restart: always
-    ports:
-      - "9000:9000"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /mnt/storage/portainer:/data
-
-  diun:
-    image: crazymax/diun:latest
-    container_name: diun
-    restart: always
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /mnt/storage/diun:/data
+    env_file:
+      - modules/.env
     environment:
-      - TZ=America/Edmonton
-      - LOG_LEVEL=info
-      - DIUN_WATCH_WORKERS=20
-      - DIUN_WATCH_SCHEDULE=0 */6 * * *
-      - DIUN_PROVIDERS_DOCKER=true
+      - EARNAPP_EMAIL=${EARNAPP_EMAIL}
+      - EARNAPP_PASSWORD=${EARNAPP_PASSWORD}
+    networks:
+      - earnbox
+
+  # ------------------------------------------------------------
+  # EARNBOX BACKEND (server.js)
+  # ------------------------------------------------------------
+  earnbox-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: earnbox-api
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./dashboard:/app/dashboard
+      - ./modules:/app/modules
+    networks:
+      - earnbox
+
+networks:
+  earnbox:
+    driver: bridge
