@@ -9,6 +9,7 @@ services:
     restart: unless-stopped
     networks:
       - earning_net
+
   honeygain:
     image: honeygain/honeygain
     container_name: honeygain
@@ -69,20 +70,6 @@ services:
       - "9999:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    networks:
-      - earning_net
-
-  api:
-    build: ./api
-    container_name: earning-api
-    restart: unless-stopped
-    environment:
-      - TZ=${TZ}
-      - PORT=3001
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /etc/earnapp:/etc/earnapp:ro
-      - /var/log/earnapp:/var/log/earnapp:ro
     networks:
       - earning_net
 
