@@ -2,7 +2,7 @@
 set -e
 
 ###############################################
-#  EarnBox Appliance‑Grade Installer
+#  EarnBox Appliance‑Grade Installer v2
 ###############################################
 
 # --- Color Output ---
@@ -82,6 +82,10 @@ COMPOSE_FILE="$REPO_ROOT/docker-compose.yml"
 info "Repo root: $REPO_ROOT"
 info "Data root: $DATA_ROOT"
 
+###############################################
+# Backend (Node.js + API + systemd)
+###############################################
+
 echo "[EarnBox] Installing backend..."
 
 # Ensure Node.js exists
@@ -93,8 +97,8 @@ fi
 
 # Install backend dependencies
 echo "[EarnBox] Installing backend dependencies..."
-cd "$(dirname "$0")"   # go to project root
-npm install --silent
+cd "$REPO_ROOT"
+npm install --silent || err "npm install failed."
 
 # Create systemd service
 echo "[EarnBox] Creating backend service..."
@@ -107,7 +111,7 @@ Requires=docker.service
 
 [Service]
 Type=simple
-WorkingDirectory=$(pwd)
+WorkingDirectory=$REPO_ROOT
 ExecStart=/usr/bin/node server.js
 Restart=always
 RestartSec=5
@@ -123,6 +127,7 @@ sudo systemctl enable earnbox-backend.service
 sudo systemctl restart earnbox-backend.service
 
 echo "[EarnBox] Backend installed and running!"
+
 ###############################################
 # Native EarnApp Installer (Official)
 ###############################################
@@ -173,6 +178,7 @@ install_earnapp_native
 # User Prompts for Docker Services
 ###############################################
 
+# Honeygain
 read -rp "Install Honeygain in Docker? (Y/n): " INSTALL_HONEYGAIN
 INSTALL_HONEYGAIN=${INSTALL_HONEYGAIN:-Y}
 
@@ -183,6 +189,22 @@ if [[ "$INSTALL_HONEYGAIN" =~ ^[Yy]$ ]]; then
   read -rp "Enter your Honeygain email: " HONEYGAIN_EMAIL
   read -rsp "Enter your Honeygain password: " HONEYGAIN_PASSWORD
   echo
+fi
+
+# Pawns.app
+read -rp "Install Pawns.app in Docker? (Y/n): " INSTALL_PAWNS
+INSTALL_PAWNS=${INSTALL_PAWNS:-Y}
+
+PAWNS_EMAIL=""
+PAWNS_PASSWORD=""
+PAWNS_DEVICE="earnbox-pawns"
+
+if [[ "$INSTALL_PAWNS" =~ ^[Yy]$ ]]; then
+  read -rp "Enter your Pawns.app email: " PAWNS_EMAIL
+  read -rsp "Enter your Pawns.app password: " PAWNS_PASSWORD
+  echo
+  read -rp "Enter Pawns device name [${PAWNS_DEVICE}]: " TMP_PAWNS_DEVICE
+  PAWNS_DEVICE=${TMP_PAWNS_DEVICE:-$PAWNS_DEVICE}
 fi
 
 ###############################################
@@ -223,6 +245,25 @@ if [[ "$INSTALL_HONEYGAIN" =~ ^[Yy]$ && -n "$HONEYGAIN_EMAIL" && -n "$HONEYGAIN_
 EOF
 else
   warn "Honeygain installation skipped."
+fi
+
+# Pawns.app
+if [[ "$INSTALL_PAWNS" =~ ^[Yy]$ && -n "$PAWNS_EMAIL" && -n "$PAWNS_PASSWORD" ]]; then
+  ok "Pawns.app will be installed in Docker."
+  cat >> "$COMPOSE_FILE" <<EOF
+
+  pawns:
+    image: iproyal/pawns-cli:latest
+    container_name: pawns
+    restart: always
+    command: >
+      -email "$PAWNS_EMAIL"
+      -password "$PAWNS_PASSWORD"
+      -device-name "$PAWNS_DEVICE"
+      -accept-tos
+EOF
+else
+  warn "Pawns.app installation skipped."
 fi
 
 # Core services
@@ -295,17 +336,14 @@ ok "Docker stack deployment complete."
 
 echo ">>> Setting up EarnBox Dashboard API..."
 
-# Ensure local-api directory exists
 mkdir -p "$REPO_ROOT/dashboard/local-api"
 
-# Ensure api.sh is executable
 if [ -f "$REPO_ROOT/dashboard/local-api/api.sh" ]; then
   chmod +x "$REPO_ROOT/dashboard/local-api/api.sh"
 else
   warn "dashboard/local-api/api.sh not found in repo. Dashboard API will not function until it is added."
 fi
 
-# Install systemd service if present
 if [ -f "$REPO_ROOT/dashboard/local-api/api.service" ]; then
   sudo cp "$REPO_ROOT/dashboard/local-api/api.service" /etc/systemd/system/api.service
   sudo systemctl daemon-reload
@@ -324,19 +362,12 @@ echo ">>> Installing required packages..."
 sudo apt-get update -y
 sudo apt-get install -y smartmontools
 
-# Ensure vcgencmd exists (Raspberry Pi OS)
 if ! command -v vcgencmd >/dev/null; then
   echo ">>> WARNING: vcgencmd not found. Installing raspberrypi-utils..."
   sudo apt-get install -y libraspberrypi-bin
 fi
 
 echo ">>> Dependencies installed."
-
-###############################################
-# Web Symlinks for Dashboard + API
-###############################################
-
-echo ">>> Dashboard and API are now web-accessible."
 
 ###############################################
 # Final Output
