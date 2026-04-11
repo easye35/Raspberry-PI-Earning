@@ -6,7 +6,7 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo "[*] Updating system packages..."
 sudo apt-get update -y
 
-echo "[*] Installing Docker & dependencies..."
+echo "[*] Installing Docker..."
 if ! command -v docker >/dev/null 2>&1; then
   curl -fsSL https://get.docker.com | sh
   sudo usermod -aG docker "$USER" || true
@@ -38,18 +38,18 @@ echo "[*] Installing API dependencies..."
 cd "$REPO_DIR/api"
 npm install --production
 
-echo "[*] Enabling native EarnApp service if present..."
+echo "[*] Checking for native EarnApp..."
 if systemctl list-unit-files | grep -q "^earnapp.service"; then
   sudo systemctl enable earnapp.service || true
   sudo systemctl start earnapp.service || true
-  echo "  -> Detected native EarnApp. Service enabled."
+  echo "  -> Native EarnApp detected and enabled."
 else
-  echo "  -> No native EarnApp service detected. You can install it separately."
+  echo "  -> No native EarnApp service found."
+  echo "     If you want EarnApp, install it with:"
+  echo "       curl -s https://app.earnapp.com/install.sh | bash"
 fi
 
-echo "[*] Creating systemd service for earning API..."
-sudo mkdir -p /etc/systemd/system
-
+echo "[*] Creating earning-api systemd service..."
 sudo tee /etc/systemd/system/earning-api.service >/dev/null <<EOF
 [Unit]
 Description=Earning Stack Local API
@@ -100,14 +100,15 @@ sudo systemctl start earning-reset.timer
 
 echo "[*] Bringing up Docker stack..."
 cd "$REPO_DIR"
-docker compose pull
-docker compose up -d
+docker compose --env-file .env pull
+docker compose --env-file .env up -d
 
 echo
 echo "[✓] Install complete."
-echo "    - Dashboard: http://<pi-ip>:3000 (if you proxy it) or open dashboard/index.html via a web server"
-echo "    - Glances:   http://<pi-ip>:61208"
-echo "    - Dozzle:    http://<pi-ip>:9999"
-echo "    - API:       http://<pi-ip>:3001"
+echo "    - Glances: http://<pi-ip>:61208"
+echo "    - Dozzle:  http://<pi-ip>:9999"
+echo "    - API:     http://<pi-ip>:3001"
+echo "    - Dashboard: serve ./dashboard via any web server (or add nginx later)"
 echo
-echo "You may need to log out and back in for Docker group changes to apply."
+echo "Edit .env to set Honeygain/Pawns credentials, then run:"
+echo "  docker compose --env-file .env up -d"
