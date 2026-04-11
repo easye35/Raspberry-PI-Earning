@@ -1,9 +1,17 @@
 [Unit]
-Description=EarnBox Daily Container Reset
+Description=EarnBox Daily Reset Service
 After=docker.service
 Requires=docker.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/docker restart $(/usr/bin/docker ps -q)
-User=pi
+WorkingDirectory=/home/pi/EarnBox
+ExecStart=/usr/bin/docker compose down
+ExecStartPost=/usr/bin/docker compose up -d
+
+# Log to journalctl
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
