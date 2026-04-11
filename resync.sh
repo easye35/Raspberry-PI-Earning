@@ -1,56 +1,40 @@
 #!/bin/bash
 set -e
 
-echo "🔍 Auto-detecting Raspberry Pi on the network..."
+echo "------------------------------------------------------------"
+echo " EarnBox Repo Resync"
+echo "------------------------------------------------------------"
 
-# --- Ensure nmap is installed ---
-if ! command -v nmap >/dev/null 2>&1; then
-    echo "📦 nmap not found — installing..."
-    sudo apt update -y
-    sudo apt install -y nmap
+REPO_DIR="/home/pi/EarnBox"
+
+cd "$REPO_DIR"
+
+echo "[1/6] Pulling latest repo files (if using git)..."
+if [ -d ".git" ]; then
+    git fetch --all
+    git reset --hard origin/main || git reset --hard origin/master || true
+else
+    echo "No git repo detected — skipping."
 fi
 
-# --- Detect local subnet properly ---
-SUBNET=$(ip -o -f inet addr show | awk '/scope global/ {print $4; exit}')
+echo "[2/6] Restoring dashboard folder structure..."
+mkdir -p dashboard/css
+mkdir -p dashboard/js
+mkdir -p modules
 
-if [ -z "$SUBNET" ]; then
-    echo "❌ Could not determine local subnet."
-    exit 1
-fi
+echo "[3/6] Ensuring permissions..."
+chmod +x install.sh || true
+chmod +x reset.sh || true
+chmod +x resync.sh || true
 
-echo "🌐 Subnet detected: $SUBNET"
-echo "🔎 Running nmap scan (5–10 seconds)..."
+echo "[4/6] Rebuilding Docker containers..."
+docker compose down || true
+docker compose up -d --build
 
-# --- Scan for Raspberry Pi MAC prefixes ---
-PI_IP=$(sudo nmap -sn "$SUBNET" \
-    | awk '
-        /Nmap scan report/{ip=$5}
-        /MAC Address:/{if ($3 ~ /B8:27:EB|DC:A6:32|E4:5F:01|28:CD:C1|D8:3A:DD/) print ip}
-    ' \
-    | head -n 1)
+echo "[5/6] Restarting EarnBox API service..."
+sudo systemctl restart earnbox-api.service
 
-if [ -z "$PI_IP" ]; then
-    echo "❌ Could not auto-detect Raspberry Pi on the network."
-    exit 1
-fi
-
-echo "✅ Raspberry Pi detected at: $PI_IP"
-
-PI_HOST="pi@$PI_IP"
-BASE_DIR="earnbox"
-TARGET_DIR="$BASE_DIR/dashboard"
-
-echo "🔥 Removing old dashboard on Pi..."
-ssh "$PI_HOST" "rm -rf \"$TARGET_DIR\""
-
-echo "📁 Recreating directory..."
-ssh "$PI_HOST" "mkdir -p \"$TARGET_DIR\""
-
-echo "🔄 Syncing new dashboard files..."
-rsync -av --delete ./dashboard/ "$PI_HOST":"$TARGET_DIR/"
-
-echo "🔁 Restarting services..."
-ssh "$PI_HOST" "systemctl --user restart earnbox-ui 2>/dev/null || true"
-ssh "$PI_HOST" "docker compose -f \"$BASE_DIR/docker-compose.yml\" up -d 2>/dev/null || true"
-
-echo "🎉 Resync complete — Earnbox UI updated."
+echo "[6/6] Resync complete!"
+echo "------------------------------------------------------------"
+echo " EarnBox is now fully refreshed and rebuilt."
+echo "------------------------------------------------------------"
