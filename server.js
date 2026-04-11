@@ -132,6 +132,8 @@ app.post("/api/admin/enable-daily-reset", (req, res) => {
 
 import fs from "fs";
 
+import fs from "fs";
+
 // ------------------------------------------------------------
 // ADMIN: Read .env credentials
 // ------------------------------------------------------------
@@ -150,6 +152,7 @@ app.get("/api/admin/env", (req, res) => {
 
         res.json(data);
     } catch (err) {
+        console.error("Failed to read .env:", err);
         res.status(500).json({ error: "Failed to read .env" });
     }
 });
@@ -168,6 +171,7 @@ app.post("/api/admin/env", (req, res) => {
         res.json({ status: "updated" });
 
     } catch (err) {
+        console.error("Failed to write .env:", err);
         res.status(500).json({ error: "Failed to write .env" });
     }
 });
