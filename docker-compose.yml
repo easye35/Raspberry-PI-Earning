@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   honeygain:
     image: honeygain/honeygain
