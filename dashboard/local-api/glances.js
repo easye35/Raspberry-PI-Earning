@@ -1,8 +1,10 @@
-async function fetchGlances() {
+async function loadGlances() {
+    const el = document.getElementById("system-data");
     try {
-        const res = await fetch("http://glances:61208/api/3/");
-        return await res.json();
+        const res = await fetch("http://localhost:3001/glances");
+        const data = await res.json();
+        el.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
     } catch (err) {
-        return { error: true, message: err.toString() };
+        el.innerHTML = "Error loading system metrics.";
     }
 }
