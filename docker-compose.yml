@@ -16,7 +16,7 @@ services:
       - earning_net
 
   pawns:
-    image: iproyal/pawns-cli:0.9.3
+    image: iproyal/pawns-cli:0.9.4
     container_name: pawns
     restart: unless-stopped
     command: >
