@@ -1,71 +1,83 @@
-version: "3.9"
+version: "3.8"
 
 services:
-
-  # ------------------------------------------------------------
-  # PAWNS.APP
-  # ------------------------------------------------------------
-  pawns:
-    image: iproyal/pawns-cli:latest
-    container_name: pawns
-    restart: always
-    env_file:
-      - modules/.env
-    command: >
-      --email ${PAWNS_EMAIL}
-      --password ${PAWNS_PASSWORD}
-      --device-name ${PAWNS_DEVICE}
-    networks:
-      - earnbox
-
-  # ------------------------------------------------------------
-  # HONEYGAIN
-  # ------------------------------------------------------------
   honeygain:
-    image: honeygain/honeygain:latest
+    image: honeygain/honeygain
     container_name: honeygain
-    restart: always
-    env_file:
-      - modules/.env
+    restart: unless-stopped
     command: >
       -tou-accept
       -email ${HONEYGAIN_EMAIL}
       -password ${HONEYGAIN_PASSWORD}
-    networks:
-      - earnbox
-
-  # ------------------------------------------------------------
-  # EARNAPP
-  # ------------------------------------------------------------
-  earnapp:
-    image: earnapp/earnapp:latest
-    container_name: earnapp
-    restart: always
-    env_file:
-      - modules/.env
+      -device ${HONEYGAIN_DEVICE}
     environment:
-      - EARNAPP_EMAIL=${EARNAPP_EMAIL}
-      - EARNAPP_PASSWORD=${EARNAPP_PASSWORD}
+      - TZ=${TZ}
     networks:
-      - earnbox
+      - earning_net
 
-  # ------------------------------------------------------------
-  # EARNBOX BACKEND (server.js)
-  # ------------------------------------------------------------
-  earnbox-api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: earnbox-api
-    restart: always
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./dashboard:/app/dashboard
-      - ./modules:/app/modules
+  pawns:
+    image: iproyal/pawns-cli:0.9.3
+    container_name: pawns
+    restart: unless-stopped
+    command: >
+      --email=${PAWNS_EMAIL}
+      --password=${PAWNS_PASSWORD}
+      --device-name=${PAWNS_DEVICE}
+      --accept-tos
+    environment:
+      - TZ=${TZ}
     networks:
-      - earnbox
+      - earning_net
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: unless-stopped
+    command: --cleanup --schedule "0 0 4 * * *"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - earning_net
+
+  glances:
+    image: nicolargo/glances:latest-full
+    container_name: glances
+    restart: unless-stopped
+    pid: "host"
+    ports:
+      - "61208:61208"
+    environment:
+      - GLANCES_OPT=-w
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - earning_net
+
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: dozzle
+    restart: unless-stopped
+    ports:
+      - "9999:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - earning_net
+
+  api:
+    build: ./api
+    container_name: earning-api
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - PORT=3001
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/earnapp:/etc/earnapp:ro
+      - /var/log/earnapp:/var/log/earnapp:ro
+    networks:
+      - earning_net
 
 networks:
-  earnbox:
+  earning_net:
     driver: bridge
