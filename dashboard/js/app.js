@@ -1,5 +1,5 @@
 // ------------------------------------------------------------
-// EarnBox Dashboard - Modular Router + Plug‑in Architecture
+// EarnBox Dashboard v2 - Router + Views + Admin
 // ------------------------------------------------------------
 
 // -------------------------------
@@ -38,7 +38,7 @@ async function loadView(viewName) {
 }
 
 // -------------------------------
-// Dashboard View
+// Dashboard View (Customer-facing)
 // -------------------------------
 const DashboardView = {
     name: "dashboard",
@@ -47,8 +47,54 @@ const DashboardView = {
         div.className = "dashboard-view";
 
         div.innerHTML = `
-            <h1 class="view-title">Dashboard</h1>
-            <p class="view-subtitle">Welcome to your EarnBox control center.</p>
+            <h1 class="view-title">EarnBox Dashboard</h1>
+            <p class="view-subtitle">Manage your earning apps and payout accounts</p>
+
+            <div class="apps-grid">
+
+                <div class="app-card">
+                    <div class="app-icon">♟️</div>
+                    <div class="app-name">Pawns.app</div>
+                    <button class="app-btn" onclick="window.open('https://pawns.app/login', '_blank')">
+                        Open Pawns Website
+                    </button>
+                </div>
+
+                <div class="app-card">
+                    <div class="app-icon">🍯</div>
+                    <div class="app-name">Honeygain</div>
+                    <button class="app-btn" onclick="window.open('https://dashboard.honeygain.com', '_blank')">
+                        Open Honeygain Website
+                    </button>
+                </div>
+
+                <div class="app-card">
+                    <div class="app-icon">💸</div>
+                    <div class="app-name">EarnApp</div>
+                    <button class="app-btn" onclick="window.open('https://earnapp.com/dashboard', '_blank')">
+                        Open EarnApp Website
+                    </button>
+                </div>
+
+                <div class="app-card">
+                    <div class="app-icon">🛠️</div>
+                    <div class="app-name">Portainer</div>
+                    <button class="app-btn" onclick="window.open('http://' + location.hostname + ':9000', '_blank')">
+                        Open Portainer
+                    </button>
+                </div>
+
+                <div class="app-card">
+                    <div class="app-icon">📊</div>
+                    <div class="app-name">Netdata</div>
+                    <button class="app-btn" onclick="window.open('http://' + location.hostname + ':19999', '_blank')">
+                        Open Netdata
+                    </button>
+                </div>
+
+            </div>
+
+            <div id="admin-unlock" class="admin-hidden">v2.0</div>
         `;
 
         return div;
@@ -56,8 +102,7 @@ const DashboardView = {
 };
 
 // -------------------------------
-// Containers Plug‑in View
-// Auto‑discovers running containers
+// Containers View (Updated)
 // -------------------------------
 const ContainersView = {
     name: "containers",
@@ -89,24 +134,38 @@ const ContainersView = {
 
             containers.forEach(c => {
                 const card = document.createElement("div");
-                card.className = "container-card";
+                card.className = `container-card type-${c.type}`;
+
+                const icon = {
+                    pawns: "♟️",
+                    honeygain: "🍯",
+                    portainer: "🛠️",
+                    netdata: "📊",
+                    dashboard: "🖥️",
+                    generic: "📦"
+                }[c.type] || "📦";
+
+                const statusClass = c.status === "running" ? "running" : "stopped";
 
                 card.innerHTML = `
                     <div class="card-header">
+                        <span class="container-icon">${icon}</span>
                         <span class="container-name">${c.name}</span>
-                        <span class="status-dot ${c.status}"></span>
+                        <span class="status-dot ${statusClass}"></span>
                     </div>
 
                     <div class="card-body">
+                        <div><strong>Type:</strong> ${c.type}</div>
                         <div><strong>IP:</strong> ${c.ip}</div>
-                        <div><strong>Port:</strong> ${c.port}</div>
+                        <div><strong>Port:</strong> ${c.port || "—"}</div>
                         <div><strong>Last Seen:</strong> ${c.last_seen}</div>
                     </div>
 
-                    <button class="login-btn"
-                        onclick="window.open('http://${c.ip}:${c.port}', '_blank')">
-                        Login
-                    </button>
+                    ${
+                        c.ui && c.login_url
+                        ? `<button class="login-btn" onclick="window.open('${c.login_url}', '_blank')">Open UI</button>`
+                        : `<button class="login-btn disabled" disabled>No UI</button>`
+                    }
                 `;
 
                 grid.appendChild(card);
@@ -122,7 +181,62 @@ const ContainersView = {
 };
 
 // -------------------------------
-// System View
+// Admin Panel View (Hidden)
+// -------------------------------
+const AdminView = {
+    name: "admin",
+    render: async () => {
+        const div = document.createElement("div");
+        div.className = "admin-view";
+
+        div.innerHTML = `
+            <h1 class="view-title">Admin Panel</h1>
+            <p class="view-subtitle">Advanced controls for EarnBox</p>
+
+            <div class="admin-grid">
+
+                <div class="admin-card">
+                    <h3>Portainer</h3>
+                    <button onclick="window.open('http://' + location.hostname + ':9000', '_blank')">
+                        Open Portainer
+                    </button>
+                </div>
+
+                <div class="admin-card">
+                    <h3>Netdata</h3>
+                    <button onclick="window.open('http://' + location.hostname + ':19999', '_blank')">
+                        Open Netdata
+                    </button>
+                </div>
+
+                <div class="admin-card">
+                    <h3>Restart All Containers</h3>
+                    <button onclick="fetch('/api/admin/reset', { method: 'POST' }).then(()=>alert('Restart requested'))">
+                        Restart Containers
+                    </button>
+                </div>
+
+                <div class="admin-card">
+                    <h3>Enable Daily Auto‑Reset</h3>
+                    <button onclick="fetch('/api/admin/enable-daily-reset', { method: 'POST' }).then(()=>alert('Daily reset enabled'))">
+                        Enable Daily Reset
+                    </button>
+                </div>
+
+                <div class="admin-card">
+                    <h3>Change Dashboard Password</h3>
+                    <p>(UI stub – backend/password system to be wired)</p>
+                </div>
+
+            </div>
+        `;
+
+        return div;
+    }
+};
+
+// -------------------------------
+// System & Logs Views (stubs)
 // -------------------------------
 const SystemView = {
     name: "system",
@@ -139,9 +253,6 @@ const SystemView = {
     }
 };
 
-// -------------------------------
-// Logs View
-// -------------------------------
 const LogsView = {
     name: "logs",
     render: async () => {
@@ -164,7 +275,8 @@ const views = {
     dashboard: DashboardView,
     containers: ContainersView,
     system: SystemView,
-    logs: LogsView
+    logs: LogsView,
+    admin: AdminView
 };
 
 // -------------------------------
@@ -175,6 +287,21 @@ document.querySelectorAll(".nav-btn").forEach(btn => {
         const view = btn.getAttribute("data-view");
         loadView(view);
     });
+});
+
+// -------------------------------
+// Hidden Admin Unlock (click v2.0 5x)
+// -------------------------------
+let adminClicks = 0;
+
+document.addEventListener("click", (e) => {
+    if (e.target.id === "admin-unlock") {
+        adminClicks++;
+        if (adminClicks >= 5) {
+            loadView("admin");
+            adminClicks = 0;
+        }
+    }
 });
 
 // -------------------------------
