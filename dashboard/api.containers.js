@@ -1,11 +1,10 @@
-function parseContainers(glancesData) {
-    if (!glancesData || !glancesData.docker) return [];
-
-    return glancesData.docker.map(c => ({
-        name: c.Name,
-        status: c.Status,
-        cpu: c.cpu_percent,
-        mem: c.mem_percent,
-        uptime: c.uptime
-    }));
+async function loadContainers() {
+    const el = document.getElementById("container-data");
+    try {
+        const res = await fetch("http://localhost:3001/containers");
+        const data = await res.json();
+        el.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+    } catch (err) {
+        el.innerHTML = "Error loading containers.";
+    }
 }
