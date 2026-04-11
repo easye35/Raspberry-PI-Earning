@@ -130,6 +130,60 @@ app.post("/api/admin/enable-daily-reset", (req, res) => {
     });
 });
 
+import fs from "fs";
+
+// ------------------------------------------------------------
+// ADMIN: Read .env credentials
+// ------------------------------------------------------------
+app.get("/api/admin/env", (req, res) => {
+    try {
+        const env = fs.readFileSync("modules/.env", "utf8");
+        const lines = env.split("\n");
+
+        const data = {};
+        for (const line of lines) {
+            if (line.includes("=")) {
+                const [key, value] = line.split("=");
+                data[key.trim()] = value.trim();
+            }
+        }
+
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ error: "Failed to read .env" });
+    }
+});
+
+// ------------------------------------------------------------
+// ADMIN: Update .env credentials
+// ------------------------------------------------------------
+app.post("/api/admin/env", (req, res) => {
+    try {
+        let output = "";
+        for (const [key, value] of Object.entries(req.body)) {
+            output += `${key}=${value}\n`;
+        }
+
+        fs.writeFileSync("modules/.env", output);
+        res.json({ status: "updated" });
+
+    } catch (err) {
+        res.status(500).json({ error: "Failed to write .env" });
+    }
+});
+
+// ------------------------------------------------------------
+// ADMIN: Restart containers to apply new credentials
+// ------------------------------------------------------------
+app.post("/api/admin/apply-env", (req, res) => {
+    exec("docker compose down && docker compose up -d", (err) => {
+        if (err) {
+            console.error("Restart error:", err);
+            return res.status(500).json({ error: "Failed to restart containers" });
+        }
+        res.json({ status: "containers restarted" });
+    });
+});
 // ------------------------------------------------------------
 // START SERVER
 // ------------------------------------------------------------
