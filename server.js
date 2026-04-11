@@ -42,36 +42,42 @@ app.get("/api/containers", async (req, res) => {
             let ui = false;
             let login_url = null;
 
+            // Pawns
             if (name.includes("pawns")) {
                 type = "pawns";
                 ui = true;
                 login_url = `http://${req.hostname}:9000/#/containers/${name}`;
             }
 
+            // Honeygain
             if (name.includes("honeygain")) {
                 type = "honeygain";
                 ui = true;
                 login_url = `http://${req.hostname}:9000/#/containers/${name}`;
             }
 
+            // EarnApp
             if (name.includes("earnapp")) {
                 type = "earnapp";
                 ui = true;
                 login_url = `http://${req.hostname}:9000/#/containers/${name}`;
             }
 
+            // Portainer
             if (name.includes("portainer")) {
                 type = "portainer";
                 ui = true;
                 login_url = `http://${req.hostname}:9000`;
             }
 
+            // Netdata
             if (name.includes("netdata")) {
                 type = "netdata";
                 ui = true;
                 login_url = `http://${req.hostname}:19999`;
             }
 
+            // Dashboard (nginx)
             if (name.includes("nginx")) {
                 type = "dashboard";
                 ui = true;
