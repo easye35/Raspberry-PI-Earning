@@ -1,49 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Raspberry Pi Earning Dashboard</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <title>EarnBox Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div id="app">
-    <header>
-      <h1>Raspberry Pi Earning Dashboard</h1>
-      <span id="last-update"></span>
-    </header>
 
-    <main>
-      <section class="card" id="honeygain-card">
-        <h2>Honeygain</h2>
-        <pre id="honeygain-status">Loading...</pre>
-      </section>
+<div id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+        <span class="logo">EarnBox</span>
+        <button id="toggleSidebar" class="toggle-btn">☰</button>
+    </div>
 
-      <section class="card" id="earnapp-card">
-        <h2>EarnApp (Native)</h2>
-        <div class="row">
-          <div>
-            <div><strong>Service:</strong> <span id="earnapp-service"></span></div>
-            <div><strong>Device ID:</strong> <span id="earnapp-device"></span></div>
-            <div><strong>Email:</strong> <span id="earnapp-email"></span></div>
-          </div>
-          <button id="earnapp-restart">Restart EarnApp</button>
-        </div>
-        <h3>Recent Log</h3>
-        <pre id="earnapp-log">Loading...</pre>
-      </section>
+    <nav class="nav">
+        <a href="#" data-section="home">Home</a>
+        <a href="#" data-section="earnapp">EarnApp Native</a>
+        <a href="#" data-section="containers">Containers</a>
+        <a href="#" data-section="system">System Metrics</a>
+        <a href="#" data-section="logins">Logins</a>
+    </nav>
+</div>
 
-      <section class="card" id="pawns-card">
-        <h2>Pawns</h2>
-        <pre id="pawns-status">Loading...</pre>
-      </section>
+<div id="main" class="main">
+    <div id="content"></div>
+</div>
 
-      <section class="card" id="system-card">
-        <h2>System / Containers</h2>
-        <pre id="system-containers">Loading...</pre>
-      </section>
-    </main>
-  </div>
+<script src="local-api/glances.js"></script>
+<script src="local-api/earnapp.js"></script>
+<script src="api.containers.js"></script>
+<script src="app.js"></script>
 
-  <script src="app.js"></script>
 </body>
 </html>
