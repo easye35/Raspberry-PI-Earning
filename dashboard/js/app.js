@@ -1,184 +1,183 @@
-/* ---------------------------------------------------------
-   EarnBox Cyberpunk SPA Dashboard
-   Floating Glass Sidebar + Live Data
---------------------------------------------------------- */
+// ------------------------------------------------------------
+// EarnBox Dashboard - Modular Router + Plug‑in Architecture
+// ------------------------------------------------------------
 
-let currentView = "dashboard";
-let apiData = null;
-
-/* ---------------------------------------------------------
-   SIDEBAR + ORB TOGGLE
---------------------------------------------------------- */
-
+// -------------------------------
+// Sidebar + Orb Toggle Logic
+// -------------------------------
 const sidebar = document.getElementById("sidebar");
-const sidebarOrb = document.getElementById("sidebarOrb");
 const sidebarToggle = document.getElementById("sidebarToggle");
+const sidebarOrb = document.getElementById("sidebarOrb");
 
-sidebarToggle.addEventListener("click", () => collapseSidebar());
-sidebarOrb.addEventListener("click", () => expandSidebar());
+sidebarToggle.addEventListener("click", () => {
+    sidebar.classList.toggle("collapsed");
+    sidebarOrb.classList.toggle("visible");
+});
 
-function collapseSidebar() {
-    sidebar.classList.add("collapsed");
-    sidebarOrb.classList.add("visible");
-}
+sidebarOrb.addEventListener("click", () => {
+    sidebar.classList.toggle("collapsed");
+    sidebarOrb.classList.toggle("visible");
+});
 
-function expandSidebar() {
-    sidebar.classList.remove("collapsed");
-    sidebarOrb.classList.remove("visible");
-}
-
-/* ---------------------------------------------------------
-   SPA ROUTER
---------------------------------------------------------- */
-
+// -------------------------------
+// View Injection System
+// -------------------------------
 const viewContainer = document.getElementById("view-container");
-const navButtons = document.querySelectorAll(".nav-btn");
 
-navButtons.forEach(btn => {
+async function loadView(viewName) {
+    const view = views[viewName];
+
+    if (!view) {
+        viewContainer.innerHTML = `<div class="error">Unknown view: ${viewName}</div>`;
+        return;
+    }
+
+    const content = await view.render();
+    viewContainer.innerHTML = "";
+    viewContainer.appendChild(content);
+}
+
+// -------------------------------
+// Dashboard View
+// -------------------------------
+const DashboardView = {
+    name: "dashboard",
+    render: async () => {
+        const div = document.createElement("div");
+        div.className = "dashboard-view";
+
+        div.innerHTML = `
+            <h1 class="view-title">Dashboard</h1>
+            <p class="view-subtitle">Welcome to your EarnBox control center.</p>
+        `;
+
+        return div;
+    }
+};
+
+// -------------------------------
+// Containers Plug‑in View
+// Auto‑discovers running containers
+// -------------------------------
+const ContainersView = {
+    name: "containers",
+    render: async () => {
+        const container = document.createElement("div");
+        container.className = "containers-view";
+
+        container.innerHTML = `
+            <h1 class="view-title">Containers</h1>
+            <p class="view-subtitle">Auto‑discovered running containers</p>
+
+            <div id="containersGrid" class="containers-grid">
+                <div class="loading">Scanning Docker...</div>
+            </div>
+        `;
+
+        const grid = container.querySelector("#containersGrid");
+
+        try {
+            const res = await fetch("/api/containers");
+            const containers = await res.json();
+
+            grid.innerHTML = "";
+
+            if (!containers.length) {
+                grid.innerHTML = `<div class="empty">No containers detected.</div>`;
+                return container;
+            }
+
+            containers.forEach(c => {
+                const card = document.createElement("div");
+                card.className = "container-card";
+
+                card.innerHTML = `
+                    <div class="card-header">
+                        <span class="container-name">${c.name}</span>
+                        <span class="status-dot ${c.status}"></span>
+                    </div>
+
+                    <div class="card-body">
+                        <div><strong>IP:</strong> ${c.ip}</div>
+                        <div><strong>Port:</strong> ${c.port}</div>
+                        <div><strong>Last Seen:</strong> ${c.last_seen}</div>
+                    </div>
+
+                    <button class="login-btn"
+                        onclick="window.open('http://${c.ip}:${c.port}', '_blank')">
+                        Login
+                    </button>
+                `;
+
+                grid.appendChild(card);
+            });
+
+        } catch (err) {
+            console.error(err);
+            grid.innerHTML = `<div class="error">Failed to load containers.</div>`;
+        }
+
+        return container;
+    }
+};
+
+// -------------------------------
+// System View
+// -------------------------------
+const SystemView = {
+    name: "system",
+    render: async () => {
+        const div = document.createElement("div");
+        div.className = "system-view";
+
+        div.innerHTML = `
+            <h1 class="view-title">System</h1>
+            <p class="view-subtitle">System information and diagnostics.</p>
+        `;
+
+        return div;
+    }
+};
+
+// -------------------------------
+// Logs View
+// -------------------------------
+const LogsView = {
+    name: "logs",
+    render: async () => {
+        const div = document.createElement("div");
+        div.className = "logs-view";
+
+        div.innerHTML = `
+            <h1 class="view-title">Logs</h1>
+            <p class="view-subtitle">Container and system logs.</p>
+        `;
+
+        return div;
+    }
+};
+
+// -------------------------------
+// View Registry
+// -------------------------------
+const views = {
+    dashboard: DashboardView,
+    containers: ContainersView,
+    system: SystemView,
+    logs: LogsView
+};
+
+// -------------------------------
+// Navigation Buttons
+// -------------------------------
+document.querySelectorAll(".nav-btn").forEach(btn => {
     btn.addEventListener("click", () => {
-        navButtons.forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        currentView = btn.dataset.view;
-        renderView();
+        const view = btn.getAttribute("data-view");
+        loadView(view);
     });
 });
 
-/* ---------------------------------------------------------
-   FETCH LIVE DATA
---------------------------------------------------------- */
-
-async function fetchData() {
-    try {
-        const response = await fetch("/local-api/api.json");
-        apiData = await response.json();
-        renderView();
-    } catch (err) {
-        console.error("API fetch failed:", err);
-    }
-}
-
-setInterval(fetchData, 5000);
-fetchData();
-
-/* ---------------------------------------------------------
-   VIEW RENDERING
---------------------------------------------------------- */
-
-function renderView() {
-    if (!apiData) return;
-
-    switch (currentView) {
-        case "dashboard":
-            renderDashboard();
-            break;
-        case "containers":
-            renderContainers();
-            break;
-        case "system":
-            renderSystem();
-            break;
-        case "logs":
-            renderLogs();
-            break;
-    }
-}
-
-/* ---------------------------------------------------------
-   DASHBOARD VIEW
---------------------------------------------------------- */
-
-function renderDashboard() {
-    viewContainer.innerHTML = `
-        
-        <div class="card">
-            <div class="card-title">Container Status</div>
-            <div>${Object.keys(apiData.containers).length} containers monitored</div>
-        </div>
-
-        <div class="card">
-            <div class="card-title">System Health</div>
-            <div>Pi Temp: ${apiData.pi.temp}</div>
-            <div>HDD: ${apiData.hdd.health}</div>
-            <div>Power: ${apiData.power.undervolt ? "⚠ Undervolt" : "Stable"}</div>
-        </div>
-    `;
-}
-
-/* ---------------------------------------------------------
-   CONTAINERS VIEW
---------------------------------------------------------- */
-
-function renderContainers() {
-    let html = `<div class="card"><div class="card-title">Containers</div>`;
-
-    for (const [name, c] of Object.entries(apiData.containers)) {
-        html += `
-            <div class="card" style="margin-top:15px;">
-                <div class="card-title">${name}</div>
-                <div>Status: ${c.status}</div>
-                <div>CPU: ${c.cpu}</div>
-                <div>RAM: ${c.ram}</div>
-                <div>Uptime: ${c.uptime}</div>
-            </div>
-        `;
-    }
-
-    html += `</div>`;
-    viewContainer.innerHTML = html;
-}
-
-/* ---------------------------------------------------------
-   SYSTEM VIEW
---------------------------------------------------------- */
-
-function renderSystem() {
-    viewContainer.innerHTML = `
-        <div class="card">
-            <div class="card-title">Power</div>
-            <div>Undervolt: ${apiData.power.undervolt}</div>
-            <div>Throttled: ${apiData.power.throttled}</div>
-            <div>Voltage: ${apiData.power.voltage}</div>
-        </div>
-
-        <div class="card">
-            <div class="card-title">HDD</div>
-            <div>Health: ${apiData.hdd.health}</div>
-            <div>Temp: ${apiData.hdd.temp}</div>
-            <div>Free Space: ${apiData.hdd.free}</div>
-        </div>
-
-        <div class="card">
-            <div class="card-title">Pi</div>
-            <div>Temp: ${apiData.pi.temp}</div>
-            <div>Load: ${apiData.pi.load}</div>
-            <div>Uptime: ${apiData.pi.uptime}</div>
-        </div>
-    `;
-}
-
-/* 
-
-/* ---------------------------------------------------------
-   LOGS VIEW
---------------------------------------------------------- */
-
-function renderLogs() {
-    viewContainer.innerHTML = `
-        <div class="card">
-            <div class="card-title">Container Logs</div>
-            <div class="log-box" id="logBox">Loading logs...</div>
-        </div>
-    `;
-
-    fetchLogs();
-}
-
-async function fetchLogs() {
-    try {
-        const response = await fetch("/local-api/logs.txt");
-        const text = await response.text();
-        document.getElementById("logBox").textContent = text;
-    } catch {
-        document.getElementById("logBox").textContent = "Failed to load logs.";
-    }
-}
+// -------------------------------
+// Load Default View
+// -------------------------------
+loadView("dashboard");
