@@ -38,7 +38,6 @@ echo ""
 echo "Saving credentials..."
 
 # --- WRITE .env FILE ---
-mkdir -p modules
 
 cat <<EOF > .env
 HONEYGAIN_EMAIL="$HONEYGAIN_EMAIL"
