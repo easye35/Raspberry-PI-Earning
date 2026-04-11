@@ -54,7 +54,7 @@ EARNAPP_PASSWORD="$EARNAPP_PASSWORD"
 TZ="$TZ_VALUE"
 EOF
 
-echo "modules/.env created successfully."
+echo ".env created successfully."
 echo ""
 
 # --- DOCKER INSTALL CHECK ---
