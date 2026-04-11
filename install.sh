@@ -82,6 +82,47 @@ COMPOSE_FILE="$REPO_ROOT/docker-compose.yml"
 info "Repo root: $REPO_ROOT"
 info "Data root: $DATA_ROOT"
 
+echo "[EarnBox] Installing backend..."
+
+# Ensure Node.js exists
+if ! command -v node >/dev/null 2>&1; then
+    echo "[EarnBox] Node.js not found. Installing..."
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+    sudo apt-get install -y nodejs
+fi
+
+# Install backend dependencies
+echo "[EarnBox] Installing backend dependencies..."
+cd "$(dirname "$0")"   # go to project root
+npm install --silent
+
+# Create systemd service
+echo "[EarnBox] Creating backend service..."
+
+sudo tee /etc/systemd/system/earnbox-backend.service >/dev/null <<EOF
+[Unit]
+Description=EarnBox Backend API
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=$(pwd)
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Enable + start service
+sudo systemctl daemon-reload
+sudo systemctl enable earnbox-backend.service
+sudo systemctl restart earnbox-backend.service
+
+echo "[EarnBox] Backend installed and running!"
 ###############################################
 # Native EarnApp Installer (Official)
 ###############################################
