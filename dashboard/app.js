@@ -16,16 +16,19 @@ function setText(id, text) {
 }
 
 async function refresh() {
-  document.getElementById("last-update").textContent = `Last update: ${new Date().toLocaleTimeString()}`;
+  document.getElementById("last-update").textContent =
+    `Last update: ${new Date().toLocaleTimeString()}`;
 
   const containers = await fetchJson("/api/system/containers");
   if (containers.ok) {
     const lines = containers.containers.map(
       (c) => `${c.Names}  |  ${c.Status}  |  ${c.Image}`
     );
-    document.getElementById("system-containers").textContent = lines.join("\n") || "No containers.";
+    document.getElementById("system-containers").textContent =
+      lines.join("\n") || "No containers.";
   } else {
-    document.getElementById("system-containers").textContent = `Error: ${containers.error}`;
+    document.getElementById("system-containers").textContent =
+      `Error: ${containers.error}`;
   }
 
   const earn = await fetchJson("/api/earnapp/status");
@@ -36,7 +39,8 @@ async function refresh() {
     document.getElementById("earnapp-log").textContent =
       earn.log_tail || "(no log data)";
   } else {
-    document.getElementById("earnapp-log").textContent = `Error: ${earn.error}`;
+    document.getElementById("earnapp-log").textContent =
+      `Error: ${earn.error}`;
   }
 
   document.getElementById("honeygain-status").textContent =
@@ -51,7 +55,7 @@ async function restartEarnApp() {
   btn.textContent = "Restarting...";
   try {
     const res = await fetch(`${API_BASE}/api/earnapp/restart`, {
-      method: "POST",
+      method: "POST"
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     await refresh();
