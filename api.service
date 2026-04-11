@@ -1,0 +1,19 @@
+[Unit]
+Description=EarnBox Backend API
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+WorkingDirectory=/home/pi/EarnBox
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+User=pi
+Environment=NODE_ENV=production
+
+# Prevent systemd from killing Node during shutdown
+KillSignal=SIGINT
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target
