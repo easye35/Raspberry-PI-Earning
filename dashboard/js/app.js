@@ -1,5 +1,5 @@
 // ------------------------------------------------------------
-// EarnBox Dashboard v2 - Router + Views + Admin
+// EarnBox Dashboard v2 — Full SPA Router + Views
 // ------------------------------------------------------------
 
 // -------------------------------
@@ -35,11 +35,16 @@ async function loadView(viewName) {
     const content = await view.render();
     viewContainer.innerHTML = "";
     viewContainer.appendChild(content);
+
+    // Highlight active nav button
+    document.querySelectorAll(".nav-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.getAttribute("data-view") === viewName);
+    });
 }
 
-// -------------------------------
-// Dashboard View (Customer-facing)
-// -------------------------------
+// ------------------------------------------------------------
+// DASHBOARD VIEW (Customer-facing)
+// ------------------------------------------------------------
 const DashboardView = {
     name: "dashboard",
     render: async () => {
@@ -101,9 +106,9 @@ const DashboardView = {
     }
 };
 
-// -------------------------------
-// Containers View (Updated)
-// -------------------------------
+// ------------------------------------------------------------
+// CONTAINERS VIEW (Auto-discovery)
+// ------------------------------------------------------------
 const ContainersView = {
     name: "containers",
     render: async () => {
@@ -180,9 +185,9 @@ const ContainersView = {
     }
 };
 
-// -------------------------------
-// Admin Panel View (Hidden)
-// -------------------------------
+// ------------------------------------------------------------
+// ADMIN PANEL (Hidden)
+// ------------------------------------------------------------
 const AdminView = {
     name: "admin",
     render: async () => {
@@ -225,7 +230,7 @@ const AdminView = {
 
                 <div class="admin-card">
                     <h3>Change Dashboard Password</h3>
-                    <p>(UI stub – backend/password system to be wired)</p>
+                    <p>(Coming soon)</p>
                 </div>
 
             </div>
@@ -235,20 +240,17 @@ const AdminView = {
     }
 };
 
-// -------------------------------
-// System & Logs Views (stubs)
-// -------------------------------
+// ------------------------------------------------------------
+// SYSTEM + LOGS (Stubs)
+// ------------------------------------------------------------
 const SystemView = {
     name: "system",
     render: async () => {
         const div = document.createElement("div");
-        div.className = "system-view";
-
         div.innerHTML = `
             <h1 class="view-title">System</h1>
             <p class="view-subtitle">System information and diagnostics.</p>
         `;
-
         return div;
     }
 };
@@ -257,20 +259,17 @@ const LogsView = {
     name: "logs",
     render: async () => {
         const div = document.createElement("div");
-        div.className = "logs-view";
-
         div.innerHTML = `
             <h1 class="view-title">Logs</h1>
             <p class="view-subtitle">Container and system logs.</p>
         `;
-
         return div;
     }
 };
 
-// -------------------------------
+// ------------------------------------------------------------
 // View Registry
-// -------------------------------
+// ------------------------------------------------------------
 const views = {
     dashboard: DashboardView,
     containers: ContainersView,
@@ -279,9 +278,9 @@ const views = {
     admin: AdminView
 };
 
-// -------------------------------
+// ------------------------------------------------------------
 // Navigation Buttons
-// -------------------------------
+// ------------------------------------------------------------
 document.querySelectorAll(".nav-btn").forEach(btn => {
     btn.addEventListener("click", () => {
         const view = btn.getAttribute("data-view");
@@ -289,9 +288,9 @@ document.querySelectorAll(".nav-btn").forEach(btn => {
     });
 });
 
-// -------------------------------
-// Hidden Admin Unlock (click v2.0 5x)
-// -------------------------------
+// ------------------------------------------------------------
+// Hidden Admin Unlock (click v2.0 5×)
+// ------------------------------------------------------------
 let adminClicks = 0;
 
 document.addEventListener("click", (e) => {
@@ -304,7 +303,7 @@ document.addEventListener("click", (e) => {
     }
 });
 
-// -------------------------------
+// ------------------------------------------------------------
 // Load Default View
-// -------------------------------
+// ------------------------------------------------------------
 loadView("dashboard");
