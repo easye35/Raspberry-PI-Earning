@@ -1,0 +1,13 @@
+[Unit]
+Description=Earning API Service
+After=network.target docker.service
+
+[Service]
+WorkingDirectory=/home/easye35/Raspberry-PI-docker-Earning/api
+ExecStart=/usr/bin/node server.js
+Restart=always
+User=easye35
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target[]
