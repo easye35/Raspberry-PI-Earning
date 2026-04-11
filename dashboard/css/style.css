@@ -1,194 +1,87 @@
-/* ------------------------------------------------------------
-   GLOBAL
------------------------------------------------------------- */
-
 body {
     margin: 0;
-    padding: 0;
-    background: #0d0b14;
-    color: #e0d7ff;
     font-family: "Segoe UI", sans-serif;
+    background: #0d0d0f;
+    color: #e0e0e0;
     overflow: hidden;
 }
 
-h1, h2, h3 {
-    margin: 0 0 10px 0;
-    font-weight: 600;
-}
-
-button {
-    background: rgba(180, 0, 255, 0.25);
-    border: 1px solid rgba(180, 0, 255, 0.5);
-    padding: 10px 16px;
-    border-radius: 8px;
-    color: #e0d7ff;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-button:hover {
-    background: rgba(180, 0, 255, 0.45);
-}
-
-/* ------------------------------------------------------------
-   LAYOUT
------------------------------------------------------------- */
-
-.layout {
-    display: flex;
-    height: 100vh;
-}
-
-/* ------------------------------------------------------------
-   SIDEBAR
------------------------------------------------------------- */
-
+/* Sidebar */
 .sidebar {
     width: 260px;
-    background: rgba(20, 15, 35, 0.85);
+    height: 100vh;
+    background: rgba(20, 20, 25, 0.65);
     backdrop-filter: blur(12px);
-    border-right: 1px solid rgba(180, 0, 255, 0.2);
+    border-right: 1px solid rgba(140, 0, 255, 0.4);
+    position: fixed;
+    left: 0;
+    top: 0;
+    transition: transform 0.35s ease;
+}
+
+.sidebar.collapsed {
+    transform: translateX(-220px);
+}
+
+.sidebar-header {
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
     padding: 20px;
-    transition: width 0.3s;
+    font-size: 22px;
+    color: #c88cff;
 }
 
-.sidebar-collapsed .sidebar {
-    width: 70px;
-}
-
-.brand {
-    display: flex;
-    align-items: center;
-    margin-bottom: 30px;
+.toggle-btn {
+    background: none;
+    border: none;
+    color: #c88cff;
+    font-size: 22px;
     cursor: pointer;
 }
 
-.brand-mark {
-    font-size: 28px;
-    margin-right: 10px;
+.nav a {
+    display: block;
+    padding: 15px 20px;
+    color: #d8caff;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(140, 0, 255, 0.15);
+    transition: background 0.2s;
 }
 
-.sidebar-collapsed .brand-text {
-    display: none;
+.nav a:hover {
+    background: rgba(140, 0, 255, 0.15);
 }
 
-.nav button {
-    width: 100%;
-    text-align: left;
-    margin-bottom: 10px;
-    background: transparent;
-    border: 1px solid rgba(180, 0, 255, 0.2);
-}
-
-.nav button.active {
-    background: rgba(180, 0, 255, 0.4);
-}
-
-/* ------------------------------------------------------------
-   ORB TOGGLE
------------------------------------------------------------- */
-
-.orb-toggle {
-    margin-top: auto;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(180,0,255,0.8), rgba(80,0,150,0.4));
-    cursor: pointer;
-    align-self: center;
-}
-
-/* ------------------------------------------------------------
-   MAIN CONTENT
------------------------------------------------------------- */
-
+/* Main content */
 .main {
-    flex: 1;
-    padding: 30px;
+    margin-left: 260px;
+    padding: 20px;
+    height: 100vh;
     overflow-y: auto;
+    transition: margin-left 0.35s ease;
 }
 
-/* ------------------------------------------------------------
-   GLASS CARDS
------------------------------------------------------------- */
+.main.collapsed {
+    margin-left: 40px;
+}
 
-.glass-card {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(180, 0, 255, 0.25);
-    border-radius: 12px;
+/* Cards */
+.card {
+    background: rgba(25, 25, 30, 0.55);
+    border: 1px solid rgba(140, 0, 255, 0.35);
     padding: 20px;
     margin-bottom: 20px;
     backdrop-filter: blur(10px);
+    box-shadow: 0 0 12px rgba(140, 0, 255, 0.25);
+    transition: transform 0.2s ease;
 }
 
-/* ------------------------------------------------------------
-   DASHBOARD
------------------------------------------------------------- */
-
-.cards-row {
-    display: flex;
-    gap: 20px;
+.card:hover {
+    transform: translateY(-3px);
 }
 
-/* ------------------------------------------------------------
-   TABLES
------------------------------------------------------------- */
-
-.table-wrapper {
-    overflow-x: auto;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    color: #e0d7ff;
-}
-
-th, td {
-    padding: 12px;
-    border-bottom: 1px solid rgba(180, 0, 255, 0.2);
-}
-
-.status-ok {
-    color: #7dff9c;
-}
-
-.status-bad {
-    color: #ff7d7d;
-}
-
-/* ------------------------------------------------------------
-   ADMIN PANEL
------------------------------------------------------------- */
-
-.admin-grid {
+.grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 20px;
-}
-
-.admin-card label {
-    display: block;
-    margin-top: 10px;
-    margin-bottom: 4px;
-    font-size: 14px;
-    opacity: 0.8;
-}
-
-.admin-input {
-    width: 100%;
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px solid rgba(180, 0, 255, 0.3);
-    background: rgba(255, 255, 255, 0.08);
-    color: #e0d7ff;
-    margin-bottom: 10px;
-}
-
-.admin-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 10px;
 }
