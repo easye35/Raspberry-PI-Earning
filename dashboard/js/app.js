@@ -1,309 +1,340 @@
 // ------------------------------------------------------------
-// EarnBox Dashboard v2 — Full SPA Router + Views
+// EarnBox Dashboard SPA
 // ------------------------------------------------------------
 
-// -------------------------------
-// Sidebar + Orb Toggle Logic
-// -------------------------------
-const sidebar = document.getElementById("sidebar");
-const sidebarToggle = document.getElementById("sidebarToggle");
-const sidebarOrb = document.getElementById("sidebarOrb");
+const state = {
+    currentView: "dashboard",
+    adminUnlocked: false,
+    logoClickCount: 0,
+    logoClickTimeout: null,
+    containers: []
+};
 
-sidebarToggle.addEventListener("click", () => {
-    sidebar.classList.toggle("collapsed");
-    sidebarOrb.classList.toggle("visible");
-});
+const views = {};
 
-sidebarOrb.addEventListener("click", () => {
-    sidebar.classList.toggle("collapsed");
-    sidebarOrb.classList.toggle("visible");
-});
+// ------------------------------------------------------------
+// Utility: Switch View
+// ------------------------------------------------------------
+function setView(view) {
+    state.currentView = view;
+    render();
+}
 
-// -------------------------------
-// View Injection System
-// -------------------------------
-const viewContainer = document.getElementById("view-container");
+// ------------------------------------------------------------
+// Sidebar + Orb Toggle
+// ------------------------------------------------------------
+function toggleSidebar() {
+    document.body.classList.toggle("sidebar-collapsed");
+}
 
-async function loadView(viewName) {
-    const view = views[viewName];
-
-    if (!view) {
-        viewContainer.innerHTML = `<div class="error">Unknown view: ${viewName}</div>`;
-        return;
+function initSidebar() {
+    const orb = document.getElementById("orb-toggle");
+    if (orb) {
+        orb.onclick = toggleSidebar;
     }
 
-    const content = await view.render();
-    viewContainer.innerHTML = "";
-    viewContainer.appendChild(content);
-
-    // Highlight active nav button
-    document.querySelectorAll(".nav-btn").forEach(btn => {
-        btn.classList.toggle("active", btn.getAttribute("data-view") === viewName);
+    document.querySelectorAll("[data-view]").forEach(el => {
+        el.onclick = () => {
+            const view = el.getAttribute("data-view");
+            setView(view);
+        };
     });
 }
 
 // ------------------------------------------------------------
-// DASHBOARD VIEW (Customer-facing)
+// Logo Secret Admin Unlock (5 clicks)
 // ------------------------------------------------------------
-const DashboardView = {
-    name: "dashboard",
-    render: async () => {
-        const div = document.createElement("div");
-        div.className = "dashboard-view";
+function initLogoUnlock() {
+    const logo = document.getElementById("brand-logo");
+    if (!logo) return;
 
-        div.innerHTML = `
-            <h1 class="view-title">EarnBox Dashboard</h1>
-            <p class="view-subtitle">Manage your earning apps and payout accounts</p>
+    logo.addEventListener("click", () => {
+        state.logoClickCount++;
 
-            <div class="apps-grid">
-
-                <div class="app-card">
-                    <div class="app-icon">♟️</div>
-                    <div class="app-name">Pawns.app</div>
-                    <button class="app-btn" onclick="window.open('https://pawns.app/login', '_blank')">
-                        Open Pawns Website
-                    </button>
-                </div>
-
-                <div class="app-card">
-                    <div class="app-icon">🍯</div>
-                    <div class="app-name">Honeygain</div>
-                    <button class="app-btn" onclick="window.open('https://dashboard.honeygain.com', '_blank')">
-                        Open Honeygain Website
-                    </button>
-                </div>
-
-                <div class="app-card">
-                    <div class="app-icon">💸</div>
-                    <div class="app-name">EarnApp</div>
-                    <button class="app-btn" onclick="window.open('https://earnapp.com/dashboard', '_blank')">
-                        Open EarnApp Website
-                    </button>
-                </div>
-
-                <div class="app-card">
-                    <div class="app-icon">🛠️</div>
-                    <div class="app-name">Portainer</div>
-                    <button class="app-btn" onclick="window.open('http://' + location.hostname + ':9000', '_blank')">
-                        Open Portainer
-                    </button>
-                </div>
-
-                <div class="app-card">
-                    <div class="app-icon">📊</div>
-                    <div class="app-name">Netdata</div>
-                    <button class="app-btn" onclick="window.open('http://' + location.hostname + ':19999', '_blank')">
-                        Open Netdata
-                    </button>
-                </div>
-
-            </div>
-
-            <div id="admin-unlock" class="admin-hidden">v2.0</div>
-        `;
-
-        return div;
-    }
-};
-
-// ------------------------------------------------------------
-// CONTAINERS VIEW (Auto-discovery)
-// ------------------------------------------------------------
-const ContainersView = {
-    name: "containers",
-    render: async () => {
-        const container = document.createElement("div");
-        container.className = "containers-view";
-
-        container.innerHTML = `
-            <h1 class="view-title">Containers</h1>
-            <p class="view-subtitle">Auto‑discovered running containers</p>
-
-            <div id="containersGrid" class="containers-grid">
-                <div class="loading">Scanning Docker...</div>
-            </div>
-        `;
-
-        const grid = container.querySelector("#containersGrid");
-
-        try {
-            const res = await fetch("/api/containers");
-            const containers = await res.json();
-
-            grid.innerHTML = "";
-
-            if (!containers.length) {
-                grid.innerHTML = `<div class="empty">No containers detected.</div>`;
-                return container;
-            }
-
-            containers.forEach(c => {
-                const card = document.createElement("div");
-                card.className = `container-card type-${c.type}`;
-
-                const icon = {
-                    pawns: "♟️",
-                    honeygain: "🍯",
-                    portainer: "🛠️",
-                    netdata: "📊",
-                    dashboard: "🖥️",
-                    generic: "📦"
-                }[c.type] || "📦";
-
-                const statusClass = c.status === "running" ? "running" : "stopped";
-
-                card.innerHTML = `
-                    <div class="card-header">
-                        <span class="container-icon">${icon}</span>
-                        <span class="container-name">${c.name}</span>
-                        <span class="status-dot ${statusClass}"></span>
-                    </div>
-
-                    <div class="card-body">
-                        <div><strong>Type:</strong> ${c.type}</div>
-                        <div><strong>IP:</strong> ${c.ip}</div>
-                        <div><strong>Port:</strong> ${c.port || "—"}</div>
-                        <div><strong>Last Seen:</strong> ${c.last_seen}</div>
-                    </div>
-
-                    ${
-                        c.ui && c.login_url
-                        ? `<button class="login-btn" onclick="window.open('${c.login_url}', '_blank')">Open UI</button>`
-                        : `<button class="login-btn disabled" disabled>No UI</button>`
-                    }
-                `;
-
-                grid.appendChild(card);
-            });
-
-        } catch (err) {
-            console.error(err);
-            grid.innerHTML = `<div class="error">Failed to load containers.</div>`;
+        if (state.logoClickTimeout) {
+            clearTimeout(state.logoClickTimeout);
         }
 
-        return container;
+        state.logoClickTimeout = setTimeout(() => {
+            state.logoClickCount = 0;
+        }, 2000);
+
+        if (state.logoClickCount >= 5) {
+            state.adminUnlocked = true;
+            state.logoClickCount = 0;
+            alert("Admin Panel unlocked");
+            setView("admin");
+        }
+    });
+}
+
+// ------------------------------------------------------------
+// API Helpers
+// ------------------------------------------------------------
+async function fetchContainers() {
+    try {
+        const res = await fetch("/api/containers");
+        state.containers = await res.json();
+    } catch (e) {
+        console.error("Failed to fetch containers", e);
+        state.containers = [];
+    }
+}
+
+async function restartContainers() {
+    await fetch("/api/admin/reset", { method: "POST" });
+    alert("Containers restarting");
+}
+
+async function enableDailyReset() {
+    await fetch("/api/admin/enable-daily-reset", { method: "POST" });
+    alert("Daily reset enabled");
+}
+
+// ------------------------------------------------------------
+// Admin: .env Management
+// ------------------------------------------------------------
+async function loadEnv() {
+    try {
+        const env = await fetch("/api/admin/env").then(r => r.json());
+
+        const map = {
+            PAWNS_EMAIL: "pawnsEmail",
+            PAWNS_PASSWORD: "pawnsPass",
+            PAWNS_DEVICE: "pawnsDevice",
+            HONEYGAIN_EMAIL: "hgEmail",
+            HONEYGAIN_PASSWORD: "hgPass",
+            EARNAPP_EMAIL: "eaEmail",
+            EARNAPP_PASSWORD: "eaPass"
+        };
+
+        Object.entries(map).forEach(([envKey, inputId]) => {
+            const el = document.getElementById(inputId);
+            if (el && env[envKey] !== undefined) {
+                el.value = env[envKey];
+            }
+        });
+    } catch (e) {
+        console.error("Failed to load .env", e);
+    }
+}
+
+async function saveEnv() {
+    const data = {
+        PAWNS_EMAIL: document.getElementById("pawnsEmail")?.value || "",
+        PAWNS_PASSWORD: document.getElementById("pawnsPass")?.value || "",
+        PAWNS_DEVICE: document.getElementById("pawnsDevice")?.value || "",
+        HONEYGAIN_EMAIL: document.getElementById("hgEmail")?.value || "",
+        HONEYGAIN_PASSWORD: document.getElementById("hgPass")?.value || "",
+        EARNAPP_EMAIL: document.getElementById("eaEmail")?.value || "",
+        EARNAPP_PASSWORD: document.getElementById("eaPass")?.value || ""
+    };
+
+    await fetch("/api/admin/env", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+    });
+
+    alert("Credentials saved to .env");
+}
+
+async function applyEnv() {
+    await fetch("/api/admin/apply-env", { method: "POST" });
+    alert("Containers restarted with new credentials");
+}
+
+// ------------------------------------------------------------
+// Views
+// ------------------------------------------------------------
+
+// Dashboard View
+views["dashboard"] = {
+    name: "Dashboard",
+    render: () => {
+        const running = state.containers.filter(c => c.status === "running").length;
+        const total = state.containers.length;
+
+        return `
+            <div class="view dashboard-view">
+                <h1>EarnBox Overview</h1>
+                <div class="cards-row">
+                    <div class="glass-card">
+                        <h2>Containers</h2>
+                        <p>${running} / ${total} running</p>
+                    </div>
+                    <div class="glass-card">
+                        <h2>Status</h2>
+                        <p>${running === total && total > 0 ? "All systems nominal" : "Attention required"}</p>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 };
 
-// ------------------------------------------------------------
-// ADMIN PANEL (Hidden)
-// ------------------------------------------------------------
-const AdminView = {
-    name: "admin",
-    render: async () => {
-        const div = document.createElement("div");
-        div.className = "admin-view";
+// Containers View
+views["containers"] = {
+    name: "Containers",
+    render: () => {
+        const rows = state.containers.map(c => `
+            <tr>
+                <td>${c.name}</td>
+                <td>${c.type}</td>
+                <td class="${c.status === "running" ? "status-ok" : "status-bad"}">${c.status}</td>
+                <td>${c.port || "-"}</td>
+                <td>
+                    ${c.ui && c.login_url ? `<a href="${c.login_url}" target="_blank">Open</a>` : "-"}
+                </td>
+            </tr>
+        `).join("");
 
-        div.innerHTML = `
-            <h1 class="view-title">Admin Panel</h1>
-            <p class="view-subtitle">Advanced controls for EarnBox</p>
+        return `
+            <div class="view containers-view">
+                <h1>Containers</h1>
+                <div class="table-wrapper glass-card">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Port</th>
+                                <th>UI</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows || `<tr><td colspan="5">No containers found</td></tr>`}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+};
+
+// System View (stub)
+views["system"] = {
+    name: "System",
+    render: () => `
+        <div class="view system-view">
+            <h1>System</h1>
+            <p>System metrics and hardware info can go here.</p>
+        </div>
+    `
+};
+
+// Logs View (stub)
+views["logs"] = {
+    name: "Logs",
+    render: () => `
+        <div class="view logs-view">
+            <h1>Logs</h1>
+            <p>Log streaming or recent events can go here.</p>
+        </div>
+    `
+};
+
+// Admin View (hidden, unlocked by logo clicks)
+views["admin"] = {
+    name: "Admin Panel",
+    render: () => `
+        <div class="view admin-view">
+            <h1>Admin Panel</h1>
 
             <div class="admin-grid">
-
-                <div class="admin-card">
-                    <h3>Portainer</h3>
-                    <button onclick="window.open('http://' + location.hostname + ':9000', '_blank')">
-                        Open Portainer
-                    </button>
-                </div>
-
-                <div class="admin-card">
-                    <h3>Netdata</h3>
-                    <button onclick="window.open('http://' + location.hostname + ':19999', '_blank')">
-                        Open Netdata
-                    </button>
-                </div>
-
-                <div class="admin-card">
+                <div class="admin-card glass-card">
                     <h3>Restart All Containers</h3>
-                    <button onclick="fetch('/api/admin/reset', { method: 'POST' }).then(()=>alert('Restart requested'))">
-                        Restart Containers
-                    </button>
+                    <p>Force restart all running containers.</p>
+                    <button onclick="restartContainers()">Restart</button>
                 </div>
 
-                <div class="admin-card">
-                    <h3>Enable Daily Auto‑Reset</h3>
-                    <button onclick="fetch('/api/admin/enable-daily-reset', { method: 'POST' }).then(()=>alert('Daily reset enabled'))">
-                        Enable Daily Reset
-                    </button>
+                <div class="admin-card glass-card">
+                    <h3>Enable Daily Reset</h3>
+                    <p>Run a daily container restart via systemd timer.</p>
+                    <button onclick="enableDailyReset()">Enable</button>
                 </div>
 
-                <div class="admin-card">
-                    <h3>Change Dashboard Password</h3>
-                    <p>(Coming soon)</p>
-                </div>
+                <div class="admin-card glass-card">
+                    <h3>Earning App Credentials</h3>
 
+                    <label>Pawns Email</label>
+                    <input id="pawnsEmail" class="admin-input" placeholder="Pawns Email" />
+
+                    <label>Pawns Password</label>
+                    <input id="pawnsPass" class="admin-input" placeholder="Pawns Password" type="password" />
+
+                    <label>Pawns Device</label>
+                    <input id="pawnsDevice" class="admin-input" placeholder="Pawns Device" />
+
+                    <label>Honeygain Email</label>
+                    <input id="hgEmail" class="admin-input" placeholder="Honeygain Email" />
+
+                    <label>Honeygain Password</label>
+                    <input id="hgPass" class="admin-input" placeholder="Honeygain Password" type="password" />
+
+                    <label>EarnApp Email</label>
+                    <input id="eaEmail" class="admin-input" placeholder="EarnApp Email" />
+
+                    <label>EarnApp Password</label>
+                    <input id="eaPass" class="admin-input" placeholder="EarnApp Password" type="password" />
+
+                    <div class="admin-actions">
+                        <button onclick="saveEnv()">Save</button>
+                        <button onclick="applyEnv()">Apply & Restart</button>
+                    </div>
+                </div>
             </div>
-        `;
-
-        return div;
-    }
+        </div>
+    `
 };
 
 // ------------------------------------------------------------
-// SYSTEM + LOGS (Stubs)
+// Render Function
 // ------------------------------------------------------------
-const SystemView = {
-    name: "system",
-    render: async () => {
-        const div = document.createElement("div");
-        div.innerHTML = `
-            <h1 class="view-title">System</h1>
-            <p class="view-subtitle">System information and diagnostics.</p>
-        `;
-        return div;
+function render() {
+    const root = document.getElementById("app-root");
+    if (!root) return;
+
+    const view = views[state.currentView] || views["dashboard"];
+
+    root.innerHTML = `
+        <div class="layout">
+            <aside class="sidebar">
+                <div class="brand" id="brand-logo">
+                    <span class="brand-mark">⧉</span>
+                    <span class="brand-text">EarnBox</span>
+                </div>
+                <nav class="nav">
+                    <button data-view="dashboard" class="${state.currentView === "dashboard" ? "active" : ""}">Dashboard</button>
+                    <button data-view="containers" class="${state.currentView === "containers" ? "active" : ""}">Containers</button>
+                    <button data-view="system" class="${state.currentView === "system" ? "active" : ""}">System</button>
+                    <button data-view="logs" class="${state.currentView === "logs" ? "active" : ""}">Logs</button>
+                    ${state.adminUnlocked ? `<button data-view="admin" class="${state.currentView === "admin" ? "active" : ""}">Admin</button>` : ""}
+                </nav>
+                <div class="orb-toggle" id="orb-toggle"></div>
+            </aside>
+            <main class="main">
+                ${view.render()}
+            </main>
+        </div>
+    `;
+
+    initSidebar();
+    initLogoUnlock();
+
+    // If we just rendered admin, load .env values
+    if (state.currentView === "admin") {
+        setTimeout(loadEnv, 200);
     }
-};
-
-const LogsView = {
-    name: "logs",
-    render: async () => {
-        const div = document.createElement("div");
-        div.innerHTML = `
-            <h1 class="view-title">Logs</h1>
-            <p class="view-subtitle">Container and system logs.</p>
-        `;
-        return div;
-    }
-};
+}
 
 // ------------------------------------------------------------
-// View Registry
+// Initial Load
 // ------------------------------------------------------------
-const views = {
-    dashboard: DashboardView,
-    containers: ContainersView,
-    system: SystemView,
-    logs: LogsView,
-    admin: AdminView
-};
+async function init() {
+    await fetchContainers();
+    render();
+}
 
-// ------------------------------------------------------------
-// Navigation Buttons
-// ------------------------------------------------------------
-document.querySelectorAll(".nav-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-        const view = btn.getAttribute("data-view");
-        loadView(view);
-    });
-});
-
-// ------------------------------------------------------------
-// Hidden Admin Unlock (click v2.0 5×)
-// ------------------------------------------------------------
-let adminClicks = 0;
-
-document.addEventListener("click", (e) => {
-    if (e.target.id === "admin-unlock") {
-        adminClicks++;
-        if (adminClicks >= 5) {
-            loadView("admin");
-            adminClicks = 0;
-        }
-    }
-});
-
-// ------------------------------------------------------------
-// Load Default View
-// ------------------------------------------------------------
-loadView("dashboard");
+window.addEventListener("DOMContentLoaded", init);
