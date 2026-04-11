@@ -1,141 +1,87 @@
-// ------------------------------------------------------------
-// EarnBox Backend API
-// ------------------------------------------------------------
 import express from "express";
-import Docker from "dockerode";
-import cors from "cors";
+import fs from "fs";
+import path from "path";
 import { exec } from "child_process";
+import { fileURLToPath } from "url";
 
 const app = express();
-const docker = new Docker({ socketPath: "/var/run/docker.sock" });
-
-app.use(cors());
 app.use(express.json());
 
-// ------------------------------------------------------------
-// ROOT
-// ------------------------------------------------------------
-app.get("/", (req, res) => {
-    res.json({ status: "EarnBox backend running" });
-});
+// Resolve __dirname for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // ------------------------------------------------------------
-// CONTAINER AUTO-DISCOVERY
+// STATIC DASHBOARD
 // ------------------------------------------------------------
-app.get("/api/containers", async (req, res) => {
-    try {
-        const containers = await docker.listContainers({ all: true });
+app.use(express.static(path.join(__dirname, "dashboard")));
 
-        const result = containers.map(c => {
-            const name = c.Names[0].replace("/", "");
-            const status = c.State === "running" ? "running" : "stopped";
+// ------------------------------------------------------------
+// API: Container Auto‑Discovery
+// ------------------------------------------------------------
+app.get("/api/containers", (req, res) => {
+    exec("docker ps --format '{{.Names}}|{{.Status}}|{{.Ports}}'", (err, stdout) => {
+        if (err) return res.json([]);
 
-            // Detect port
-            let port = null;
-            if (c.Ports && c.Ports.length > 0) {
-                const p = c.Ports.find(p => p.PublicPort || p.PrivatePort);
-                port = p?.PublicPort || p?.PrivatePort || null;
-            }
+        const lines = stdout.trim().split("\n");
+        const containers = lines.map(line => {
+            const [name, statusRaw, ports] = line.split("|");
 
-            // Type detection
+            const status = statusRaw.includes("Up") ? "running" : "stopped";
+
+            // Determine type
             let type = "generic";
-            let ui = false;
+            if (name.includes("pawns")) type = "pawns";
+            if (name.includes("honeygain")) type = "honeygain";
+            if (name.includes("earnapp")) type = "earnapp";
+
+            // Determine UI port
+            let port = null;
+            if (ports && ports.includes("0.0.0.0")) {
+                const match = ports.match(/0\.0\.0\.0:(\d+)/);
+                if (match) port = match[1];
+            }
+
+            // Login URL
             let login_url = null;
-
-            // Pawns
-            if (name.includes("pawns")) {
-                type = "pawns";
-                ui = true;
-                login_url = `http://${req.hostname}:9000/#/containers/${name}`;
-            }
-
-            // Honeygain
-            if (name.includes("honeygain")) {
-                type = "honeygain";
-                ui = true;
-                login_url = `http://${req.hostname}:9000/#/containers/${name}`;
-            }
-
-            // EarnApp
-            if (name.includes("earnapp")) {
-                type = "earnapp";
-                ui = true;
-                login_url = `http://${req.hostname}:9000/#/containers/${name}`;
-            }
-
-            // Portainer
-            if (name.includes("portainer")) {
-                type = "portainer";
-                ui = true;
-                login_url = `http://${req.hostname}:9000`;
-            }
-
-            // Netdata
-            if (name.includes("netdata")) {
-                type = "netdata";
-                ui = true;
-                login_url = `http://${req.hostname}:19999`;
-            }
-
-            // Dashboard (nginx)
-            if (name.includes("nginx")) {
-                type = "dashboard";
-                ui = true;
-                login_url = `http://${req.hostname}`;
-            }
+            if (port) login_url = `http://localhost:${port}`;
 
             return {
                 name,
                 type,
                 status,
-                ip: c.NetworkSettings?.Networks?.bridge?.IPAddress || "127.0.0.1",
                 port,
-                ui,
-                login_url,
-                last_seen: c.Status
+                ui: !!port,
+                login_url
             };
         });
 
-        res.json(result);
-
-    } catch (err) {
-        console.error("Container discovery error:", err);
-        res.status(500).json({ error: "Failed to read Docker containers" });
-    }
+        res.json(containers);
+    });
 });
 
 // ------------------------------------------------------------
 // ADMIN: Restart All Containers
 // ------------------------------------------------------------
 app.post("/api/admin/reset", (req, res) => {
-    exec("docker restart $(docker ps -q)", (err) => {
-        if (err) {
-            console.error("Restart error:", err);
-            return res.status(500).json({ error: "Failed to restart containers" });
-        }
+    exec("docker compose down && docker compose up -d", err => {
+        if (err) return res.status(500).json({ error: "Failed to restart containers" });
         res.json({ status: "ok" });
     });
 });
 
 // ------------------------------------------------------------
-// ADMIN: Enable Daily Auto-Reset
+// ADMIN: Enable Daily Reset Timer
 // ------------------------------------------------------------
 app.post("/api/admin/enable-daily-reset", (req, res) => {
-    exec("sudo systemctl enable --now earnbox-reset.timer", (err) => {
-        if (err) {
-            console.error("Timer enable error:", err);
-            return res.status(500).json({ error: "Failed to enable daily reset" });
-        }
+    exec("sudo systemctl enable --now earnbox-reset.timer", err => {
+        if (err) return res.status(500).json({ error: "Failed to enable timer" });
         res.json({ status: "enabled" });
     });
 });
 
-import fs from "fs";
-
-import fs from "fs";
-
 // ------------------------------------------------------------
-// ADMIN: Read .env credentials
+// ADMIN: Read .env
 // ------------------------------------------------------------
 app.get("/api/admin/env", (req, res) => {
     try {
@@ -152,13 +98,12 @@ app.get("/api/admin/env", (req, res) => {
 
         res.json(data);
     } catch (err) {
-        console.error("Failed to read .env:", err);
         res.status(500).json({ error: "Failed to read .env" });
     }
 });
 
 // ------------------------------------------------------------
-// ADMIN: Update .env credentials
+// ADMIN: Write .env
 // ------------------------------------------------------------
 app.post("/api/admin/env", (req, res) => {
     try {
@@ -171,27 +116,31 @@ app.post("/api/admin/env", (req, res) => {
         res.json({ status: "updated" });
 
     } catch (err) {
-        console.error("Failed to write .env:", err);
         res.status(500).json({ error: "Failed to write .env" });
     }
 });
 
 // ------------------------------------------------------------
-// ADMIN: Restart containers to apply new credentials
+// ADMIN: Apply .env + Restart Containers
 // ------------------------------------------------------------
 app.post("/api/admin/apply-env", (req, res) => {
-    exec("docker compose down && docker compose up -d", (err) => {
-        if (err) {
-            console.error("Restart error:", err);
-            return res.status(500).json({ error: "Failed to restart containers" });
-        }
+    exec("docker compose down && docker compose up -d", err => {
+        if (err) return res.status(500).json({ error: "Failed to restart containers" });
         res.json({ status: "containers restarted" });
     });
 });
+
+// ------------------------------------------------------------
+// FALLBACK: Serve Dashboard SPA
+// ------------------------------------------------------------
+app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "dashboard", "index.html"));
+});
+
 // ------------------------------------------------------------
 // START SERVER
 // ------------------------------------------------------------
-const PORT = 3001;
+const PORT = 3000;
 app.listen(PORT, () => {
     console.log(`EarnBox backend running on port ${PORT}`);
 });
