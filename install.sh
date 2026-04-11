@@ -91,6 +91,11 @@ Persistent=true
 WantedBy=timers.target
 EOF
 
+echo "[*] Creating earning-api systemd service..."
+sudo cp systemd/earning-api.service /etc/systemd/system/earning-api.service
+sudo systemctl daemon-reload
+sudo systemctl enable earning-api
+sudo systemctl restart earning-api
 echo "[*] Enabling services..."
 sudo systemctl daemon-reload
 sudo systemctl enable earning-api.service
