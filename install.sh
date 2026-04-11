@@ -369,6 +369,15 @@ fi
 
 echo ">>> Dependencies installed."
 
+echo "[EarnBox] Installing daily reset timer..."
+
+sudo cp modules/systemd/earnbox-reset.service /etc/systemd/system/
+sudo cp modules/systemd/earnbox-reset.timer /etc/systemd/system/
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now earnbox-reset.timer
+
+echo "[EarnBox] Daily reset timer enabled."
 ###############################################
 # Final Output
 ###############################################
