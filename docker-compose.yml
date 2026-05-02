@@ -1,29 +1,52 @@
 services:
 
-  dashboard:
-    build:
-      context: ./dashboard
-    container_name: dashboard
+  # ---------------------------------------------------------
+  # EarnBox Dashboard (Frontend)
+  # ---------------------------------------------------------
+  earnbox:
+    build: ./dashboard
+    container_name: earnbox
     ports:
       - "80:80"
     restart: unless-stopped
     networks:
       - earning_net
 
+  # ---------------------------------------------------------
+  # EarnBox Backend (API)
+  # ---------------------------------------------------------
+  backend:
+    user: root
+    build: ./backend
+    container_name: backend
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - earning_net
+
+  # ---------------------------------------------------------
+  # Honeygain
+  # ---------------------------------------------------------
   honeygain:
-    image: honeygain/honeygain
+    image: honeygain/honeygain:latest
     container_name: honeygain
     restart: unless-stopped
     command: >
       -tou-accept
       -email ${HONEYGAIN_EMAIL}
-      -password ${HONEYGAIN_PASSWORD}
+      -pass ${HONEYGAIN_PASSWORD}
       -device ${HONEYGAIN_DEVICE}
     environment:
       - TZ=${TZ}
     networks:
       - earning_net
 
+  # ---------------------------------------------------------
+  # Pawns
+  # ---------------------------------------------------------
   pawns:
     image: iproyal/pawns-cli:latest
     container_name: pawns
@@ -38,30 +61,30 @@ services:
     networks:
       - earning_net
 
-  watchtower:
-    image: containrrr/watchtower
-    container_name: watchtower
+  # ---------------------------------------------------------
+  # Netdata (System Stats)
+  # ---------------------------------------------------------
+  netdata:
+    image: netdata/netdata:stable
+    container_name: netdata
     restart: unless-stopped
-    command: --cleanup --schedule "0 0 4 * * *"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    networks:
-      - earning_net
-
-  glances:
-    image: nicolargo/glances:latest-full
-    container_name: glances
-    restart: unless-stopped
-    pid: "host"
     ports:
-      - "61208:61208"
-    environment:
-      - GLANCES_OPT=-w
+      - "19999:19999"
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - apparmor:unconfined
     volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /sys/class/thermal:/sys/class/thermal:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - earning_net
 
+  # ---------------------------------------------------------
+  # Dozzle (Container Logs)
+  # ---------------------------------------------------------
   dozzle:
     image: amir20/dozzle:latest
     container_name: dozzle
@@ -73,6 +96,42 @@ services:
     networks:
       - earning_net
 
+  # ---------------------------------------------------------
+  # Earnings Aggregator
+  # ---------------------------------------------------------
+  earnings:
+    build: ./earnings
+    container_name: earnings
+    restart: unless-stopped
+    environment:
+      - TZ=America/Edmonton
+      - EARNINGS_DB_PATH=/data/earnings.db
+      - EARNINGS_JSON_PATH=/data/latest_earnings.json
+
+      # Honeygain credentials
+      - HONEYGAIN_EMAIL=${HONEYGAIN_EMAIL}
+      - HONEYGAIN_PASSWORD=${HONEYGAIN_PASSWORD}
+
+      # Pawns credentials
+      - PAWNS_EMAIL=${PAWNS_EMAIL}
+      - PAWNS_PASSWORD=${PAWNS_PASSWORD}
+
+      # Peer2Profit credentials
+      - P2P_EMAIL=${P2P_EMAIL}
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./earnings/data:/data
+
+    ports:
+      - "5000:5000"
+    networks:
+      - earning_net
+
+# ---------------------------------------------------------
+# Networks
+# ---------------------------------------------------------
 networks:
   earning_net:
     driver: bridge
+    external: true

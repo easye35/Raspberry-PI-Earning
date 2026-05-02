@@ -1,87 +1,132 @@
+/* --------------------------------------------------------------------------
+   GLOBAL LAYOUT + RESET
+-------------------------------------------------------------------------- */
 body {
     margin: 0;
-    font-family: "Segoe UI", sans-serif;
-    background: #0d0d0f;
-    color: #e0e0e0;
-    overflow: hidden;
+    padding: 0;
+    background: #0d0d16;
+    font-family: "Inter", sans-serif;
+    color: #e8e8ff;
+    overflow-x: hidden;
 }
 
-/* Sidebar */
-.sidebar {
-    width: 260px;
-    height: 100vh;
-    background: rgba(20, 20, 25, 0.65);
+h1, h2, h3, h4 {
+    margin: 0;
+    padding: 0;
+}
+
+/* --------------------------------------------------------------------------
+   DASHBOARD WRAPPER
+-------------------------------------------------------------------------- */
+.dashboard-container {
+    width: 100%;
+    max-width: 1400px;
+    margin: auto;
+    padding: 20px;
+}
+
+/* --------------------------------------------------------------------------
+   NEON TOP BARS
+-------------------------------------------------------------------------- */
+
+/* Browser Tabs Bar */
+.neon-tabs-bar {
+    width: 100%;
+    padding: 12px 20px;
+    background: rgba(20, 20, 40, 0.65);
     backdrop-filter: blur(12px);
-    border-right: 1px solid rgba(140, 0, 255, 0.4);
-    position: fixed;
-    left: 0;
-    top: 0;
-    transition: transform 0.35s ease;
-}
-
-.sidebar.collapsed {
-    transform: translateX(-220px);
-}
-
-.sidebar-header {
+    border-bottom: 1px solid rgba(180, 0, 255, 0.4);
+    box-shadow: 0 0 12px rgba(180, 0, 255, 0.6);
+    color: #e0d4ff;
     display: flex;
-    justify-content: space-between;
-    padding: 20px;
-    font-size: 22px;
-    color: #c88cff;
+    flex-direction: column;
+    gap: 6px;
+    animation: neonPulse 3s infinite ease-in-out;
 }
 
-.toggle-btn {
-    background: none;
-    border: none;
-    color: #c88cff;
-    font-size: 22px;
-    cursor: pointer;
+.neon-tabs-bar .label {
+    font-weight: 700;
+    color: #c084ff;
 }
 
-.nav a {
-    display: block;
-    padding: 15px 20px;
-    color: #d8caff;
-    text-decoration: none;
-    border-bottom: 1px solid rgba(140, 0, 255, 0.15);
-    transition: background 0.2s;
+.neon-tabs-bar .value {
+    font-weight: 500;
+    color: #ffffff;
 }
 
-.nav a:hover {
-    background: rgba(140, 0, 255, 0.15);
+/* Projection Bar */
+.neon-projection {
+    width: 100%;
+    padding: 14px 20px;
+    background: rgba(25, 0, 40, 0.55);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(200, 0, 255, 0.5);
+    box-shadow: 0 0 15px rgba(200, 0, 255, 0.7);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    animation: neonPulse 3s infinite ease-in-out;
 }
 
-/* Main content */
-.main {
-    margin-left: 260px;
-    padding: 20px;
-    height: 100vh;
-    overflow-y: auto;
-    transition: margin-left 0.35s ease;
+.projection-select {
+    background: rgba(40, 0, 70, 0.7);
+    border: 1px solid rgba(200, 0, 255, 0.6);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    box-shadow: 0 0 10px rgba(200, 0, 255, 0.6);
 }
 
-.main.collapsed {
-    margin-left: 40px;
+.projection-display {
+    flex-grow: 1;
+    color: #e8d4ff;
+    font-size: 16px;
+    font-weight: 600;
 }
 
-/* Cards */
+/* --------------------------------------------------------------------------
+   CARDS
+-------------------------------------------------------------------------- */
 .card {
-    background: rgba(25, 25, 30, 0.55);
-    border: 1px solid rgba(140, 0, 255, 0.35);
+    background: rgba(30, 30, 50, 0.6);
+    border: 1px solid rgba(150, 0, 255, 0.3);
+    border-radius: 12px;
     padding: 20px;
     margin-bottom: 20px;
+    box-shadow: 0 0 12px rgba(150, 0, 255, 0.4);
     backdrop-filter: blur(10px);
-    box-shadow: 0 0 12px rgba(140, 0, 255, 0.25);
-    transition: transform 0.2s ease;
 }
 
-.card:hover {
-    transform: translateY(-3px);
+.card h2 {
+    color: #d8b4ff;
+    margin-bottom: 10px;
 }
 
-.grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 20px;
+/* --------------------------------------------------------------------------
+   BUTTONS
+-------------------------------------------------------------------------- */
+.btn {
+    background: rgba(80, 0, 150, 0.7);
+    border: 1px solid rgba(200, 0, 255, 0.6);
+    padding: 8px 14px;
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn:hover {
+    background: rgba(120, 0, 200, 0.8);
+    box-shadow: 0 0 10px rgba(200, 0, 255, 0.7);
+}
+
+/* --------------------------------------------------------------------------
+   ANIMATIONS
+-------------------------------------------------------------------------- */
+@keyframes neonPulse {
+    0% { box-shadow: 0 0 8px rgba(180, 0, 255, 0.4); }
+    50% { box-shadow: 0 0 18px rgba(180, 0, 255, 0.9); }
+    100% { box-shadow: 0 0 8px rgba(180, 0, 255, 0.4); }
 }

@@ -1,340 +1,284 @@
-// ------------------------------------------------------------
-// EarnBox Dashboard SPA
-// ------------------------------------------------------------
+// -------------------------------------------------------------
+// Backend API base URL (dynamic, no static IP)
+// -------------------------------------------------------------
+const API = "";
 
-const state = {
-    currentView: "dashboard",
-    adminUnlocked: false,
-    logoClickCount: 0,
-    logoClickTimeout: null,
-    containers: []
-};
+// -------------------------------------------------------------
+// Modal state
+// -------------------------------------------------------------
+let logsOpen = false;
 
-const views = {};
-
-// ------------------------------------------------------------
-// Utility: Switch View
-// ------------------------------------------------------------
-function setView(view) {
-    state.currentView = view;
-    render();
+// -------------------------------------------------------------
+// Utility: Smooth number update
+// -------------------------------------------------------------
+function smoothUpdate(element, newValue, suffix = "") {
+    if (!element) return;
+    element.textContent = `${newValue}${suffix}`;
 }
 
-// ------------------------------------------------------------
-// Sidebar + Orb Toggle
-// ------------------------------------------------------------
-function toggleSidebar() {
-    document.body.classList.toggle("sidebar-collapsed");
+// -------------------------------------------------------------
+// Loading placeholders
+// -------------------------------------------------------------
+function showLoading() {
+    smoothUpdate(document.getElementById("cpuValue"), "…");
+    smoothUpdate(document.getElementById("ramValue"), "…");
+    smoothUpdate(document.getElementById("diskValue"), "…");
+    const netEl = document.getElementById("netValue");
+    if (netEl) netEl.innerHTML = "RX: …<br>TX: …";
+    smoothUpdate(document.getElementById("tempValue"), "…", "°C");
+    const uptimeEl = document.getElementById("uptimeBadge");
+    if (uptimeEl) uptimeEl.textContent = "Uptime: …";
 }
 
-function initSidebar() {
-    const orb = document.getElementById("orb-toggle");
-    if (orb) {
-        orb.onclick = toggleSidebar;
-    }
-
-    document.querySelectorAll("[data-view]").forEach(el => {
-        el.onclick = () => {
-            const view = el.getAttribute("data-view");
-            setView(view);
-        };
-    });
-}
-
-// ------------------------------------------------------------
-// Logo Secret Admin Unlock (5 clicks)
-// ------------------------------------------------------------
-function initLogoUnlock() {
-    const logo = document.getElementById("brand-logo");
-    if (!logo) return;
-
-    logo.addEventListener("click", () => {
-        state.logoClickCount++;
-
-        if (state.logoClickTimeout) {
-            clearTimeout(state.logoClickTimeout);
-        }
-
-        state.logoClickTimeout = setTimeout(() => {
-            state.logoClickCount = 0;
-        }, 2000);
-
-        if (state.logoClickCount >= 5) {
-            state.adminUnlocked = true;
-            state.logoClickCount = 0;
-            alert("Admin Panel unlocked");
-            setView("admin");
-        }
-    });
-}
-
-// ------------------------------------------------------------
-// API Helpers
-// ------------------------------------------------------------
-async function fetchContainers() {
+// -------------------------------------------------------------
+// Fetch System Stats (with retry)
+// -------------------------------------------------------------
+async function loadSystemStats() {
     try {
-        const res = await fetch("/api/containers");
-        state.containers = await res.json();
-    } catch (e) {
-        console.error("Failed to fetch containers", e);
-        state.containers = [];
+        const res = await fetch(`${API}/api/system`);
+        if (!res.ok) throw new Error("HTTP error");
+
+        const data = await res.json();
+        if (!data.ok) throw new Error("Backend not ready");
+
+        smoothUpdate(document.getElementById("cpuValue"), data.cpu.toFixed(1), "%");
+        smoothUpdate(document.getElementById("ramValue"), data.ram, "%");
+        smoothUpdate(document.getElementById("diskValue"), data.disk, "%");
+
+        const rxKB = data.network.rx.toFixed(1);
+        const txKB = data.network.tx.toFixed(1);
+        const netEl = document.getElementById("netValue");
+        if (netEl) {
+            netEl.innerHTML = `RX: ${rxKB} KB/s<br>TX: ${txKB} KB/s`;
+        }
+
+        smoothUpdate(
+            document.getElementById("tempValue"),
+            data.temp ? data.temp.toFixed(1) : "--",
+            "°C"
+        );
+
+        const hours = (data.uptime / 3600).toFixed(1);
+        const uptimeEl = document.getElementById("uptimeBadge");
+        if (uptimeEl) uptimeEl.textContent = `Uptime: ${hours} hrs`;
+
+        setTimeout(loadSystemStats, 5000);
+
+    } catch (err) {
+        showLoading();
+        setTimeout(loadSystemStats, 2000);
     }
 }
 
-async function restartContainers() {
-    await fetch("/api/admin/reset", { method: "POST" });
-    alert("Containers restarting");
-}
-
-async function enableDailyReset() {
-    await fetch("/api/admin/enable-daily-reset", { method: "POST" });
-    alert("Daily reset enabled");
-}
-
-// ------------------------------------------------------------
-// Admin: .env Management
-// ------------------------------------------------------------
-async function loadEnv() {
+// -------------------------------------------------------------
+// Fetch Service Status
+// -------------------------------------------------------------
+async function loadServiceStatus() {
     try {
-        const env = await fetch("/api/admin/env").then(r => r.json());
+        const res = await fetch(`${API}/api/services`);
+        if (!res.ok) throw new Error("HTTP error");
 
-        const map = {
-            PAWNS_EMAIL: "pawnsEmail",
-            PAWNS_PASSWORD: "pawnsPass",
-            PAWNS_DEVICE: "pawnsDevice",
-            HONEYGAIN_EMAIL: "hgEmail",
-            HONEYGAIN_PASSWORD: "hgPass",
-            EARNAPP_EMAIL: "eaEmail",
-            EARNAPP_PASSWORD: "eaPass"
-        };
+        const data = await res.json();
+        const badge = document.getElementById("serviceBadge");
+        if (badge) badge.textContent = `Reset Service: ${data.resetService}`;
 
-        Object.entries(map).forEach(([envKey, inputId]) => {
-            const el = document.getElementById(inputId);
-            if (el && env[envKey] !== undefined) {
-                el.value = env[envKey];
-            }
+    } catch (err) {
+        console.error("Service status error:", err);
+    }
+}
+
+// -------------------------------------------------------------
+// Fetch Containers
+// -------------------------------------------------------------
+async function loadContainers() {
+    if (logsOpen) return;
+
+    try {
+        const res = await fetch(`${API}/api/containers`);
+        if (!res.ok) throw new Error("HTTP error");
+
+        const containers = await res.json();
+
+        const grid = document.getElementById("containerGrid");
+        if (!grid) return;
+        grid.innerHTML = "";
+
+        containers.forEach(c => {
+            const card = document.createElement("div");
+            card.className = "container-card";
+
+            card.innerHTML = `
+                <h3>${c.Names[0].replace("/", "")}</h3>
+                <div class="container-info">
+                    <strong>Image:</strong> ${c.Image}<br>
+                    <strong>ID:</strong> ${c.Id.substring(0, 12)}<br>
+                    <strong>Status:</strong> ${c.State}
+                </div>
+
+                <div class="container-controls">
+                    <button class="startBtn" data-id="${c.Id}">▶ Start</button>
+                    <button class="stopBtn" data-id="${c.Id}">■ Stop</button>
+                    <button class="restartBtn" data-id="${c.Id}">↻ Restart</button>
+                    <button class="logsBtn" data-id="${c.Id}">📄 Logs</button>
+                </div>
+            `;
+
+            grid.appendChild(card);
         });
-    } catch (e) {
-        console.error("Failed to load .env", e);
+
+        attachContainerEvents();
+
+    } catch (err) {
+        console.error("Container load error:", err);
     }
 }
 
-async function saveEnv() {
-    const data = {
-        PAWNS_EMAIL: document.getElementById("pawnsEmail")?.value || "",
-        PAWNS_PASSWORD: document.getElementById("pawnsPass")?.value || "",
-        PAWNS_DEVICE: document.getElementById("pawnsDevice")?.value || "",
-        HONEYGAIN_EMAIL: document.getElementById("hgEmail")?.value || "",
-        HONEYGAIN_PASSWORD: document.getElementById("hgPass")?.value || "",
-        EARNAPP_EMAIL: document.getElementById("eaEmail")?.value || "",
-        EARNAPP_PASSWORD: document.getElementById("eaPass")?.value || ""
-    };
-
-    await fetch("/api/admin/env", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
+// -------------------------------------------------------------
+// Container Control Events
+// -------------------------------------------------------------
+function attachContainerEvents() {
+    document.querySelectorAll(".startBtn").forEach(btn => {
+        btn.onclick = () => containerAction(btn.dataset.id, "start");
     });
 
-    alert("Credentials saved to .env");
+    document.querySelectorAll(".stopBtn").forEach(btn => {
+        btn.onclick = () => containerAction(btn.dataset.id, "stop");
+    });
+
+    document.querySelectorAll(".restartBtn").forEach(btn => {
+        btn.onclick = () => containerAction(btn.dataset.id, "restart");
+    });
+
+    document.querySelectorAll(".logsBtn").forEach(btn => {
+        btn.onclick = () => loadLogs(btn.dataset.id);
+    });
 }
 
-async function applyEnv() {
-    await fetch("/api/admin/apply-env", { method: "POST" });
-    alert("Containers restarted with new credentials");
-}
-
-// ------------------------------------------------------------
-// Views
-// ------------------------------------------------------------
-
-// Dashboard View
-views["dashboard"] = {
-    name: "Dashboard",
-    render: () => {
-        const running = state.containers.filter(c => c.status === "running").length;
-        const total = state.containers.length;
-
-        return `
-            <div class="view dashboard-view">
-                <h1>EarnBox Overview</h1>
-                <div class="cards-row">
-                    <div class="glass-card">
-                        <h2>Containers</h2>
-                        <p>${running} / ${total} running</p>
-                    </div>
-                    <div class="glass-card">
-                        <h2>Status</h2>
-                        <p>${running === total && total > 0 ? "All systems nominal" : "Attention required"}</p>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-};
-
-// Containers View
-views["containers"] = {
-    name: "Containers",
-    render: () => {
-        const rows = state.containers.map(c => `
-            <tr>
-                <td>${c.name}</td>
-                <td>${c.type}</td>
-                <td class="${c.status === "running" ? "status-ok" : "status-bad"}">${c.status}</td>
-                <td>${c.port || "-"}</td>
-                <td>
-                    ${c.ui && c.login_url ? `<a href="${c.login_url}" target="_blank">Open</a>` : "-"}
-                </td>
-            </tr>
-        `).join("");
-
-        return `
-            <div class="view containers-view">
-                <h1>Containers</h1>
-                <div class="table-wrapper glass-card">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Type</th>
-                                <th>Status</th>
-                                <th>Port</th>
-                                <th>UI</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${rows || `<tr><td colspan="5">No containers found</td></tr>`}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        `;
-    }
-};
-
-// System View (stub)
-views["system"] = {
-    name: "System",
-    render: () => `
-        <div class="view system-view">
-            <h1>System</h1>
-            <p>System metrics and hardware info can go here.</p>
-        </div>
-    `
-};
-
-// Logs View (stub)
-views["logs"] = {
-    name: "Logs",
-    render: () => `
-        <div class="view logs-view">
-            <h1>Logs</h1>
-            <p>Log streaming or recent events can go here.</p>
-        </div>
-    `
-};
-
-// Admin View (hidden, unlocked by logo clicks)
-views["admin"] = {
-    name: "Admin Panel",
-    render: () => `
-        <div class="view admin-view">
-            <h1>Admin Panel</h1>
-
-            <div class="admin-grid">
-                <div class="admin-card glass-card">
-                    <h3>Restart All Containers</h3>
-                    <p>Force restart all running containers.</p>
-                    <button onclick="restartContainers()">Restart</button>
-                </div>
-
-                <div class="admin-card glass-card">
-                    <h3>Enable Daily Reset</h3>
-                    <p>Run a daily container restart via systemd timer.</p>
-                    <button onclick="enableDailyReset()">Enable</button>
-                </div>
-
-                <div class="admin-card glass-card">
-                    <h3>Earning App Credentials</h3>
-
-                    <label>Pawns Email</label>
-                    <input id="pawnsEmail" class="admin-input" placeholder="Pawns Email" />
-
-                    <label>Pawns Password</label>
-                    <input id="pawnsPass" class="admin-input" placeholder="Pawns Password" type="password" />
-
-                    <label>Pawns Device</label>
-                    <input id="pawnsDevice" class="admin-input" placeholder="Pawns Device" />
-
-                    <label>Honeygain Email</label>
-                    <input id="hgEmail" class="admin-input" placeholder="Honeygain Email" />
-
-                    <label>Honeygain Password</label>
-                    <input id="hgPass" class="admin-input" placeholder="Honeygain Password" type="password" />
-
-                    <label>EarnApp Email</label>
-                    <input id="eaEmail" class="admin-input" placeholder="EarnApp Email" />
-
-                    <label>EarnApp Password</label>
-                    <input id="eaPass" class="admin-input" placeholder="EarnApp Password" type="password" />
-
-                    <div class="admin-actions">
-                        <button onclick="saveEnv()">Save</button>
-                        <button onclick="applyEnv()">Apply & Restart</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `
-};
-
-// ------------------------------------------------------------
-// Render Function
-// ------------------------------------------------------------
-function render() {
-    const root = document.getElementById("app-root");
-    if (!root) return;
-
-    const view = views[state.currentView] || views["dashboard"];
-
-    root.innerHTML = `
-        <div class="layout">
-            <aside class="sidebar">
-                <div class="brand" id="brand-logo">
-                    <span class="brand-mark">⧉</span>
-                    <span class="brand-text">EarnBox</span>
-                </div>
-                <nav class="nav">
-                    <button data-view="dashboard" class="${state.currentView === "dashboard" ? "active" : ""}">Dashboard</button>
-                    <button data-view="containers" class="${state.currentView === "containers" ? "active" : ""}">Containers</button>
-                    <button data-view="system" class="${state.currentView === "system" ? "active" : ""}">System</button>
-                    <button data-view="logs" class="${state.currentView === "logs" ? "active" : ""}">Logs</button>
-                    ${state.adminUnlocked ? `<button data-view="admin" class="${state.currentView === "admin" ? "active" : ""}">Admin</button>` : ""}
-                </nav>
-                <div class="orb-toggle" id="orb-toggle"></div>
-            </aside>
-            <main class="main">
-                ${view.render()}
-            </main>
-        </div>
-    `;
-
-    initSidebar();
-    initLogoUnlock();
-
-    // If we just rendered admin, load .env values
-    if (state.currentView === "admin") {
-        setTimeout(loadEnv, 200);
+// -------------------------------------------------------------
+// Container Actions
+// -------------------------------------------------------------
+async function containerAction(id, action) {
+    try {
+        await fetch(`${API}/api/containers/${id}/${action}`, { method: "POST" });
+        loadContainers();
+    } catch (err) {
+        console.error(`Container ${action} error:`, err);
     }
 }
 
-// ------------------------------------------------------------
-// Initial Load
-// ------------------------------------------------------------
-async function init() {
-    await fetchContainers();
-    render();
+// -------------------------------------------------------------
+// Load Logs
+// -------------------------------------------------------------
+async function loadLogs(id) {
+    logsOpen = true;
+    try {
+        const res = await fetch(`${API}/api/containers/${id}/logs`);
+        if (!res.ok) throw new Error("HTTP error");
+
+        const data = await res.json();
+
+        const modal = document.getElementById("logsModal");
+        const content = document.getElementById("logsContent");
+
+        if (modal && content) {
+            content.textContent = data.logs.join("\n");
+            modal.style.display = "block";
+        }
+
+    } catch (err) {
+        console.error("Logs error:", err);
+    }
 }
 
-window.addEventListener("DOMContentLoaded", init);
+// -------------------------------------------------------------
+// Modal wiring
+// -------------------------------------------------------------
+function setupModal() {
+    const modal = document.getElementById("logsModal");
+    const closeBtn = document.getElementById("closeLogs");
+    const refreshBtn = document.getElementById("refreshLogs");
+
+    if (closeBtn && modal) {
+        closeBtn.onclick = () => {
+            logsOpen = false;
+            modal.style.display = "none";
+        };
+    }
+
+    window.addEventListener("click", (e) => {
+        if (logsOpen && e.target === modal) {
+            logsOpen = false;
+            modal.style.display = "none";
+        }
+    });
+
+    if (refreshBtn) {
+        refreshBtn.onclick = () => {
+            const openLogBtn = document.querySelector(".logsBtn[data-id]");
+            if (openLogBtn) {
+                loadLogs(openLogBtn.dataset.id);
+            }
+        };
+    }
+}
+
+// -------------------------------------------------------------
+// Browser Tabs Neon Bar
+// -------------------------------------------------------------
+async function loadBrowserTabs() {
+    try {
+        const res = await fetch(`${API}/api/browser-tabs`);
+        const tabs = await res.json();
+
+        const active = tabs.find(t => t.isCurrent);
+        const others = tabs.filter(t => !t.isCurrent);
+
+        document.getElementById("active-tab-title").textContent =
+            active ? active.pageTitle : "None";
+
+        document.getElementById("other-tabs").textContent =
+            others.length > 0
+                ? others.map(t => t.pageTitle).join(" • ")
+                : "No other tabs";
+
+    } catch (err) {
+        console.error("Browser tabs error:", err);
+    }
+}
+
+// -------------------------------------------------------------
+// Projection Dropdown + Neon Bar
+// -------------------------------------------------------------
+async function updateProjection() {
+    const mode = document.getElementById("projection-mode").value;
+
+    try {
+        const res = await fetch(`${API}/api/projection/${mode}`);
+        const data = await res.json();
+
+        document.getElementById("projection-display").textContent =
+            `$${data.projection} / month (${mode})`;
+
+    } catch (err) {
+        console.error("Projection error:", err);
+    }
+}
+
+document.getElementById("projection-mode").addEventListener("change", updateProjection);
+
+// -------------------------------------------------------------
+// Auto-refresh loops
+// -------------------------------------------------------------
+setInterval(loadServiceStatus, 5000);
+setInterval(loadContainers, 5000);
+setInterval(loadBrowserTabs, 5000);
+setInterval(updateProjection, 10000);
+
+// Initial load
+showLoading();
+loadSystemStats();
+loadServiceStatus();
+loadContainers();
+loadBrowserTabs();
+updateProjection();
+setupModal();

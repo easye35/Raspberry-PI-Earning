@@ -2,34 +2,129 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EarnBox Dashboard</title>
-    <link rel="stylesheet" href="style.css">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
 
-<div id="sidebar" class="sidebar">
-    <div class="sidebar-header">
-        <span class="logo">EarnBox</span>
-        <button id="toggleSidebar" class="toggle-btn">☰</button>
+    <!-- ---------------------------------------------------------
+         SIDEBAR
+    ---------------------------------------------------------- -->
+    <div class="sidebar">
+        <h2>EarnBox</h2>
+        <ul>
+            <li><a href="#">Dashboard</a></li>
+            <li><a href="#">Containers</a></li>
+            <li><a href="#">System</a></li>
+        </ul>
     </div>
 
-    <nav class="nav">
-        <a href="#" data-section="home">Home</a>
-        <a href="#" data-section="earnapp">EarnApp Native</a>
-        <a href="#" data-section="containers">Containers</a>
-        <a href="#" data-section="system">System Metrics</a>
-        <a href="#" data-section="logins">Logins</a>
-    </nav>
-</div>
+    <!-- ---------------------------------------------------------
+         MAIN CONTENT
+    ---------------------------------------------------------- -->
+    <div class="main-content">
 
-<div id="main" class="main">
-    <div id="content"></div>
-</div>
+        <!-- -----------------------------------------------------
+             BROWSER TABS NEON BAR
+        ------------------------------------------------------ -->
+        <div class="neon-tabs-bar">
+            <div class="label">Active Tab:</div>
+            <div id="active-tab-title" class="value">Loading…</div>
 
-<script src="local-api/glances.js"></script>
-<script src="local-api/earnapp.js"></script>
-<script src="api.containers.js"></script>
-<script src="app.js"></script>
+            <div class="label">Other Tabs:</div>
+            <div id="other-tabs" class="value">Loading…</div>
+        </div>
+
+        <!-- -----------------------------------------------------
+             PROJECTION NEON BAR
+        ------------------------------------------------------ -->
+        <div class="neon-projection">
+            <select id="projection-mode" class="projection-select">
+                <option value="7day">7‑Day Avg</option>
+                <option value="30day">30‑Day Avg</option>
+                <option value="weighted">Weighted Trend</option>
+                <option value="trend">Linear Trend</option>
+            </select>
+
+            <div id="projection-display" class="projection-display">
+                Loading projection…
+            </div>
+        </div>
+
+        <!-- -----------------------------------------------------
+             SYSTEM STATS GRID
+        ------------------------------------------------------ -->
+        <div class="stats-grid">
+
+            <div class="stat-card">
+                <h3>CPU</h3>
+                <p id="cpuValue">…</p>
+            </div>
+
+            <div class="stat-card">
+                <h3>RAM</h3>
+                <p id="ramValue">…</p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Disk</h3>
+                <p id="diskValue">…</p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Network</h3>
+                <p id="netValue">RX: …<br>TX: …</p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Temperature</h3>
+                <p id="tempValue">…</p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Uptime</h3>
+                <p id="uptimeBadge">Uptime: …</p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Reset Service</h3>
+                <p id="serviceBadge">Reset Service: …</p>
+            </div>
+
+        </div>
+
+        <!-- -----------------------------------------------------
+             CONTAINER GRID
+        ------------------------------------------------------ -->
+        <h2>Containers</h2>
+        <div id="containerGrid"></div>
+
+    </div>
+
+    <!-- ---------------------------------------------------------
+         LOGS MODAL
+    ---------------------------------------------------------- -->
+    <div id="logsModal" class="modal">
+        <div class="modal-content">
+
+            <h2>Container Logs</h2>
+
+            <pre id="logsContent"></pre>
+
+            <button id="refreshLogs">Refresh</button>
+            <button id="closeLogs">Close</button>
+
+        </div>
+    </div>
+
+    <!-- ---------------------------------------------------------
+         JAVASCRIPT
+    ---------------------------------------------------------- -->
+    <script src="js/app.js"></script>
 
 </body>
 </html>

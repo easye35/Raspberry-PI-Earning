@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 echo "======================================="
 echo "        EarnBox Full Installer"
@@ -15,30 +16,35 @@ fi
 echo "Detected Timezone: $TZ_VALUE"
 echo ""
 
-# --- CREDENTIAL PROMPTS ---
+# ---------------------------------------------------------
+# CREDENTIAL PROMPTS
+# ---------------------------------------------------------
 echo "Enter your service credentials:"
 echo ""
 
+# Honeygain
 read -p "Honeygain Email: " HONEYGAIN_EMAIL
 read -p "Honeygain Password: " HONEYGAIN_PASSWORD
 read -p "Honeygain Device Name: " HONEYGAIN_DEVICE
-
 echo ""
 
+# Pawns
 read -p "Pawns Email: " PAWNS_EMAIL
 read -p "Pawns Password: " PAWNS_PASSWORD
 read -p "Pawns Device Name: " PAWNS_DEVICE
-
 echo ""
 
+# EarnApp
 read -p "EarnApp Email: " EARNAPP_EMAIL
 read -p "EarnApp Password: " EARNAPP_PASSWORD
-
 echo ""
+
 echo "Saving credentials..."
+echo ""
 
-# --- WRITE .env FILE ---
-
+# ---------------------------------------------------------
+# WRITE .env FILE
+# ---------------------------------------------------------
 cat <<EOF > .env
 HONEYGAIN_EMAIL="$HONEYGAIN_EMAIL"
 HONEYGAIN_PASSWORD="$HONEYGAIN_PASSWORD"
@@ -57,26 +63,59 @@ EOF
 echo ".env created successfully."
 echo ""
 
-# --- DOCKER INSTALL CHECK ---
-if ! command -v docker &> /dev/null
-then
+# ---------------------------------------------------------
+# Install Docker
+# ---------------------------------------------------------
+if ! command -v docker &> /dev/null; then
     echo "Docker not found. Installing Docker..."
     curl -fsSL https://get.docker.com | sh
     sudo usermod -aG docker $USER
     echo "Docker installed."
 fi
 
-if ! command -v docker-compose &> /dev/null
-then
-    echo "docker-compose not found. Installing..."
-    sudo apt-get install -y docker-compose
+# ---------------------------------------------------------
+# Install docker-compose plugin
+# ---------------------------------------------------------
+if ! docker compose version &> /dev/null; then
+    echo "Installing docker-compose plugin..."
+    sudo apt update -y
+    sudo apt install -y docker-compose-plugin
 fi
 
+# ---------------------------------------------------------
+# Install Node.js (backend requires it)
+# ---------------------------------------------------------
+if ! command -v node &> /dev/null; then
+    echo "Installing Node.js 18..."
+    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+    sudo apt install -y nodejs
+fi
+
+# ---------------------------------------------------------
+# Run Plugins
+# ---------------------------------------------------------
+if [ -d "./plugins" ]; then
+    echo "Running plugins..."
+    for plugin in ./plugins/*.sh; do
+        echo "Executing plugin: $plugin"
+        bash "$plugin"
+    done
+fi
+
+# ---------------------------------------------------------
+# Build & Start Docker Stack
+# ---------------------------------------------------------
 echo ""
 echo "Building containers..."
-
-# --- BUILD & START STACK ---
+docker compose down || true
 docker compose build --no-cache
+
+# Ensure earning_net exists
+if ! docker network ls | grep -q "earning_net"; then
+    echo "Creating Docker network: earning_net"
+    docker network create earning_net
+fi
+
 docker compose up -d
 
 echo ""
