@@ -42,7 +42,7 @@ sudo reboot
 ## 📦 Installation (Interactive Installer)
 Clone the repo:
 ```bsh
-git clone https://github.com/easye35/Raspberry-PI-docker-Earning
+git clone git@github.com:easye35/Raspberry-PI-docker-Earning.git
 cd Raspberry-PI-docker-Earning
 chmod +x install.sh
 sudo ./install.sh
