@@ -43,7 +43,7 @@ sudo reboot
 Clone the repo:
 ```bsh
 git clone https://github.com/easye35/Raspberry-PI-Earning.git
-cd Raspberry-PI-docker-Earning
+cd Raspberry-PI-Earning
 chmod +x install.sh
 sudo ./install.sh
 ```
