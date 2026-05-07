@@ -183,11 +183,13 @@ def update_earnings():
 
     conn = _get_connection()
     cur = conn.cursor()
+
+    # FIXED: 5 columns → 5 placeholders
     cur.execute(
         """
         INSERT INTO earnings (
             timestamp, honeygain, pawns, daily_change, projected_30_day
-        ) VALUES (?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?)
         """,
         (
             now,
@@ -197,6 +199,7 @@ def update_earnings():
             projected_30_day,
         ),
     )
+
     conn.commit()
     conn.close()
 

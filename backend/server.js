@@ -1,16 +1,23 @@
-// -----------------------------------------------------------------------------
-// EarnBox Backend API
-// -----------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+   EarnBox Backend API (Corrected + DB Auto‑Init)
+--------------------------------------------------------------------------- */
 
 const express = require("express");
 const fetch = require("node-fetch");
 const cors = require("cors");
 const { exec } = require("child_process");
 const Docker = require("dockerode");
-const docker = new Docker({ socketPath: "/var/run/docker.sock" });
+const fs = require("fs");
 
+const docker = new Docker({ socketPath: "/var/run/docker.sock" });
 const app = express();
-// Browser tabs metadata (static for now)
+
+app.use(cors());
+app.use(express.json());
+
+/* ---------------------------------------------------------------------------
+   Browser Tabs (Static)
+--------------------------------------------------------------------------- */
 const edge_all_open_tabs = [
     {
         pageTitle: "<WebsiteContent_FzfSe4dY1VqQc4PpYwE5N></WebsiteContent_FzfSe4dY1VqQc4PpYwE5N>",
@@ -25,14 +32,10 @@ const edge_all_open_tabs = [
         isCurrent: false
     }
 ];
-app.use(cors());
-app.use(express.json());
 
-const NETDATA = "http://netdata:19999";
-
-// -----------------------------------------------------------------------------
-// Utility: Fetch with retry
-// -----------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+   Utility: Fetch with Retry
+--------------------------------------------------------------------------- */
 async function fetchWithRetry(url, retries = 3, delay = 500) {
     for (let i = 0; i < retries; i++) {
         try {
@@ -44,19 +47,30 @@ async function fetchWithRetry(url, retries = 3, delay = 500) {
     return null;
 }
 
-// -----------------------------------------------------------------------------
-// API: System Stats (via Netdata)
-// -----------------------------------------------------------------------------
-app.get("/api/browser-tabs", (req, res) => {
-    res.json(edge_all_open_tabs);
-});
-// -----------------------------------------------------------------------------
-// API: Earnings Projection (7-day, 30-day, weighted, trend)
-// -----------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+   Database Initialization (FIXED)
+--------------------------------------------------------------------------- */
 const Database = require("better-sqlite3");
-const db = new Database("/data/earnings.db");
-const DB_PATH = "/data/earnings.db";
 
+// Ensure /data exists
+fs.mkdirSync("/data", { recursive: true });
+
+// Open DB
+const db = new Database("/data/earnings.db");
+
+// Ensure table exists
+db.prepare(`
+    CREATE TABLE IF NOT EXISTS earnings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp INTEGER NOT NULL,
+        total REAL,
+        daily_change REAL
+    )
+`).run();
+
+/* ---------------------------------------------------------------------------
+   Earnings Projection API
+--------------------------------------------------------------------------- */
 app.get("/api/projection/:mode", (req, res) => {
     const mode = req.params.mode;
 
@@ -103,6 +117,11 @@ app.get("/api/projection/:mode", (req, res) => {
     res.json({ projection: Number(projection.toFixed(2)) });
 });
 
+/* ---------------------------------------------------------------------------
+   System Stats (Netdata)
+--------------------------------------------------------------------------- */
+const NETDATA = "http://netdata:19999";
+
 app.get("/api/system", async (req, res) => {
     try {
         // CPU
@@ -122,7 +141,7 @@ app.get("/api/system", async (req, res) => {
         const ramChart = await fetchWithRetry(
             `${NETDATA}/api/v1/data?chart=system.ram&after=-1&points=1&format=json`
         );
-        const ramRow = ramChart?.data?.[0] || [];
+        const ramRow = ramChart?.data?.[[0]] || [];
         const ramFree = ramRow[1] || 0;
         const ramUsed = ramRow[2] || 0;
         const ramPercent = Math.round((ramUsed / (ramUsed + ramFree)) * 100);
@@ -197,9 +216,9 @@ app.get("/api/system", async (req, res) => {
     }
 });
 
-// -----------------------------------------------------------------------------
-// API: Service Status (systemd)
-// -----------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+   Services
+--------------------------------------------------------------------------- */
 app.get("/api/services", async (req, res) => {
     exec("systemctl is-active earnbox-reset.service", (err, stdout) => {
         const status = stdout.trim() || "unknown";
@@ -207,9 +226,9 @@ app.get("/api/services", async (req, res) => {
     });
 });
 
-// -----------------------------------------------------------------------------
-// API: Containers (Dockerode)
-// -----------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+   Docker Containers
+--------------------------------------------------------------------------- */
 app.get("/api/containers", async (req, res) => {
     try {
         const containers = await docker.listContainers({ all: true });
@@ -220,9 +239,6 @@ app.get("/api/containers", async (req, res) => {
     }
 });
 
-// -----------------------------------------------------------------------------
-// API: Container Actions
-// -----------------------------------------------------------------------------
 app.post("/api/containers/:id/start", (req, res) => {
     exec(`docker start ${req.params.id}`, () => res.json({ ok: true }));
 });
@@ -235,9 +251,9 @@ app.post("/api/containers/:id/restart", (req, res) => {
     exec(`docker restart ${req.params.id}`, () => res.json({ ok: true }));
 });
 
-// -----------------------------------------------------------------------------
-// API: Container Logs (Dockerode)
-// -----------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+   Container Logs
+--------------------------------------------------------------------------- */
 app.get("/api/containers/:id/logs", async (req, res) => {
     try {
         const c = docker.getContainer(req.params.id);
@@ -256,27 +272,24 @@ app.get("/api/containers/:id/logs", async (req, res) => {
     }
 });
 
-// -----------------------------------------------------------------------------
-// API: Reset Now
-// -----------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+   Admin: Reset + Daily Reset
+--------------------------------------------------------------------------- */
 app.post("/api/admin/reset", (req, res) => {
     exec("systemctl restart earnbox-reset.service", () => {
         res.json({ ok: true });
     });
 });
 
-// -----------------------------------------------------------------------------
-// API: Enable Daily Reset
-// -----------------------------------------------------------------------------
 app.post("/api/admin/enable-daily-reset", (req, res) => {
     exec("systemctl enable --now earnbox-reset.timer", () => {
         res.json({ ok: true });
     });
 });
 
-// -----------------------------------------------------------------------------
-// Start Server
-// -----------------------------------------------------------------------------
+/* ---------------------------------------------------------------------------
+   Start Server
+--------------------------------------------------------------------------- */
 app.listen(3001, () => {
     console.log("Backend running on port 3001");
 });
