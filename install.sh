@@ -119,7 +119,17 @@ fi
 docker compose up -d
 
 # ---------------------------------------------------------
-# NEW: Auto-update script (Pi pulls from GitHub)
+# Read version.txt
+# ---------------------------------------------------------
+VERSION_FILE="./version.txt"
+if [ -f "$VERSION_FILE" ]; then
+    VERSION_NUMBER=$(head -n 1 "$VERSION_FILE")
+else
+    VERSION_NUMBER="Unknown"
+fi
+
+# ---------------------------------------------------------
+# Auto-update script (Pi pulls from GitHub)
 # ---------------------------------------------------------
 UPDATE_SCRIPT="/usr/local/bin/update_from_github.sh"
 
@@ -132,6 +142,12 @@ cd $REPO_DIR || exit 1
 git fetch --all
 git reset --hard origin/main
 
+# Log version after update
+if [ -f "$REPO_DIR/version.txt" ]; then
+    VERSION=$(head -n 1 "$REPO_DIR/version.txt")
+    echo "$(date): Updated to version $VERSION" >> /var/log/earnbox_update.log
+fi
+
 docker compose down
 docker compose up -d --build
 EOF
@@ -139,22 +155,18 @@ EOF
 sudo chmod +x $UPDATE_SCRIPT
 
 # ---------------------------------------------------------
-# NEW: Add monthly cron job (1st of month @ 3 AM)
+# Monthly + reboot cron jobs
 # ---------------------------------------------------------
 (crontab -l 2>/dev/null; echo "0 3 1 * * $UPDATE_SCRIPT >> /var/log/earnbox_update.log 2>&1") | crontab -
-
-# ---------------------------------------------------------
-# NEW: Add @reboot auto-update
-# ---------------------------------------------------------
 (crontab -l 2>/dev/null; echo "@reboot $UPDATE_SCRIPT >> /var/log/earnbox_update.log 2>&1") | crontab -
 
 # ---------------------------------------------------------
-# NEW: Detect Pi IP
+# Detect Pi IP
 # ---------------------------------------------------------
 PI_IP=$(hostname -I | awk '{print $1}')
 
 # ---------------------------------------------------------
-# NEW: Detect EarnApp Registration URL
+# Detect EarnApp Registration URL
 # ---------------------------------------------------------
 EARNAPP_UUID_FILE="/etc/earnapp/uuid"
 if [ -f "$EARNAPP_UUID_FILE" ]; then
@@ -167,6 +179,8 @@ fi
 echo ""
 echo "======================================="
 echo " Install Complete!"
+echo ""
+echo " Version Installed: $VERSION_NUMBER"
 echo ""
 echo " Dashboard running on: http://$PI_IP"
 echo ""
