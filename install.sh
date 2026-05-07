@@ -119,6 +119,36 @@ fi
 docker compose up -d
 
 # ---------------------------------------------------------
+# NEW: Auto-update script (Pi pulls from GitHub)
+# ---------------------------------------------------------
+UPDATE_SCRIPT="/usr/local/bin/update_from_github.sh"
+
+cat <<'EOF' | sudo tee $UPDATE_SCRIPT >/dev/null
+#!/bin/bash
+REPO_DIR="/home/pi/EarnBox"
+
+cd $REPO_DIR || exit 1
+
+git fetch --all
+git reset --hard origin/main
+
+docker compose down
+docker compose up -d --build
+EOF
+
+sudo chmod +x $UPDATE_SCRIPT
+
+# ---------------------------------------------------------
+# NEW: Add monthly cron job (1st of month @ 3 AM)
+# ---------------------------------------------------------
+(crontab -l 2>/dev/null; echo "0 3 1 * * $UPDATE_SCRIPT >> /var/log/earnbox_update.log 2>&1") | crontab -
+
+# ---------------------------------------------------------
+# NEW: Add @reboot auto-update
+# ---------------------------------------------------------
+(crontab -l 2>/dev/null; echo "@reboot $UPDATE_SCRIPT >> /var/log/earnbox_update.log 2>&1") | crontab -
+
+# ---------------------------------------------------------
 # NEW: Detect Pi IP
 # ---------------------------------------------------------
 PI_IP=$(hostname -I | awk '{print $1}')
@@ -142,4 +172,8 @@ echo " Dashboard running on: http://$PI_IP"
 echo ""
 echo " EarnApp Registration URL:"
 echo " $EARNAPP_URL"
+echo ""
+echo " Auto-update enabled:"
+echo " - Monthly (1st @ 3 AM)"
+echo " - On every reboot"
 echo "======================================="
