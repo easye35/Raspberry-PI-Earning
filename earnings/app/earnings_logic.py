@@ -52,27 +52,28 @@ def _get_last_row():
 # BALANCE FETCHERS
 # ---------------------------------------------------------
 
+import docker
+
 def get_pawns_balance():
     """
-    Reads the Pawns container logs and extracts the latest balance_ready event.
-    Returns the balance as a float (USD).
+    Reads Pawns logs using Docker SDK (works inside containers).
     """
 
     try:
-        logs = subprocess.check_output(
-            ["docker", "logs", "pawns", "--tail", "200"],
-            stderr=subprocess.STDOUT
-        ).decode("utf-8", errors="ignore")
-    except Exception:
+        client = docker.from_env()
+        container = client.containers.get("pawns")
+        logs = container.logs(tail=300).decode("utf-8", errors="ignore")
+    except Exception as e:
+        print("DEBUG: Pawns log read error:", e, flush=True)
         return 0.0
 
     latest_balance = None
 
     for line in logs.splitlines():
-        if '"balance_ready"' in line:
+        if "balance_ready" in line:
             try:
                 data = json.loads(line)
-                bal_str = data["parameters"]["balance"]
+                bal_str = data["parameters"]["balance"]  # "0.399 USD"
                 match = re.match(r"([0-9.]+)", bal_str)
                 if match:
                     latest_balance = float(match.group(1))
@@ -80,8 +81,6 @@ def get_pawns_balance():
                 continue
 
     return latest_balance if latest_balance is not None else 0.0
-
-
 
 def get_honeygain_balance():
     """
