@@ -1,0 +1,4 @@
+.env
+*.env
+earnings/.env
+backend/.env
