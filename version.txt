@@ -1,2 +1,6 @@
 1.00
 -first release version
+
+1.01
+-fixed earnings
+-added .env to gitignore
