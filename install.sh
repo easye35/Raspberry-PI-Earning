@@ -118,8 +118,28 @@ fi
 
 docker compose up -d
 
+# ---------------------------------------------------------
+# NEW: Detect Pi IP
+# ---------------------------------------------------------
+PI_IP=$(hostname -I | awk '{print $1}')
+
+# ---------------------------------------------------------
+# NEW: Detect EarnApp Registration URL
+# ---------------------------------------------------------
+EARNAPP_UUID_FILE="/etc/earnapp/uuid"
+if [ -f "$EARNAPP_UUID_FILE" ]; then
+    EARNAPP_UUID=$(cat "$EARNAPP_UUID_FILE")
+    EARNAPP_URL="https://earnapp.com/r/$EARNAPP_UUID"
+else
+    EARNAPP_URL="Not available (EarnApp not installed yet)"
+fi
+
 echo ""
 echo "======================================="
 echo " Install Complete!"
-echo " Dashboard running on: http://<your_pi_ip>"
+echo ""
+echo " Dashboard running on: http://$PI_IP"
+echo ""
+echo " EarnApp Registration URL:"
+echo " $EARNAPP_URL"
 echo "======================================="
