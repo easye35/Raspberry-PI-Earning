@@ -271,7 +271,6 @@ document.getElementById("projection-mode").addEventListener("change", updateProj
 // -------------------------------------------------------------
 setInterval(loadServiceStatus, 5000);
 setInterval(loadContainers, 5000);
-setInterval(loadBrowserTabs, 5000);
 setInterval(updateProjection, 10000);
 
 // Initial load
