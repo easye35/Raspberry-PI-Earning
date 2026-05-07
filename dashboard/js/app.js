@@ -223,30 +223,6 @@ function setupModal() {
 }
 
 // -------------------------------------------------------------
-// Browser Tabs Neon Bar
-// -------------------------------------------------------------
-async function loadBrowserTabs() {
-    try {
-        const res = await fetch(`${API}/api/browser-tabs`);
-        const tabs = await res.json();
-
-        const active = tabs.find(t => t.isCurrent);
-        const others = tabs.filter(t => !t.isCurrent);
-
-        document.getElementById("active-tab-title").textContent =
-            active ? active.pageTitle : "None";
-
-        document.getElementById("other-tabs").textContent =
-            others.length > 0
-                ? others.map(t => t.pageTitle).join(" • ")
-                : "No other tabs";
-
-    } catch (err) {
-        console.error("Browser tabs error:", err);
-    }
-}
-
-// -------------------------------------------------------------
 // Projection Dropdown + Neon Bar
 // -------------------------------------------------------------
 async function updateProjection() {
