@@ -254,6 +254,5 @@ showLoading();
 loadSystemStats();
 loadServiceStatus();
 loadContainers();
-loadBrowserTabs();
 updateProjection();
 setupModal();
