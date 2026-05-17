@@ -31,6 +31,34 @@ function showLoading() {
 }
 
 // -------------------------------------------------------------
+// Fetch Earnings (Honeygain + Pawns + Today + Projected + Total)
+// -------------------------------------------------------------
+async function loadEarnings() {
+    try {
+        const res = await fetch(`${API}/earnings`);
+        if (!res.ok) throw new Error("HTTP error");
+
+        const data = await res.json();
+
+        // Update UI
+        smoothUpdate(document.getElementById("honeygain-balance"), `$${data.honeygain.toFixed(2)}`);
+        smoothUpdate(document.getElementById("pawns-balance"), `$${data.pawns.toFixed(2)}`);
+
+        // Today = daily_change
+        smoothUpdate(document.getElementById("today-earnings"), `$${(data.daily_change || 0).toFixed(2)}`);
+
+        // Projected = projected_30_day
+        smoothUpdate(document.getElementById("projected-earnings"), `$${(data.projected_30_day || 0).toFixed(2)}`);
+
+        // Total = honeygain + pawns
+        const total = (data.honeygain || 0) + (data.pawns || 0);
+        smoothUpdate(document.getElementById("total-earnings"), `$${total.toFixed(2)}`);
+
+    } catch (err) {
+        console.error("Earnings load error:", err);
+    }
+}
+// -------------------------------------------------------------
 // Fetch System Stats (with retry)
 // -------------------------------------------------------------
 async function loadSystemStats() {
@@ -248,6 +276,7 @@ document.getElementById("projection-mode").addEventListener("change", updateProj
 setInterval(loadServiceStatus, 5000);
 setInterval(loadContainers, 5000);
 setInterval(updateProjection, 10000);
+setInterval(loadEarnings, 5000);
 
 // Initial load
 showLoading();
