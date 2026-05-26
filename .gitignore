@@ -2,3 +2,8 @@
 *.env
 earnings/.env
 backend/.env
+data/
+earnings/data/
+*.db
+*.json
+
