@@ -16,25 +16,58 @@ app.use(cors());
 app.use(express.json());
 
 /* ---------------------------------------------------------------------------
-   Browser Tabs (Static)
+   Earnings API (Honeygain + Pawns + DB)
 --------------------------------------------------------------------------- */
-const edge_all_open_tabs = [
-    {
-        pageTitle: "<WebsiteContent_FzfSe4dY1VqQc4PpYwE5N></WebsiteContent_FzfSe4dY1VqQc4PpYwE5N>",
-        pageUrl: "<WebsiteContent_FzfSe4dY1VqQc4PpYwE5N></WebsiteContent_FzfSe4dY1VqQc4PpYwE5N>",
-        tabId: -1,
-        isCurrent: true
-    },
-    {
-        pageTitle: "<WebsiteContent_FzfSe4dY1VqQc4PpYwE5N>\"https://store.creality.com/products/creality-wifi-cloud-box-2\" - Search</WebsiteContent_FzfSe4dY1VqQc4PpYwE5N>",
-        pageUrl: "<WebsiteContent_FzfSe4dY1VqQc4PpYwE5N>https://www.bing.com/search?q=%22https%3A%2F%2Fstore.creality.com%2Fproducts%2Fcreality-wifi-cloud-box-2%22&qs=n&form=QBRE&sp=-1&lq=0&pq=%22https%3A%2F%2Fstore.creality.com%2Fproducts%2Fcreality-wifi-cloud-box-2%22&sc=0-63&sk=&cvid=176E2DC5150C48CFA46B8A8BCB8BE850</WebsiteContent_FzfSe4dY1VqQc4PpYwE5N>",
-        tabId: -1,
-        isCurrent: false
-    }
-];
+app.get("/earnings", (req, res) => {
+    try {
+        // Load Honeygain + Pawns JSON from /data
+        let honeygain = 0;
+        let pawns = 0;
 
-/* ---------------------------------------------------------------------------
-   Utility: Fetch with Retry
+        try {
+            const raw = fs.readFileSync("/data/latest_earnings.json", "utf8");
+            const json = JSON.parse(raw);
+
+            honeygain = json.honeygain || 0;
+            pawns = json.pawns || 0;
+
+        } catch (err) {
+            console.log("No earnings JSON yet.");
+        }
+
+        // Load DB latest row
+        const latest = db.prepare(
+            "SELECT total, daily_change FROM earnings ORDER BY id DESC LIMIT 1"
+        ).get();
+
+        const daily = latest?.daily_change || 0;
+        const total = latest?.total || (honeygain + pawns);
+
+        // 30‑day projection (simple)
+        const projected_30_day = daily * 30;
+
+        res.json({
+            honeygain,
+            pawns,
+            daily_change: daily,
+            projected_30_day,
+            total
+        });
+
+    } catch (err) {
+        console.error("Earnings API error:", err);
+
+        res.json({
+            honeygain: 0,
+            pawns: 0,
+            daily_change: 0,
+            projected_30_day: 0,
+            total: 0
+        });
+    }
+});
+/*---------------------------------------------------------------------
+ Utility: Fetch with Retry
 --------------------------------------------------------------------------- */
 async function fetchWithRetry(url, retries = 3, delay = 500) {
     for (let i = 0; i < retries; i++) {
