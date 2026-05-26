@@ -9,6 +9,7 @@ from . import earnings_logic as logic
 
 def create_app():
     app = Flask(__name__)
+    CORS(app)
 
     # Ensure DB exists
     logic.init_db()
