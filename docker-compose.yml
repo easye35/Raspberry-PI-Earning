@@ -16,17 +16,17 @@ services:
   # EarnBox Backend (API)
   # ---------------------------------------------------------
   backend:
-    user: root
-    build: ./backend
-    container_name: backend
-    ports:
-      - "3001:3001"
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./backend/data:/data
-    networks:
-      - earning_net
+  user: root
+  build: ./backend
+  container_name: backend
+  ports:
+    - "3001:3001"
+  restart: unless-stopped
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - ./data:/data
+  networks:
+    - earning_net
 
   # ---------------------------------------------------------
   # Honeygain
@@ -101,33 +101,25 @@ services:
   # Earnings Aggregator
   # ---------------------------------------------------------
   earnings:
-    build: ./earnings
-    container_name: earnings
-    restart: unless-stopped
-    environment:
-      - TZ=America/Edmonton
-      - EARNINGS_DB_PATH=/data/earnings.db
-      - EARNINGS_JSON_PATH=/data/latest_earnings.json
-
-      # Honeygain credentials
-      - HONEYGAIN_EMAIL=${HONEYGAIN_EMAIL}
-      - HONEYGAIN_PASSWORD=${HONEYGAIN_PASSWORD}
-
-      # Pawns credentials
-      - PAWNS_EMAIL=${PAWNS_EMAIL}
-      - PAWNS_PASSWORD=${PAWNS_PASSWORD}
-
-      # Peer2Profit credentials
-      - P2P_EMAIL=${P2P_EMAIL}
-
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./earnings/data:/data
-
-    ports:
-      - "5000:5000"
-    networks:
-      - earning_net
+  build: ./earnings
+  container_name: earnings
+  restart: unless-stopped
+  environment:
+    - TZ=America/Edmonton
+    - EARNINGS_DB_PATH=/data/earnings.db
+    - EARNINGS_JSON_PATH=/data/latest_earnings.json
+    - HONEYGAIN_EMAIL=${HONEYGAIN_EMAIL}
+    - HONEYGAIN_PASSWORD=${HONEYGAIN_PASSWORD}
+    - PAWNS_EMAIL=${PAWNS_EMAIL}
+    - PAWNS_PASSWORD=${PAWNS_PASSWORD}
+    - P2P_EMAIL=${P2P_EMAIL}
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - ./data:/data
+  ports:
+    - "5000:5000"
+  networks:
+    - earning_net
 
 # ---------------------------------------------------------
 # Networks
