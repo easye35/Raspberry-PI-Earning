@@ -1,9 +1,7 @@
-.env
-*.env
-earnings/.env
-backend/.env
 data/
 earnings/data/
 *.db
 *.json
-
+__pycache__/
+*.pyc
+.env
