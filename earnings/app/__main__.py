@@ -1,3 +1,4 @@
+import psutil
 from flask import Flask, jsonify, request
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -8,6 +9,18 @@ from . import earnings_logic as logic
 
 
 def create_app():
+        @app.get("/api/system")
+    def system_info():
+        cpu = psutil.cpu_percent(interval=0.5)
+        ram = psutil.virtual_memory().percent
+        disk = psutil.disk_usage("/").percent
+
+        return jsonify({
+            "cpu": cpu,
+            "ram": ram,
+            "disk": disk
+        })
+
     app = Flask(__name__)
     CORS(app)
 
