@@ -9,23 +9,24 @@ from . import earnings_logic as logic
 
 
 def create_app():
-        @app.get("/api/system")
-def system_info():
-   cpu = psutil.cpu_percent(interval=0.5)
-   ram = psutil.virtual_memory().percent
-   disk = psutil.disk_usage("/").percent
-
-   return jsonify({
-            "cpu": cpu,
-            "ram": ram,
-            "disk": disk
-        })
-
     app = Flask(__name__)
     CORS(app)
 
     # Ensure DB exists
     logic.init_db()
+
+    # ---------- SYSTEM METRICS ROUTE ----------
+    @app.get("/api/system")
+    def system_info():
+        cpu = psutil.cpu_percent(interval=0.5)
+        ram = psutil.virtual_memory().percent
+        disk = psutil.disk_usage("/").percent
+
+        return jsonify({
+            "cpu": cpu,
+            "ram": ram,
+            "disk": disk
+        })
 
     # ---------- API ROUTES ----------
 
@@ -36,14 +37,9 @@ def system_info():
         """
         snapshot = logic.get_latest_snapshot()
         if snapshot is None:
-            return (
-                jsonify(
-                    {
-                        "message": "No earnings data yet. Wait for the first scheduled run.",
-                    }
-                ),
-                404,
-            )
+            return jsonify({
+                "message": "No earnings data yet. Wait for the first scheduled run."
+            }), 404
         return jsonify(snapshot)
 
     @app.get("/earnings/history")
@@ -55,8 +51,12 @@ def system_info():
             limit = int(request.args.get("limit", "30"))
         except ValueError:
             limit = 30
+
         history = logic.get_history(limit=limit)
-        return jsonify({"count": len(history), "items": history})
+        return jsonify({
+            "count": len(history),
+            "items": history
+        })
 
     @app.post("/earnings/run-now")
     def run_now():
@@ -82,7 +82,10 @@ def _start_scheduler(app):
 
     # Every day at 16:00
     trigger = CronTrigger(hour=16, minute=0)
-    scheduler.add_job(job_wrapper, trigger, id="daily_earnings_update", replace_existing=True)
+    scheduler.add_job(job_wrapper, trigger,
+                      id="daily_earnings_update",
+                      replace_existing=True)
+
     scheduler.start()
     app.logger.info("Scheduler started: daily at 16:00 America/Edmonton")
 
