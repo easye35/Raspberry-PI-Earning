@@ -1,7 +1,7 @@
 // -------------------------------------------------------------
 // Backend API base URL (dynamic, no static IP)
 // -------------------------------------------------------------
-const API = `http://${window.location.hostname}:3001`;
+const API = `http://${window.location.hostname}:5000`;
 
 // -------------------------------------------------------------
 // Modal state
