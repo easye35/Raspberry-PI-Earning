@@ -24,13 +24,21 @@ def create_app():
         ram = psutil.virtual_memory().percent
         disk = psutil.disk_usage("/").percent
 
+        # Read Raspberry Pi CPU temperature
+        try:
+            with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
+                temp_raw = f.read().strip()
+                temp = float(temp_raw) / 1000.0
+        except:
+            temp = None
+
         return jsonify({
             "ok": True,
             "cpu": cpu,
             "ram": ram,
             "disk": disk,
             "network": {"rx": 0, "tx": 0},
-            "temp": 0,
+            "temp": temp,
             "uptime": 0
         })
 
