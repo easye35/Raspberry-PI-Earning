@@ -15,7 +15,9 @@ def create_app():
     # Ensure DB exists
     logic.init_db()
 
-    # ---------- SYSTEM METRICS ----------
+    # ---------------------------------------------------------
+    # SYSTEM METRICS
+    # ---------------------------------------------------------
     @app.get("/api/system")
     def system_info():
         cpu = psutil.cpu_percent(interval=0.5)
@@ -23,26 +25,34 @@ def create_app():
         disk = psutil.disk_usage("/").percent
 
         return jsonify({
+            "ok": True,
             "cpu": cpu,
             "ram": ram,
-            "disk": disk
+            "disk": disk,
+            "network": {"rx": 0, "tx": 0},
+            "temp": 0,
+            "uptime": 0
         })
 
-    # ---------- SERVICES (stub so UI stops erroring) ----------
+    # ---------------------------------------------------------
+    # SERVICES (frontend expects resetService)
+    # ---------------------------------------------------------
     @app.get("/api/services")
     def get_services():
         return jsonify({
-            "services": []
+            "resetService": "OK"
         })
 
-    # ---------- CONTAINERS (stub so UI stops erroring) ----------
+    # ---------------------------------------------------------
+    # CONTAINERS (frontend expects an ARRAY)
+    # ---------------------------------------------------------
     @app.get("/api/containers")
     def get_containers():
-        return jsonify({
-            "containers": []
-        })
+        return jsonify([])
 
-    # ---------- 7-DAY PROJECTION ----------
+    # ---------------------------------------------------------
+    # 7-DAY PROJECTION
+    # ---------------------------------------------------------
     @app.get("/api/projection/7day")
     def projection_7day():
         history = logic.get_history(limit=7)
@@ -50,11 +60,12 @@ def create_app():
         avg = total / 7 if history else 0
 
         return jsonify({
-            "average": avg,
-            "projection": avg * 30
+            "projection": round(avg * 30, 2)
         })
 
-    # ---------- EARNINGS ROUTES ----------
+    # ---------------------------------------------------------
+    # EARNINGS ROUTES
+    # ---------------------------------------------------------
     @app.get("/earnings")
     def get_earnings():
         snapshot = logic.get_latest_snapshot()
