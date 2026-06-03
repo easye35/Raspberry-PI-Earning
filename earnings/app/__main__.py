@@ -10,12 +10,12 @@ from . import earnings_logic as logic
 
 def create_app():
         @app.get("/api/system")
-    def system_info():
-        cpu = psutil.cpu_percent(interval=0.5)
-        ram = psutil.virtual_memory().percent
-        disk = psutil.disk_usage("/").percent
+def system_info():
+   cpu = psutil.cpu_percent(interval=0.5)
+   ram = psutil.virtual_memory().percent
+   disk = psutil.disk_usage("/").percent
 
-        return jsonify({
+   return jsonify({
             "cpu": cpu,
             "ram": ram,
             "disk": disk
