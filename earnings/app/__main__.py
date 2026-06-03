@@ -15,7 +15,7 @@ def create_app():
     # Ensure DB exists
     logic.init_db()
 
-    # ---------- SYSTEM METRICS ROUTE ----------
+    # ---------- SYSTEM METRICS ----------
     @app.get("/api/system")
     def system_info():
         cpu = psutil.cpu_percent(interval=0.5)
@@ -28,13 +28,35 @@ def create_app():
             "disk": disk
         })
 
-    # ---------- API ROUTES ----------
+    # ---------- SERVICES (stub so UI stops erroring) ----------
+    @app.get("/api/services")
+    def get_services():
+        return jsonify({
+            "services": []
+        })
 
+    # ---------- CONTAINERS (stub so UI stops erroring) ----------
+    @app.get("/api/containers")
+    def get_containers():
+        return jsonify({
+            "containers": []
+        })
+
+    # ---------- 7-DAY PROJECTION ----------
+    @app.get("/api/projection/7day")
+    def projection_7day():
+        history = logic.get_history(limit=7)
+        total = sum((item.get("daily_change") or 0) for item in history)
+        avg = total / 7 if history else 0
+
+        return jsonify({
+            "average": avg,
+            "projection": avg * 30
+        })
+
+    # ---------- EARNINGS ROUTES ----------
     @app.get("/earnings")
     def get_earnings():
-        """
-        Returns the latest earnings snapshot.
-        """
         snapshot = logic.get_latest_snapshot()
         if snapshot is None:
             return jsonify({
@@ -44,9 +66,6 @@ def create_app():
 
     @app.get("/earnings/history")
     def get_earnings_history():
-        """
-        Returns last N entries (default 30).
-        """
         try:
             limit = int(request.args.get("limit", "30"))
         except ValueError:
@@ -60,9 +79,6 @@ def create_app():
 
     @app.post("/earnings/run-now")
     def run_now():
-        """
-        Manual trigger for testing from browser or curl.
-        """
         snapshot = logic.update_earnings()
         return jsonify(snapshot)
 
@@ -70,9 +86,6 @@ def create_app():
 
 
 def _start_scheduler(app):
-    """
-    Start APScheduler to run update_earnings daily at 16:00 Edmonton time.
-    """
     scheduler = BackgroundScheduler(timezone=pytz.timezone("America/Edmonton"))
 
     def job_wrapper():
@@ -80,7 +93,6 @@ def _start_scheduler(app):
             app.logger.info("Running scheduled earnings update at %s", datetime.now())
             logic.update_earnings()
 
-    # Every day at 16:00
     trigger = CronTrigger(hour=16, minute=0)
     scheduler.add_job(job_wrapper, trigger,
                       id="daily_earnings_update",
@@ -94,5 +106,4 @@ app = create_app()
 _start_scheduler(app)
 
 if __name__ == "__main__":
-    # For local testing; in Docker we still use this.
     app.run(host="0.0.0.0", port=5000)
