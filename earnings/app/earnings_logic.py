@@ -47,6 +47,11 @@ def _get_last_row():
     conn.close()
     return row
 
+# ---------------------------------------------------------
+# RATE LIMIT: Prevent refresh more than once every 5 minutes
+# ---------------------------------------------------------
+LAST_REFRESH = 0
+MIN_REFRESH_INTERVAL = 3000  # seconds
 
 # ---------------------------------------------------------
 # BALANCE FETCHERS
@@ -154,7 +159,24 @@ def get_honeygain_balance():
 # CORE LOGIC
 # ---------------------------------------------------------
 
+import time
+
 def update_earnings():
+    global LAST_REFRESH
+
+    now = time.time()
+
+    # If called too soon → return cached JSON
+    if now - LAST_REFRESH < MIN_REFRESH_INTERVAL:
+        try:
+            with open(JSON_PATH, "r") as f:
+                return json.load(f)
+        except:
+            pass  # If no JSON exists, fall through and fetch fresh
+
+    # Otherwise → fetch fresh
+    LAST_REFRESH = now
+
     """
     Fetches balances, computes daily change + projection,
     stores in SQLite, writes JSON snapshot.
