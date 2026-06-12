@@ -16,6 +16,46 @@ app.use(cors());
 app.use(express.json());
 
 /* ---------------------------------------------------------------------------
+   Database Initialization (FIXED)
+--------------------------------------------------------------------------- */
+const Database = require("better-sqlite3");
+
+// Ensure /data exists
+fs.mkdirSync("/data", { recursive: true });
+
+// Open DB
+const db = new Database("/data/earnings.db");
+
+// Ensure table exists
+db.prepare(`
+    CREATE TABLE IF NOT EXISTS earnings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp INTEGER NOT NULL,
+        total REAL,
+        daily_change REAL
+    )
+`).run();
+
+/* ---------------------------------------------------------------------------
+   Today Earnings Calculator (Last 24 Hours)
+--------------------------------------------------------------------------- */
+function calculateToday() {
+    const now = Date.now();
+    const cutoff = now - 24 * 60 * 60 * 1000;
+
+    const rows = db.prepare(
+        "SELECT timestamp, total FROM earnings WHERE timestamp >= ? ORDER BY timestamp ASC"
+    ).all(cutoff);
+
+    if (rows.length < 2) return 0;
+
+    const first = rows[0].total;
+    const last = rows[rows.length - 1].total;
+
+    return Number((last - first).toFixed(4));
+}
+
+/* ---------------------------------------------------------------------------
    Earnings API (Honeygain + Pawns + DB)
 --------------------------------------------------------------------------- */
 app.get("/earnings", (req, res) => {
@@ -49,6 +89,7 @@ app.get("/earnings", (req, res) => {
         res.json({
             honeygain,
             pawns,
+            today: calculateToday(),
             daily_change: daily,
             projected_30_day,
             total
@@ -60,12 +101,14 @@ app.get("/earnings", (req, res) => {
         res.json({
             honeygain: 0,
             pawns: 0,
+            today: 0,
             daily_change: 0,
             projected_30_day: 0,
             total: 0
         });
     }
 });
+
 /*---------------------------------------------------------------------
  Utility: Fetch with Retry
 --------------------------------------------------------------------------- */
@@ -79,27 +122,6 @@ async function fetchWithRetry(url, retries = 3, delay = 500) {
     }
     return null;
 }
-
-/* ---------------------------------------------------------------------------
-   Database Initialization (FIXED)
---------------------------------------------------------------------------- */
-const Database = require("better-sqlite3");
-
-// Ensure /data exists
-fs.mkdirSync("/data", { recursive: true });
-
-// Open DB
-const db = new Database("/data/earnings.db");
-
-// Ensure table exists
-db.prepare(`
-    CREATE TABLE IF NOT EXISTS earnings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp INTEGER NOT NULL,
-        total REAL,
-        daily_change REAL
-    )
-`).run();
 
 /* ---------------------------------------------------------------------------
    Earnings Projection API
