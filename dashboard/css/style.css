@@ -130,3 +130,43 @@ h1, h2, h3, h4 {
     50% { box-shadow: 0 0 18px rgba(180, 0, 255, 0.9); }
     100% { box-shadow: 0 0 8px rgba(180, 0, 255, 0.4); }
 }
+/* --------------------------------------------------------------------------
+   SYSTEM STATS GRID — NEON CARD LAYOUT
+-------------------------------------------------------------------------- */
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 22px;
+    margin-top: 25px;
+}
+
+.stat-card {
+    background: rgba(30, 20, 50, 0.55);
+    border: 1px solid rgba(180, 0, 255, 0.35);
+    border-radius: 14px;
+    padding: 18px 20px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 0 14px rgba(180, 0, 255, 0.35);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0 20px rgba(200, 0, 255, 0.55);
+}
+
+.stat-card h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #d8b4ff;
+    margin-bottom: 10px;
+    letter-spacing: 0.4px;
+}
+
+.stat-card p {
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0;
+}
