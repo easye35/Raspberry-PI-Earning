@@ -75,10 +75,28 @@ app.get("/earnings", (req, res) => {
             console.log("No earnings JSON yet.");
         }
 
-        // Load DB latest row
-        const latest = db.prepare(
-            "SELECT total, daily_change FROM earnings ORDER BY id DESC LIMIT 1"
-        ).get();
+        // Compute rolling 7‑day average daily change
+const history = db.prepare(`
+    SELECT total 
+    FROM earnings 
+    ORDER BY timestamp DESC 
+    LIMIT 7
+`).all();
+
+let rollingDaily = 0;
+
+if (history.length >= 2) {
+    const diffs = [];
+
+    for (let i = 0; i < history.length - 1; i++) {
+        diffs.push(history[i].total - history[i + 1].total);
+    }
+
+    rollingDaily = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+}
+
+const total = history.length > 0 ? history[0].total : (honeygain + pawns);
+
 
         const daily = latest?.daily_change || 0;
         const total = latest?.total || (honeygain + pawns);
