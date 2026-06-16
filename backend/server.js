@@ -75,42 +75,40 @@ app.get("/earnings", (req, res) => {
             console.log("No earnings JSON yet.");
         }
 
-        // Compute rolling 7‑day average daily change
-const history = db.prepare(`
-    SELECT total 
-    FROM earnings 
-    ORDER BY timestamp DESC 
-    LIMIT 7
-`).all();
+        /* -------------------------------------------------------------------
+           Compute rolling 7‑day average daily change
+        ------------------------------------------------------------------- */
+        const history = db.prepare(`
+            SELECT total 
+            FROM earnings 
+            ORDER BY timestamp DESC 
+            LIMIT 7
+        `).all();
 
-let rollingDaily = 0;
+        let rollingDaily = 0;
 
-if (history.length >= 2) {
-    const diffs = [];
+        if (history.length >= 2) {
+            const diffs = [];
 
-    for (let i = 0; i < history.length - 1; i++) {
-        diffs.push(history[i].total - history[i + 1].total);
-    }
+            for (let i = 0; i < history.length - 1; i++) {
+                diffs.push(history[i].total - history[i + 1].total);
+            }
 
-    rollingDaily = diffs.reduce((a, b) => a + b, 0) / diffs.length;
-}
+            rollingDaily = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+        }
 
-const total = history.length > 0 ? history[0].total : (honeygain + pawns);
+        const total = history.length > 0 ? history[0].total : (honeygain + pawns);
+        const projected_30_day = rollingDaily * 30;
 
-
-        const daily = latest?.daily_change || 0;
-        const total = latest?.total || (honeygain + pawns);
-
-        // 30‑day projection (simple)
-        const projected_30_day = daily * 30;
-
+        /* -------------------------------------------------------------------
+           Return API response
+        ------------------------------------------------------------------- */
         res.json({
             honeygain,
             pawns,
             today: calculateToday(),
             daily_change: Number(rollingDaily.toFixed(4)),
-            projected_30_day: Number((rollingDaily * 30).toFixed(2)),
-
+            projected_30_day: Number(projected_30_day.toFixed(2)),
             total
         });
 
