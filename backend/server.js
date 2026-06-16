@@ -108,8 +108,9 @@ const total = history.length > 0 ? history[0].total : (honeygain + pawns);
             honeygain,
             pawns,
             today: calculateToday(),
-            daily_change: daily,
-            projected_30_day,
+            daily_change: Number(rollingDaily.toFixed(4)),
+            projected_30_day: Number((rollingDaily * 30).toFixed(2)),
+
             total
         });
 
