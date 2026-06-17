@@ -66,7 +66,7 @@ services:
   # Traffmonetizer
   #--------------------------------------------------------
   traffmonetizer:
-    image: traffmonetizer/cli:latest
+    image: traffmonetizer/traffic:latest
     container_name: traffmonetizer
     restart: always
     command: start accept --token ${TRAFFMONETIZER_TOKEN}
