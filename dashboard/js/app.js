@@ -248,31 +248,10 @@ function setupModal() {
 }
 
 // -------------------------------------------------------------
-// Projection Dropdown + Neon Bar
-// -------------------------------------------------------------
-async function updateProjection() {
-    const mode = document.getElementById("projection-mode").value;
-
-    try {
-        const res = await fetch(`${API}/api/projection/${mode}`);
-        const data = await res.json();
-
-        document.getElementById("projection-display").textContent =
-            `$${data.projection} / month (${mode})`;
-
-    } catch (err) {
-        console.error("Projection error:", err);
-    }
-}
-
-document.getElementById("projection-mode").addEventListener("change", updateProjection);
-
-// -------------------------------------------------------------
 // Auto-refresh loops
 // -------------------------------------------------------------
 setInterval(loadServiceStatus, 5000);
 setInterval(loadContainers, 5000);
-setInterval(updateProjection, 10000);
 setInterval(loadEarnings, 5000);
 
 // Initial load
@@ -280,5 +259,4 @@ showLoading();
 loadSystemStats();
 loadServiceStatus();
 loadContainers();
-updateProjection();
 setupModal();
