@@ -39,11 +39,6 @@ echo
 read -p "Pawns Device Name: " PAWNS_DEVICE
 echo ""
 
-# EarnApp
-read -p "EarnApp Email: " EARNAPP_EMAIL
-read -s -p "EarnApp Password: " EARNAPP_PASSWORD
-echo ""
-
 # TraffMonetizer
 read -p "TraffMonetizer Token: " TRAFFMONETIZER_TOKEN
 echo ""
@@ -62,9 +57,6 @@ HONEYGAIN_DEVICE="$HONEYGAIN_DEVICE"
 PAWNS_EMAIL="$PAWNS_EMAIL"
 PAWNS_PASSWORD="$PAWNS_PASSWORD"
 PAWNS_DEVICE="$PAWNS_DEVICE"
-
-EARNAPP_EMAIL="$EARNAPP_EMAIL"
-EARNAPP_PASSWORD="$EARNAPP_PASSWORD"
 
 TRAFFMONETIZER_TOKEN="$TRAFFMONETIZER_TOKEN"
 
@@ -101,6 +93,32 @@ if ! command -v node &> /dev/null; then
     curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
     sudo apt install -y nodejs
 fi
+
+# ---------------------------------------------------------
+# Install native EarnApp
+# ---------------------------------------------------------
+install_earnapp() {
+    echo "Installing native EarnApp..."
+    if command -v earnapp >/dev/null 2>&1; then
+        echo "EarnApp is already installed."
+        return 0
+    fi
+
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL https://download.earnapp.com/install.sh | sudo bash
+    elif command -v wget >/dev/null 2>&1; then
+        wget -qO- https://download.earnapp.com/install.sh | sudo bash
+    else
+        echo "curl or wget is required to install EarnApp. Skipping EarnApp installation."
+        return 1
+    fi
+
+    if command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files | grep -q "^earnapp.service"; then
+        sudo systemctl enable --now earnapp.service || true
+    fi
+}
+
+install_earnapp || echo "EarnApp installation failed or was skipped. You may need to install it manually."
 
 # ---------------------------------------------------------
 # Run Plugins

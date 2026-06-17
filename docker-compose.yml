@@ -123,7 +123,6 @@ services:
       - HONEYGAIN_PASSWORD=${HONEYGAIN_PASSWORD}
       - PAWNS_EMAIL=${PAWNS_EMAIL}
       - PAWNS_PASSWORD=${PAWNS_PASSWORD}
-      - P2P_EMAIL=${P2P_EMAIL}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./data:/data

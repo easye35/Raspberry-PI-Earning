@@ -1,18 +1,18 @@
 # Raspberry Pi Passive‑Income Appliance
-## Honeygain • Pawns • Watchtower • Watchdog • Dashboard • Diagnostics
-## A fully automated, self‑healing, Docker‑based earning appliance for Raspberry Pi.
+## Honeygain • Pawns • TraffMonetizer • Dozzle • Netdata • Dashboard • Diagnostics
+## A Docker‑based passive‑income appliance for Raspberry Pi.
 
 ## 🚀 What This Appliance Does  
 This project turns any Raspberry Pi (ARM64 recommended) into a zero‑touch passive‑income appliance running:  
 • 	Honeygain — passive bandwidth sharing  
 • 	Pawns.app — passive bandwidth sharing  
-• 	Watchtower — automatic container updates  
-• 	Watchdog — self‑healing restarts + service recovery  
+• 	TraffMonetizer — optional traffic monetization  
 • 	Dozzle — real‑time logs  
-• 	Glances — system metrics dashboard  
+• 	Netdata — system performance dashboard  
 • 	Dashboard UI — clean landing page  
 • 	Diagnostics API — one‑click system health report  
-Everything runs in Docker.  
+• 	EarnApp — optional native host service (not containerized)  
+Everything runs in Docker except optional native EarnApp support.  
 Everything is monitored.  
 Everything is self‑healing.  
 Everything is remote‑friendly.  
@@ -61,15 +61,15 @@ sudo ./install.sh
 ```bash
 sudo tailscale up
 ```
-## 🐳 Docker + Emulation
+## 🐳 Docker
 The installer automatically:  
 • 	Installs Docker  
-• 	Enables x86 emulation (for compatibility)  
 • 	Generates **`.env`**      
 • 	Deploys the full stack via Docker Compose
 No Portainer.
-No EarnApp.
-No manual setup.
+No manual host configuration.
+
+> EarnApp is not deployed as a Docker service. If you want EarnApp, install it natively on the Raspberry Pi and the repo can optionally detect it after install.
 
 ### 📊 Your Dashboard
 After installation, you get a clean, modern dashboard:
@@ -93,13 +93,12 @@ http://<PI-IP>:9999
 Live logs for:  
 • 	Honeygain  
 • 	Pawns  
-• 	Watchtower  
-• 	Watchdog  
-• 	Diagnostics server  
+• 	Dozzle  
+• 	Diagnostics API  
 
-Glances (System Metrics)
+Netdata (System Metrics)
 ```bash
-http://<PI-IP>:61208
+http://<PI-IP>:19999
 ```
 Shows:
 - CPU load
@@ -122,12 +121,12 @@ Returns JSON with:
 The dashboard UI includes a Run Diagnostics button that fetches this live.  
 
 ## 🛡 Self‑Healing Watchdog  
-The watchdog container:  
-• 	Monitors all services  
-• 	Restarts anything that stops  
-• 	Detects Docker daemon issues  
+The repository includes a watchdog helper script that can inspect and restart defined services:  
+• 	Monitors actual Docker services  
+• 	Restarts containers that stop  
+• 	Supports optional native EarnApp checks when `systemctl` is available  
 - Logs recovery events  
-- Ensures the appliance stays earning 24/7  
+- Helps keep the appliance running continuously  
 
 ### 🌐 Remote Access (Optional)
 ## ⭐ Tailscale (Best Option)
