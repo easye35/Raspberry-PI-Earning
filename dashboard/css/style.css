@@ -1,15 +1,27 @@
 /* --------------------------------------------------------------------------
    GLOBAL LAYOUT + RESET
 -------------------------------------------------------------------------- */
+:root {
+    --surface: rgba(16, 12, 38, 0.88);
+    --surface-strong: rgba(12, 8, 30, 0.96);
+    --border: rgba(255, 255, 255, 0.12);
+    --shadow: rgba(16, 10, 60, 0.35);
+    --accent-1: #8b5bff;
+    --accent-2: #4fc7ff;
+    --text: #f4f4ff;
+    --muted: #c8bfff;
+}
+
 body {
     margin: 0;
     padding: 0;
     min-height: 100vh;
     font-family: "Inter", sans-serif;
-    background: radial-gradient(circle at top, rgba(111, 66, 255, 0.35), transparent 25%),
-                linear-gradient(180deg, #090a12 0%, #11131f 35%, #0f1020 100%);
-    color: #f4f4ff;
+    background: radial-gradient(circle at top, rgba(111, 66, 255, 0.22), transparent 25%),
+                linear-gradient(180deg, #05050c 0%, #0b0c18 40%, #11131f 100%);
+    color: var(--text);
     overflow-x: hidden;
+    background-attachment: fixed;
 }
 
 * {
@@ -22,51 +34,54 @@ button:focus {
 }
 
 .dashboard-shell {
-    width: min(1200px, 100%);
+    width: min(1320px, 100%);
     margin: 0 auto;
-    padding: 24px 20px 40px;
+    padding: 32px 24px 48px;
 }
 
 .dashboard-header {
     display: flex;
     justify-content: space-between;
-    gap: 20px;
+    gap: 32px;
     align-items: flex-start;
-    padding: 28px 32px;
-    background: rgba(16, 12, 38, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 24px;
-    box-shadow: 0 30px 80px rgba(9, 8, 25, 0.35);
-    backdrop-filter: blur(18px);
-    margin-bottom: 28px;
+    padding: 44px 42px;
+    background: linear-gradient(135deg, rgba(36, 15, 80, 0.95), rgba(18, 9, 34, 0.85));
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 32px;
+    box-shadow: 0 40px 110px rgba(8, 8, 30, 0.45);
+    backdrop-filter: blur(24px);
+    margin-bottom: 36px;
 }
 
 .dashboard-header h1 {
-    margin: 12px 0 10px;
-    font-size: clamp(2rem, 2.5vw, 3rem);
-    letter-spacing: -0.04em;
+    margin: 18px 0 20px;
+    font-size: clamp(2.4rem, 3vw, 4rem);
+    letter-spacing: -0.06em;
+    line-height: 1.02;
 }
 
 .eyebrow {
     margin: 0;
-    font-size: 0.88rem;
+    font-size: 0.85rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.18em;
-    color: #c8bfff;
+    letter-spacing: 0.22em;
+    color: #c9b7ff;
 }
 
 .hero-copy {
     margin: 0;
-    max-width: 640px;
-    line-height: 1.75;
-    color: #d6d1ff;
+    max-width: 600px;
+    line-height: 1.85;
+    color: #dcd6ff;
+    font-size: 1rem;
 }
 
 .header-actions {
     display: flex;
-    gap: 12px;
+    gap: 14px;
     flex-wrap: wrap;
+    align-items: center;
 }
 
 .btn {
@@ -74,25 +89,27 @@ button:focus {
     align-items: center;
     justify-content: center;
     border: none;
-    border-radius: 16px;
-    padding: 12px 24px;
+    border-radius: 20px;
+    padding: 14px 26px;
     color: #fff;
-    background: linear-gradient(135deg, #7b5bff, #4f52ff);
+    background: linear-gradient(135deg, #8f70ff, #4fa8ff);
     cursor: pointer;
-    font-weight: 600;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
-    box-shadow: 0 15px 40px rgba(79, 82, 255, 0.18);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, background 0.3s ease;
+    box-shadow: 0 18px 55px rgba(79, 112, 255, 0.18);
 }
 
 .btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 22px 60px rgba(79, 82, 255, 0.24);
+    transform: translateY(-3px);
+    box-shadow: 0 26px 70px rgba(79, 112, 255, 0.28);
+    background: linear-gradient(135deg, #985dff, #5bc2ff);
 }
 
 .btn.secondary {
     background: rgba(255, 255, 255, 0.08);
-    color: #f5f5ff;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #f7f4ff;
+    border: 1px solid rgba(255, 255, 255, 0.18);
 }
 
 .overview-grid,
@@ -110,12 +127,12 @@ button:focus {
 .hero-card,
 .mini-card,
 .dashboard-card {
-    background: rgba(21, 16, 50, 0.78);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 26px;
-    padding: 26px;
-    box-shadow: 0 40px 90px rgba(2, 2, 16, 0.28);
-    backdrop-filter: blur(20px);
+    background: rgba(22, 16, 52, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 28px;
+    padding: 28px;
+    box-shadow: 0 45px 100px rgba(12, 10, 34, 0.28);
+    backdrop-filter: blur(24px);
 }
 
 .hero-card {
@@ -123,35 +140,37 @@ button:focus {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    min-height: 320px;
 }
 
 .hero-card .hero-label,
 .mini-card span,
 .dashboard-card h2 {
     display: block;
-    margin-bottom: 16px;
-    color: #b8b3ff;
+    margin-bottom: 18px;
+    color: #c7bfff;
     font-size: 0.95rem;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
 }
 
 .hero-card h2 {
-    font-size: clamp(2.5rem, 4vw, 3.4rem);
+    font-size: clamp(2.8rem, 4.5vw, 3.8rem);
     margin: 0;
-    letter-spacing: -0.07em;
-    line-height: 0.95;
+    letter-spacing: -0.08em;
+    line-height: 0.9;
     color: #fff;
 }
 
 .hero-card .hero-subtitle {
-    margin-top: 18px;
-    color: #d9d2ff;
-    max-width: 560px;
+    margin-top: 22px;
+    color: #dcd6ff;
+    max-width: 520px;
+    font-size: 1rem;
 }
 
 .mini-card {
-    min-height: 145px;
+    min-height: 150px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -160,7 +179,7 @@ button:focus {
 
 .mini-card h3 {
     margin: 0;
-    font-size: 2rem;
+    font-size: 2.2rem;
     color: #fff;
 }
 
@@ -242,8 +261,8 @@ button:focus {
     line-height: 1.1;
 }
 
-.container-section {
-    margin-top: 32px;
+..container-section {
+    margin-top: 42px;
 }
 
 .section-header {
@@ -251,7 +270,7 @@ button:focus {
     justify-content: space-between;
     align-items: center;
     gap: 16px;
-    margin-bottom: 22px;
+    margin-bottom: 32px;
 }
 
 .container-grid {

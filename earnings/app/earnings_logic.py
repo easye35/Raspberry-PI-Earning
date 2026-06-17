@@ -30,11 +30,26 @@ def init_db():
             timestamp TEXT NOT NULL,
             honeygain REAL NOT NULL,
             pawns REAL NOT NULL,
+            traffmonetizer REAL NOT NULL DEFAULT 0.0,
+            earnapp REAL NOT NULL DEFAULT 0.0,
+            total REAL NOT NULL DEFAULT 0.0,
             daily_change REAL,
             projected_30_day REAL
         )
         """
     )
+
+    existing_columns = [row[1] for row in cur.execute("PRAGMA table_info(earnings)").fetchall()]
+    for column, default in [
+        ("traffmonetizer", 0.0),
+        ("earnapp", 0.0),
+        ("total", 0.0)
+    ]:
+        if column not in existing_columns:
+            cur.execute(
+                f"ALTER TABLE earnings ADD COLUMN {column} REAL NOT NULL DEFAULT {default}"
+            )
+
     conn.commit()
     conn.close()
 
@@ -48,10 +63,76 @@ def _get_last_row():
     return row
 
 # ---------------------------------------------------------
-# RATE LIMIT: Prevent refresh more than once every 5 minutes
+# RATE LIMIT: Prevent refresh more than once every 30 seconds
 # ---------------------------------------------------------
 LAST_REFRESH = 0
-MIN_REFRESH_INTERVAL = 3000  # seconds
+MIN_REFRESH_INTERVAL = 30  # seconds
+
+# ---------------------------------------------------------
+# Helper utilities
+# ---------------------------------------------------------
+
+def _get_container_logs(container_name, tail=500):
+    try:
+        client = docker.from_env()
+        container = client.containers.get(container_name)
+        return container.logs(tail=tail).decode("utf-8", errors="ignore")
+    except Exception as e:
+        print(f"DEBUG: Failed to read logs for {container_name}: {e}", flush=True)
+        return ""
+
+
+def get_traffmonetizer_balance():
+    """Attempts to extract a TraffMonetizer balance estimate from container logs."""
+    logs = _get_container_logs("traffmonetizer", tail=800)
+    if not logs:
+        return 0.0
+
+    for line in logs.splitlines():
+        if any(keyword in line.lower() for keyword in ["balance", "earned", "earnings", "income", "total"]):
+            match = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*(?:USD|usd|\$)?", line)
+            if match:
+                try:
+                    return float(match.group(1))
+                except ValueError:
+                    continue
+
+    matches = re.findall(r"([0-9]+(?:\.[0-9]+)?)\s*(?:USD|usd|\$)", logs)
+    if matches:
+        try:
+            return float(matches[-1])
+        except ValueError:
+            pass
+
+    return 0.0
+
+
+def get_earnapp_balance():
+    """Attempts to read native EarnApp balance from a local earnapp CLI or status output."""
+    try:
+        proc = subprocess.run(
+            ["earnapp", "status"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        output = (proc.stdout or "") + "\n" + (proc.stderr or "")
+
+        for line in output.splitlines():
+            if re.search(r"(balance|earned|earnings|total|wallet)", line, re.IGNORECASE):
+                match = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*(?:USD|usd|\$)?", line)
+                if match:
+                    try:
+                        return float(match.group(1))
+                    except ValueError:
+                        continue
+
+    except FileNotFoundError:
+        print("DEBUG: earnapp command not found", flush=True)
+    except Exception as e:
+        print("DEBUG: EarnApp balance fetch error:", e, flush=True)
+
+    return 0.0
 
 # ---------------------------------------------------------
 # BALANCE FETCHERS
@@ -187,35 +268,50 @@ def update_earnings():
 
     honeygain = float(get_honeygain_balance())
     pawns = float(get_pawns_balance())
-
-    today_total = honeygain + pawns
+    traffmonetizer = float(get_traffmonetizer_balance())
+    earnapp = float(get_earnapp_balance())
+    total = honeygain + pawns + traffmonetizer + earnapp
 
     last_row = _get_last_row()
     if last_row is not None:
-        yesterday_total = (
-            float(last_row["honeygain"])
-            + float(last_row["pawns"])
-        )
-        daily_change = today_total - yesterday_total
+        if "total" in last_row.keys():
+            previous_total = float(last_row["total"])
+        else:
+            previous_total = (
+                float(last_row["honeygain"]) +
+                float(last_row["pawns"]) +
+                float(last_row.get("traffmonetizer", 0.0)) +
+                float(last_row.get("earnapp", 0.0))
+            )
+        daily_change = total - previous_total
     else:
-        daily_change = None
+        daily_change = 0.0
 
-    projected_30_day = daily_change * 30 if daily_change is not None else None
+    projected_30_day = daily_change * 30
 
     conn = _get_connection()
     cur = conn.cursor()
 
-    # FIXED: 5 columns → 5 placeholders
     cur.execute(
         """
         INSERT INTO earnings (
-            timestamp, honeygain, pawns, daily_change, projected_30_day
-        ) VALUES (?, ?, ?, ?, ?)
+            timestamp,
+            honeygain,
+            pawns,
+            traffmonetizer,
+            earnapp,
+            total,
+            daily_change,
+            projected_30_day
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             now,
             honeygain,
             pawns,
+            traffmonetizer,
+            earnapp,
+            total,
             daily_change,
             projected_30_day,
         ),
@@ -228,6 +324,9 @@ def update_earnings():
         "timestamp": now,
         "honeygain": honeygain,
         "pawns": pawns,
+        "traffmonetizer": traffmonetizer,
+        "earnapp": earnapp,
+        "total": total,
         "daily_change": daily_change,
         "projected_30_day": projected_30_day,
     }
@@ -250,6 +349,9 @@ def get_latest_snapshot():
         "timestamp": row["timestamp"],
         "honeygain": row["honeygain"],
         "pawns": row["pawns"],
+        "traffmonetizer": row["traffmonetizer"],
+        "earnapp": row["earnapp"],
+        "total": row["total"],
         "daily_change": row["daily_change"],
         "projected_30_day": row["projected_30_day"],
     }
@@ -274,6 +376,9 @@ def get_history(limit: int = 30):
                 "timestamp": row["timestamp"],
                 "honeygain": row["honeygain"],
                 "pawns": row["pawns"],
+                "traffmonetizer": row["traffmonetizer"],
+                "earnapp": row["earnapp"],
+                "total": row["total"],
                 "daily_change": row["daily_change"],
                 "projected_30_day": row["projected_30_day"],
             }

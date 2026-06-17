@@ -31,8 +31,12 @@ function showLoading() {
 }
 
 // -------------------------------------------------------------
-// Fetch Earnings (Honeygain + Pawns + Today + Projected + Total)
+// Fetch Earnings (Honeygain + Pawns + TraffMonetizer + EarnApp + Today + Projected + Total)
 // -------------------------------------------------------------
+function safeAmount(value) {
+    return typeof value === "number" && !isNaN(value) ? value : 0.0;
+}
+
 async function loadEarnings() {
     try {
         const res = await fetch(`${API}/earnings/run-now`, {
@@ -42,12 +46,20 @@ async function loadEarnings() {
 
         const data = await res.json();
 
-        smoothUpdate(document.getElementById("honeygain-balance"), `$${data.honeygain.toFixed(2)}`);
-        smoothUpdate(document.getElementById("pawns-balance"), `$${data.pawns.toFixed(2)}`);
-        smoothUpdate(document.getElementById("today-earnings"), `$${data.daily_change.toFixed(2)}`);
-        smoothUpdate(document.getElementById("projected-earnings"), `$${data.projected_30_day.toFixed(2)}`);
+        const honeygain = safeAmount(data.honeygain);
+        const pawns = safeAmount(data.pawns);
+        const traffmonetizer = safeAmount(data.traffmonetizer);
+        const earnapp = safeAmount(data.earnapp);
+        const dailyChange = safeAmount(data.daily_change);
+        const projected = safeAmount(data.projected_30_day);
+        const total = safeAmount(data.total) || honeygain + pawns + traffmonetizer + earnapp;
 
-        const total = data.honeygain + data.pawns;
+        smoothUpdate(document.getElementById("honeygain-balance"), `$${honeygain.toFixed(2)}`);
+        smoothUpdate(document.getElementById("pawns-balance"), `$${pawns.toFixed(2)}`);
+        smoothUpdate(document.getElementById("traffmonetizer-balance"), `$${traffmonetizer.toFixed(2)}`);
+        smoothUpdate(document.getElementById("earnapp-balance"), `$${earnapp.toFixed(2)}`);
+        smoothUpdate(document.getElementById("today-earnings"), `$${dailyChange.toFixed(2)}`);
+        smoothUpdate(document.getElementById("projected-earnings"), `$${projected.toFixed(2)}`);
         smoothUpdate(document.getElementById("total-earnings"), `$${total.toFixed(2)}`);
 
     } catch (err) {
@@ -248,6 +260,29 @@ function setupModal() {
 }
 
 // -------------------------------------------------------------
+// Diagnostics button
+// -------------------------------------------------------------
+async function runDiagnostics() {
+    const diagButton = document.getElementById("diagnosticsBtn");
+    if (diagButton) {
+        diagButton.textContent = "Checking...";
+        diagButton.disabled = true;
+    }
+
+    await Promise.allSettled([
+        loadSystemStats(),
+        loadServiceStatus(),
+        loadContainers(),
+        loadEarnings()
+    ]);
+
+    if (diagButton) {
+        diagButton.textContent = "Diagnostics";
+        diagButton.disabled = false;
+    }
+}
+
+// -------------------------------------------------------------
 // Auto-refresh loops
 // -------------------------------------------------------------
 setInterval(loadServiceStatus, 5000);
@@ -260,3 +295,18 @@ loadSystemStats();
 loadServiceStatus();
 loadContainers();
 setupModal();
+
+const diagnosticsBtn = document.getElementById("diagnosticsBtn");
+if (diagnosticsBtn) {
+    diagnosticsBtn.onclick = runDiagnostics;
+}
+
+const refreshAllBtn = document.getElementById("refreshAllBtn");
+if (refreshAllBtn) {
+    refreshAllBtn.onclick = () => {
+        loadSystemStats();
+        loadServiceStatus();
+        loadContainers();
+        loadEarnings();
+    };
+}

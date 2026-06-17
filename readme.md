@@ -6,7 +6,7 @@
 This project turns any Raspberry Pi (ARM64 recommended) into a zero‑touch passive‑income appliance running:  
 • 	Honeygain — passive bandwidth sharing  
 • 	Pawns.app — passive bandwidth sharing  
-• 	TraffMonetizer — optional traffic monetization  
+• 	TraffMonetizer — optional traffic monetization with dashboard reporting  
 • 	Dozzle — real‑time logs  
 • 	Netdata — system performance dashboard  
 • 	Dashboard UI — clean landing page  
@@ -70,6 +70,8 @@ No Portainer.
 No manual host configuration.
 
 > EarnApp is not deployed as a Docker service. If you want EarnApp, install it natively on the Raspberry Pi and the repo can optionally detect it after install.
+>
+> The dashboard can now report TraffMonetizer earnings directly, and it will also show EarnApp totals when the native host CLI/status is accessible to the earnings container.
 
 ### 📊 Your Dashboard
 After installation, you get a clean, modern dashboard:

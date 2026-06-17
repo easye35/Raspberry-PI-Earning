@@ -16,8 +16,8 @@
                 <p class="hero-copy">Live earnings, system health, and container control in one sleek dashboard.</p>
             </div>
             <div class="header-actions">
-                <button class="btn secondary">Refresh All</button>
-                <button class="btn">Diagnostics</button>
+                <button id="refreshAllBtn" class="btn secondary">Refresh All</button>
+                <button id="diagnosticsBtn" class="btn">Diagnostics</button>
             </div>
         </header>
 
@@ -25,7 +25,7 @@
             <article class="hero-card">
                 <span class="hero-label">Total Earned</span>
                 <h2 id="total-earnings">$0.00</h2>
-                <p class="hero-subtitle">Current total from Honeygain + Pawns.</p>
+                <p class="hero-subtitle">Current total from Honeygain, Pawns, TraffMonetizer, and EarnApp.</p>
             </article>
             <article class="mini-card">
                 <span>Today</span>
@@ -52,8 +52,14 @@
                     <div class="earn-block">
                         <span>Pawns</span>
                         <p id="pawns-balance">$0.00</p>
+                    </div>                    <div class="earn-block">
+                        <span>TraffMonetizer</span>
+                        <p id="traffmonetizer-balance">$0.00</p>
                     </div>
-                </div>
+                    <div class="earn-block">
+                        <span>EarnApp</span>
+                        <p id="earnapp-balance">$0.00</p>
+                    </div>                </div>
             </div>
 
             <div class="dashboard-card stats-overview">
