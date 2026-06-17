@@ -4,122 +4,114 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EarnBox Dashboard</title>
-
-    <!-- Stylesheet -->
     <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
+    <div class="dashboard-shell">
+        <header class="dashboard-header">
+            <div>
+                <p class="eyebrow">EarnBox</p>
+                <h1>Raspberry Pi Income Monitor</h1>
+                <p class="hero-copy">Live earnings, system health, and container control in one sleek dashboard.</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn secondary">Refresh All</button>
+                <button class="btn">Diagnostics</button>
+            </div>
+        </header>
 
-    <!-- ---------------------------------------------------------
-         MAIN CONTENT
-    ---------------------------------------------------------- -->
-    <div class="main-content">
+        <section class="overview-grid">
+            <article class="hero-card">
+                <span class="hero-label">Total Earned</span>
+                <h2 id="total-earnings">$0.00</h2>
+                <p class="hero-subtitle">Current total from Honeygain + Pawns.</p>
+            </article>
+            <article class="mini-card">
+                <span>Today</span>
+                <h3 id="today-earnings">$0.00</h3>
+            </article>
+            <article class="mini-card">
+                <span>Projected 30d</span>
+                <h3 id="projected-earnings">$0.00</h3>
+            </article>
+            <article class="mini-card accent">
+                <span>Reset Service</span>
+                <h3 id="serviceBadge">…</h3>
+            </article>
+        </section>
 
-        <!-- -----------------------------------------------------
-             EARNINGS BANNER
-        ------------------------------------------------------ -->
-        <div class="earnings-banner">
-
-            <div class="earn-block">
-                <h4>Honeygain</h4>
-                <p id="honeygain-balance">$0.00</p>
+        <section class="tile-grid">
+            <div class="dashboard-card earnings-card">
+                <h2>Income Breakdown</h2>
+                <div class="earnings-banner">
+                    <div class="earn-block">
+                        <span>Honeygain</span>
+                        <p id="honeygain-balance">$0.00</p>
+                    </div>
+                    <div class="earn-block">
+                        <span>Pawns</span>
+                        <p id="pawns-balance">$0.00</p>
+                    </div>
+                </div>
             </div>
 
-            <div class="earn-block">
-                <h4>Pawns</h4>
-                <p id="pawns-balance">$0.00</p>
+            <div class="dashboard-card stats-overview">
+                <h2>System Metrics</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span>CPU</span>
+                        <p id="cpuValue">…</p>
+                    </div>
+                    <div class="stat-card">
+                        <span>RAM</span>
+                        <p id="ramValue">…</p>
+                    </div>
+                    <div class="stat-card">
+                        <span>Disk</span>
+                        <p id="diskValue">…</p>
+                    </div>
+                    <div class="stat-card">
+                        <span>Network</span>
+                        <p id="netValue">RX: …<br>TX: …</p>
+                    </div>
+                    <div class="stat-card">
+                        <span>Temp</span>
+                        <p id="tempValue">…</p>
+                    </div>
+                    <div class="stat-card">
+                        <span>Uptime</span>
+                        <p id="uptimeBadge">…</p>
+                    </div>
+                </div>
             </div>
+        </section>
 
-            <div class="earn-block">
-                <h4>Today</h4>
-                <p id="today-earnings">$0.00</p>
+        <section class="container-section">
+            <div class="section-header">
+                <div>
+                    <p class="eyebrow">Containers</p>
+                    <h2>Running Services</h2>
+                </div>
+                <button class="btn">Reload Containers</button>
             </div>
-
-            <div class="earn-block">
-                <h4>Projected</h4>
-                <p id="projected-earnings">$0.00</p>
-            </div>
-
-            <div class="earn-block">
-                <h4>Total</h4>
-                <p id="total-earnings">$0.00</p>
-            </div>
-
-        </div>
-
-        <!-- -----------------------------------------------------
-             SYSTEM STATS GRID
-        ------------------------------------------------------ -->
-        <div class="stats-grid">
-
-            <div class="stat-card">
-                <h3>CPU</h3>
-                <p id="cpuValue">…</p>
-            </div>
-
-            <div class="stat-card">
-                <h3>RAM</h3>
-                <p id="ramValue">…</p>
-            </div>
-
-            <div class="stat-card">
-                <h3>Disk</h3>
-                <p id="diskValue">…</p>
-            </div>
-
-            <div class="stat-card">
-                <h3>Network</h3>
-                <p id="netValue">RX: …<br>TX: …</p>
-            </div>
-
-            <div class="stat-card">
-                <h3>Temperature</h3>
-                <p id="tempValue">…</p>
-            </div>
-
-            <div class="stat-card">
-                <h3>Uptime</h3>
-                <p id="uptimeBadge">Uptime: …</p>
-            </div>
-
-            <div class="stat-card">
-                <h3>Reset Service</h3>
-                <p id="serviceBadge">Reset Service: …</p>
-            </div>
-
-        </div>
-
-        <!-- -----------------------------------------------------
-             CONTAINER GRID
-        ------------------------------------------------------ -->
-        <h2>Containers</h2>
-        <div id="containerGrid" class="container-grid">
-            <!-- JS will populate cards here -->
-        </div>
-
+            <div id="containerGrid" class="container-grid"></div>
+        </section>
     </div>
 
-    <!-- ---------------------------------------------------------
-         LOGS MODAL
-    ---------------------------------------------------------- -->
     <div id="logsModal" class="modal">
         <div class="modal-content">
-
-            <h2>Container Logs</h2>
-
+            <div class="modal-title">
+                <h2>Container Logs</h2>
+                <button id="closeLogs" class="icon-close">×</button>
+            </div>
             <pre id="logsContent"></pre>
-
-            <button id="refreshLogs">Refresh</button>
-            <button id="closeLogs">Close</button>
-
+            <div class="modal-actions">
+                <button id="refreshLogs" class="btn secondary">Refresh</button>
+            </div>
         </div>
     </div>
 
-    <!-- ---------------------------------------------------------
-         JAVASCRIPT
-    ---------------------------------------------------------- -->
     <script src="js/app.js"></script>
-
 </body>
 </html>

@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$REPO_DIR"
+
 echo "======================================="
 echo "        EarnBox Full Installer"
 echo "======================================="
@@ -24,19 +27,21 @@ echo ""
 
 # Honeygain
 read -p "Honeygain Email: " HONEYGAIN_EMAIL
-read -p "Honeygain Password: " HONEYGAIN_PASSWORD
+read -s -p "Honeygain Password: " HONEYGAIN_PASSWORD
+echo
 read -p "Honeygain Device Name: " HONEYGAIN_DEVICE
 echo ""
 
 # Pawns
 read -p "Pawns Email: " PAWNS_EMAIL
-read -p "Pawns Password: " PAWNS_PASSWORD
+read -s -p "Pawns Password: " PAWNS_PASSWORD
+echo
 read -p "Pawns Device Name: " PAWNS_DEVICE
 echo ""
 
 # EarnApp
 read -p "EarnApp Email: " EARNAPP_EMAIL
-read -p "EarnApp Password: " EARNAPP_PASSWORD
+read -s -p "EarnApp Password: " EARNAPP_PASSWORD
 echo ""
 
 # TraffMonetizer
@@ -60,6 +65,8 @@ PAWNS_DEVICE="$PAWNS_DEVICE"
 
 EARNAPP_EMAIL="$EARNAPP_EMAIL"
 EARNAPP_PASSWORD="$EARNAPP_PASSWORD"
+
+TRAFFMONETIZER_TOKEN="$TRAFFMONETIZER_TOKEN"
 
 TZ="$TZ_VALUE"
 EOF
@@ -137,11 +144,11 @@ fi
 # ---------------------------------------------------------
 UPDATE_SCRIPT="/usr/local/bin/update_from_github.sh"
 
-cat <<'EOF' | sudo tee $UPDATE_SCRIPT >/dev/null
+cat <<EOF | sudo tee "$UPDATE_SCRIPT" >/dev/null
 #!/bin/bash
-REPO_DIR="/home/pi/EarnBox"
+REPO_DIR="$REPO_DIR"
 
-cd $REPO_DIR || exit 1
+cd "$REPO_DIR" || exit 1
 
 git fetch --all
 git reset --hard origin/main
@@ -161,8 +168,13 @@ sudo chmod +x $UPDATE_SCRIPT
 # ---------------------------------------------------------
 # Monthly + reboot cron jobs
 # ---------------------------------------------------------
-(crontab -l 2>/dev/null; echo "0 3 1 * * $UPDATE_SCRIPT >> /var/log/earnbox_update.log 2>&1") | crontab -
-(crontab -l 2>/dev/null; echo "@reboot $UPDATE_SCRIPT >> /var/log/earnbox_update.log 2>&1") | crontab -
+if ! crontab -l 2>/dev/null | grep -Fq "0 3 1 * * $UPDATE_SCRIPT >> /var/log/earnbox_update.log 2>&1"; then
+    (crontab -l 2>/dev/null; echo "0 3 1 * * $UPDATE_SCRIPT >> /var/log/earnbox_update.log 2>&1") | crontab -
+fi
+
+if ! crontab -l 2>/dev/null | grep -Fq "@reboot $UPDATE_SCRIPT >> /var/log/earnbox_update.log 2>&1"; then
+    (crontab -l 2>/dev/null; echo "@reboot $UPDATE_SCRIPT >> /var/log/earnbox_update.log 2>&1") | crontab -
+fi
 
 # ---------------------------------------------------------
 # Detect Pi IP

@@ -311,16 +311,37 @@ app.get("/api/containers", async (req, res) => {
     }
 });
 
-app.post("/api/containers/:id/start", (req, res) => {
-    exec(`docker start ${req.params.id}`, () => res.json({ ok: true }));
+app.post("/api/containers/:id/start", async (req, res) => {
+    try {
+        const container = docker.getContainer(req.params.id);
+        await container.start();
+        res.json({ ok: true });
+    } catch (err) {
+        console.error("Container start error:", err);
+        res.status(500).json({ ok: false, error: err.message });
+    }
 });
 
-app.post("/api/containers/:id/stop", (req, res) => {
-    exec(`docker stop ${req.params.id}`, () => res.json({ ok: true }));
+app.post("/api/containers/:id/stop", async (req, res) => {
+    try {
+        const container = docker.getContainer(req.params.id);
+        await container.stop();
+        res.json({ ok: true });
+    } catch (err) {
+        console.error("Container stop error:", err);
+        res.status(500).json({ ok: false, error: err.message });
+    }
 });
 
-app.post("/api/containers/:id/restart", (req, res) => {
-    exec(`docker restart ${req.params.id}`, () => res.json({ ok: true }));
+app.post("/api/containers/:id/restart", async (req, res) => {
+    try {
+        const container = docker.getContainer(req.params.id);
+        await container.restart();
+        res.json({ ok: true });
+    } catch (err) {
+        console.error("Container restart error:", err);
+        res.status(500).json({ ok: false, error: err.message });
+    }
 });
 
 /* ---------------------------------------------------------------------------

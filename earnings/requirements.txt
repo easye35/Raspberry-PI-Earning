@@ -4,4 +4,5 @@ requests==2.32.3
 pytz==2024.1
 psutil
 flask-cors
+docker
 

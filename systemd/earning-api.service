@@ -1,13 +1,13 @@
 [Unit]
-Description=Earning API Service
+Description=EarnBox API Service
 After=network.target docker.service
 
 [Service]
-WorkingDirectory=/home/easye35/Raspberry-PI-docker-Earning/api
+WorkingDirectory=/home/pi/Raspberry-PI-Earning/backend
 ExecStart=/usr/bin/node server.js
 Restart=always
-User=easye35
+User=pi
 Environment=NODE_ENV=production
 
 [Install]
-WantedBy=multi-user.target[]
+WantedBy=multi-user.target

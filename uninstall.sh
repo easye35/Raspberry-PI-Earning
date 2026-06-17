@@ -5,7 +5,7 @@ echo "------------------------------------------------------------"
 echo " EarnBox Uninstaller"
 echo "------------------------------------------------------------"
 
-REPO_DIR="/home/pi/EarnBox"
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 cd "$REPO_DIR"
 
@@ -33,7 +33,7 @@ docker system prune -f || true
 
 echo "[5/6] Keeping repo files intact."
 echo "If you want to delete the repo folder, run:"
-echo "  rm -rf /home/pi/EarnBox"
+echo "  rm -rf \"$REPO_DIR\""
 
 echo "[6/6] Uninstall complete!"
 echo "------------------------------------------------------------"

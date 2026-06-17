@@ -5,7 +5,7 @@ echo "------------------------------------------------------------"
 echo " EarnBox Repo Resync"
 echo "------------------------------------------------------------"
 
-REPO_DIR="/home/pi/EarnBox"
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 cd "$REPO_DIR"
 

@@ -66,10 +66,6 @@ The installer automatically:
 • 	Installs Docker  
 • 	Enables x86 emulation (for compatibility)  
 • 	Generates **`.env`**      
-• 	Creates:    
-• 	**`watchdog.sh`**  
-• 	**`diagnostics-server.sh`**  
-• 	**`dashboard/index.html`**  
 • 	Deploys the full stack via Docker Compose
 No Portainer.
 No EarnApp.
@@ -174,9 +170,8 @@ Fully encrypted.
 ## 🧰 Files Included
 The repo now includes:
 - **`install.sh`** — interactive installer
-- **`stack.yml`** — full Docker Compose stack
-- **`watchdog.sh`** — self‑healing logic
-- **`diagnostics-server.sh`** — diagnostics API
+- **`docker-compose.yml`** — full Docker Compose stack
+- **`scripts/watchdog.sh`** — self‑healing logic
 - **`dashboard/index.html`** — dashboard UI
 - **`README.md`** — this file
 Everything is generated automatically on install.

@@ -4,131 +4,385 @@
 body {
     margin: 0;
     padding: 0;
-    background: #0d0d16;
+    min-height: 100vh;
     font-family: "Inter", sans-serif;
-    color: #e8e8ff;
+    background: radial-gradient(circle at top, rgba(111, 66, 255, 0.35), transparent 25%),
+                linear-gradient(180deg, #090a12 0%, #11131f 35%, #0f1020 100%);
+    color: #f4f4ff;
     overflow-x: hidden;
 }
 
-h1, h2, h3, h4 {
-    margin: 0;
-    padding: 0;
+* {
+    box-sizing: border-box;
 }
 
-/* --------------------------------------------------------------------------
-   DASHBOARD WRAPPER
--------------------------------------------------------------------------- */
-.dashboard-container {
-    width: 100%;
-    max-width: 1400px;
-    margin: auto;
-    padding: 20px;
-}
-
-/* --------------------------------------------------------------------------
-   NEON TOP BARS
--------------------------------------------------------------------------- */
-
-/* Browser Tabs Bar */
-.neon-tabs-bar {
-    width: 100%;
-    padding: 12px 20px;
-    background: rgba(20, 20, 40, 0.65);
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(180, 0, 255, 0.4);
-    box-shadow: 0 0 12px rgba(180, 0, 255, 0.6);
-    color: #e0d4ff;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    animation: neonPulse 3s infinite ease-in-out;
-}
-
-.neon-tabs-bar .label {
-    font-weight: 700;
-    color: #c084ff;
-}
-
-.neon-tabs-bar .value {
-    font-weight: 500;
-    color: #ffffff;
-}
-
-/* Projection Bar */
-.neon-projection {
-    width: 100%;
-    padding: 14px 20px;
-    background: rgba(25, 0, 40, 0.55);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(200, 0, 255, 0.5);
-    box-shadow: 0 0 15px rgba(200, 0, 255, 0.7);
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    animation: neonPulse 3s infinite ease-in-out;
-}
-
-.projection-select {
-    background: rgba(40, 0, 70, 0.7);
-    border: 1px solid rgba(200, 0, 255, 0.6);
-    color: #fff;
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 14px;
+button,
+button:focus {
     outline: none;
-    box-shadow: 0 0 10px rgba(200, 0, 255, 0.6);
 }
 
-.projection-display {
-    flex-grow: 1;
-    color: #e8d4ff;
-    font-size: 16px;
-    font-weight: 600;
+.dashboard-shell {
+    width: min(1200px, 100%);
+    margin: 0 auto;
+    padding: 24px 20px 40px;
 }
 
-/* --------------------------------------------------------------------------
-   CARDS
--------------------------------------------------------------------------- */
-.card {
-    background: rgba(30, 30, 50, 0.6);
-    border: 1px solid rgba(150, 0, 255, 0.3);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 0 12px rgba(150, 0, 255, 0.4);
-    backdrop-filter: blur(10px);
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    align-items: flex-start;
+    padding: 28px 32px;
+    background: rgba(16, 12, 38, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    box-shadow: 0 30px 80px rgba(9, 8, 25, 0.35);
+    backdrop-filter: blur(18px);
+    margin-bottom: 28px;
 }
 
-.card h2 {
-    color: #d8b4ff;
-    margin-bottom: 10px;
+.dashboard-header h1 {
+    margin: 12px 0 10px;
+    font-size: clamp(2rem, 2.5vw, 3rem);
+    letter-spacing: -0.04em;
 }
 
-/* --------------------------------------------------------------------------
-   BUTTONS
--------------------------------------------------------------------------- */
+.eyebrow {
+    margin: 0;
+    font-size: 0.88rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: #c8bfff;
+}
+
+.hero-copy {
+    margin: 0;
+    max-width: 640px;
+    line-height: 1.75;
+    color: #d6d1ff;
+}
+
+.header-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
 .btn {
-    background: rgba(80, 0, 150, 0.7);
-    border: 1px solid rgba(200, 0, 255, 0.6);
-    padding: 8px 14px;
-    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 16px;
+    padding: 12px 24px;
     color: #fff;
+    background: linear-gradient(135deg, #7b5bff, #4f52ff);
     cursor: pointer;
-    transition: 0.2s;
+    font-weight: 600;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    box-shadow: 0 15px 40px rgba(79, 82, 255, 0.18);
 }
 
 .btn:hover {
-    background: rgba(120, 0, 200, 0.8);
-    box-shadow: 0 0 10px rgba(200, 0, 255, 0.7);
+    transform: translateY(-2px);
+    box-shadow: 0 22px 60px rgba(79, 82, 255, 0.24);
 }
 
-/* --------------------------------------------------------------------------
-   ANIMATIONS
--------------------------------------------------------------------------- */
-@keyframes neonPulse {
-    0% { box-shadow: 0 0 8px rgba(180, 0, 255, 0.4); }
-    50% { box-shadow: 0 0 18px rgba(180, 0, 255, 0.9); }
-    100% { box-shadow: 0 0 8px rgba(180, 0, 255, 0.4); }
+.btn.secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: #f5f5ff;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.overview-grid,
+.tile-grid,
+.container-grid {
+    display: grid;
+    gap: 20px;
+}
+
+.overview-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-bottom: 24px;
+}
+
+.hero-card,
+.mini-card,
+.dashboard-card {
+    background: rgba(21, 16, 50, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 26px;
+    padding: 26px;
+    box-shadow: 0 40px 90px rgba(2, 2, 16, 0.28);
+    backdrop-filter: blur(20px);
+}
+
+.hero-card {
+    grid-column: span 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.hero-card .hero-label,
+.mini-card span,
+.dashboard-card h2 {
+    display: block;
+    margin-bottom: 16px;
+    color: #b8b3ff;
+    font-size: 0.95rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.hero-card h2 {
+    font-size: clamp(2.5rem, 4vw, 3.4rem);
+    margin: 0;
+    letter-spacing: -0.07em;
+    line-height: 0.95;
+    color: #fff;
+}
+
+.hero-card .hero-subtitle {
+    margin-top: 18px;
+    color: #d9d2ff;
+    max-width: 560px;
+}
+
+.mini-card {
+    min-height: 145px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+}
+
+.mini-card h3 {
+    margin: 0;
+    font-size: 2rem;
+    color: #fff;
+}
+
+.mini-card.accent {
+    background: linear-gradient(180deg, rgba(98, 78, 255, 0.22), rgba(30, 21, 66, 0.78));
+}
+
+.tile-grid {
+    grid-template-columns: 1.5fr 1fr;
+}
+
+.dashboard-card h2 {
+    margin: 0 0 20px;
+    font-size: 1.3rem;
+}
+
+.earnings-banner {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.earn-block {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(124, 88, 255, 0.22);
+    border-radius: 22px;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.earn-block span {
+    color: #c9c2ff;
+    font-size: 0.95rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.earn-block p {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(124, 88, 255, 0.16);
+    border-radius: 22px;
+    padding: 22px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+}
+
+.stat-card span {
+    display: block;
+    margin-bottom: 12px;
+    color: #b9b1ff;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.83rem;
+}
+
+.stat-card p {
+    margin: 0;
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.1;
+}
+
+.container-section {
+    margin-top: 32px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 22px;
+}
+
+.container-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.container-card {
+    background: rgba(20, 16, 40, 0.82);
+    border: 1px solid rgba(152, 121, 255, 0.2);
+    border-radius: 24px;
+    padding: 22px;
+    color: #f7f5ff;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 230px;
+}
+
+.container-card h3 {
+    margin: 0;
+    font-size: 1.15rem;
+}
+
+.container-info {
+    display: grid;
+    gap: 8px;
+    font-size: 0.97rem;
+    color: #c9c3ff;
+}
+
+.container-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.container-controls button {
+    flex: 1;
+    min-width: 90px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 6, 15, 0.78);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal-content {
+    width: min(960px, 100%);
+    background: rgba(18, 15, 45, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 28px;
+    padding: 28px;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.modal-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.modal-title h2 {
+    margin: 0;
+}
+
+.icon-close {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 2rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+#logsContent {
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    padding: 18px;
+    color: #e6e6ff;
+    overflow: auto;
+    min-height: 320px;
+    white-space: pre-wrap;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+@media (max-width: 1080px) {
+    .overview-grid,
+    .tile-grid,
+    .container-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-card {
+        grid-column: span 1;
+    }
+}
+
+@media (max-width: 680px) {
+    .dashboard-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .header-actions {
+        justify-content: stretch;
+    }
+
+    .btn {
+        width: 100%;
+    }
 }
 /* --------------------------------------------------------------------------
    SYSTEM STATS GRID — NEON CARD LAYOUT
