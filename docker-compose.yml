@@ -62,6 +62,13 @@ services:
     networks:
       - earning_net
 
+    traffmonetizer:
+    image: traffmonetizer/cli:latest
+    container_name: traffmonetizer
+    restart: always
+    command: start accept --token ${TRAFFMONETIZER_TOKEN}
+    networks:
+      - earning_net
   # ---------------------------------------------------------
   # Netdata (System Stats)
   # ---------------------------------------------------------
