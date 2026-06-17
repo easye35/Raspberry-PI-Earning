@@ -77,7 +77,7 @@ After installation, you get a clean, modern dashboard:
 Dashboard UI
 Your main landing page:
 ```bash
-http://<PI-IP>:8088
+http://<PI-IP>
 ```
 Shows:
 - Service overview
@@ -137,7 +137,7 @@ sudo tailscale up
 ```
 Then access your appliance from anywhere:
 ```bash
-http://100.x.x.x:8088   # Dashboard
+http://100.x.x.x   # Dashboard
 http://100.x.x.x:9999   # Logs
 http://100.x.x.x:61208  # System metrics
 http://100.x.x.x:7000   # Diagnostics API

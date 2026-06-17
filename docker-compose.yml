@@ -7,7 +7,7 @@ services:
     build: ./dashboard
     container_name: earnbox
     ports:
-      - "8088:80"
+      - "80:80"
     restart: unless-stopped
     networks:
       - earning_net
