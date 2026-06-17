@@ -39,6 +39,10 @@ read -p "EarnApp Email: " EARNAPP_EMAIL
 read -p "EarnApp Password: " EARNAPP_PASSWORD
 echo ""
 
+# TraffMonetizer
+read -p "TraffMonetizer Token: " TRAFFMONETIZER_TOKEN
+echo ""
+
 echo "Saving credentials..."
 echo ""
 
