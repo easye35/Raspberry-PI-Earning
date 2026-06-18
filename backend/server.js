@@ -75,8 +75,6 @@ app.get("/earnings", async (req, res) => {
         res.status(502).json({
             honeygain: 0,
             pawns: 0,
-            traffmonetizer: 0,
-            earnapp: 0,
             total: 0,
             daily_change: 0,
             projected_30_day: 0,
@@ -86,31 +84,9 @@ app.get("/earnings", async (req, res) => {
 });
 
 app.post("/earnings/run-now", async (req, res) => {
-    try {
-        const earningsRes = await fetch(`${EARNINGS_SERVICE}/earnings/run-now`, {
-            method: "POST"
-        });
-
-        if (!earningsRes.ok) {
-            const body = await earningsRes.text();
-            throw new Error(`Earnings service returned ${earningsRes.status}: ${body}`);
-        }
-
-        const payload = await earningsRes.json();
-        res.json(payload);
-    } catch (err) {
-        console.error("Earnings run-now proxy error:", err);
-        res.status(502).json({
-            honeygain: 0,
-            pawns: 0,
-            traffmonetizer: 0,
-            earnapp: 0,
-            total: 0,
-            daily_change: 0,
-            projected_30_day: 0,
-            error: err.message
-        });
-    }
+    res.status(404).json({
+        error: "Earnings run-now is no longer supported. Use GET /earnings instead."
+    });
 });
 
 /*---------------------------------------------------------------------

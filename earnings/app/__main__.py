@@ -76,11 +76,7 @@ def create_app():
     # ---------------------------------------------------------
     @app.get("/earnings")
     def get_earnings():
-        snapshot = logic.get_latest_snapshot()
-        if snapshot is None:
-            return jsonify({
-                "message": "No earnings data yet. Wait for the first scheduled run."
-            }), 404
+        snapshot = logic.update_earnings()
         return jsonify(snapshot)
 
     @app.get("/earnings/history")

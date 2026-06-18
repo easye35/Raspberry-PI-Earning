@@ -31,7 +31,7 @@ function showLoading() {
 }
 
 // -------------------------------------------------------------
-// Fetch Earnings (Honeygain + Pawns + TraffMonetizer + EarnApp + Today + Projected + Total)
+// Fetch Earnings (Honeygain + Pawns + Today + Projected + Total)
 // -------------------------------------------------------------
 function safeAmount(value) {
     return typeof value === "number" && !isNaN(value) ? value : 0.0;
@@ -39,25 +39,19 @@ function safeAmount(value) {
 
 async function loadEarnings() {
     try {
-        const res = await fetch(`${API}/earnings/run-now`, {
-            method: "POST"
-        });
+        const res = await fetch(`${API}/earnings`);
         if (!res.ok) throw new Error("HTTP error");
 
         const data = await res.json();
 
         const honeygain = safeAmount(data.honeygain);
         const pawns = safeAmount(data.pawns);
-        const traffmonetizer = safeAmount(data.traffmonetizer);
-        const earnapp = safeAmount(data.earnapp);
         const dailyChange = safeAmount(data.daily_change);
         const projected = safeAmount(data.projected_30_day);
-        const total = safeAmount(data.total) || honeygain + pawns + traffmonetizer + earnapp;
+        const total = safeAmount(data.total) || honeygain + pawns;
 
         smoothUpdate(document.getElementById("honeygain-balance"), `$${honeygain.toFixed(2)}`);
         smoothUpdate(document.getElementById("pawns-balance"), `$${pawns.toFixed(2)}`);
-        smoothUpdate(document.getElementById("traffmonetizer-balance"), `$${traffmonetizer.toFixed(2)}`);
-        smoothUpdate(document.getElementById("earnapp-balance"), `$${earnapp.toFixed(2)}`);
         smoothUpdate(document.getElementById("today-earnings"), `$${dailyChange.toFixed(2)}`);
         smoothUpdate(document.getElementById("projected-earnings"), `$${projected.toFixed(2)}`);
         smoothUpdate(document.getElementById("total-earnings"), `$${total.toFixed(2)}`);
