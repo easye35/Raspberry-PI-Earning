@@ -123,9 +123,13 @@ services:
       - HONEYGAIN_PASSWORD=${HONEYGAIN_PASSWORD}
       - PAWNS_EMAIL=${PAWNS_EMAIL}
       - PAWNS_PASSWORD=${PAWNS_PASSWORD}
+      - EARNAPP_COMMAND=/usr/bin/earnapp
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./data:/data
+      - /etc/earnapp:/etc/earnapp:ro
+      - /usr/bin/earnapp:/usr/bin/earnapp:ro
+      - /usr/local/bin/earnapp:/usr/local/bin/earnapp:ro
     ports:
       - "5000:5000"
     networks:

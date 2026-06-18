@@ -287,7 +287,7 @@ async function runDiagnostics() {
 // -------------------------------------------------------------
 setInterval(loadServiceStatus, 5000);
 setInterval(loadContainers, 5000);
-setInterval(loadEarnings, 5000);
+setInterval(loadEarnings, 120000);
 
 // Initial load
 showLoading();

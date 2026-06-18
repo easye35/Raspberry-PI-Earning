@@ -4,6 +4,7 @@ import sqlite3
 from datetime import datetime, timezone
 import subprocess
 import re
+import shutil
 import requests
 
 DB_PATH = os.getenv("EARNINGS_DB_PATH", "/data/earnings.db")
@@ -65,10 +66,10 @@ def _get_last_row():
     return row
 
 # ---------------------------------------------------------
-# RATE LIMIT: Prevent refresh more than once every 30 seconds
+# RATE LIMIT: Prevent refresh more than once every 120 seconds
 # ---------------------------------------------------------
 LAST_REFRESH = 0
-MIN_REFRESH_INTERVAL = 30  # seconds
+MIN_REFRESH_INTERVAL = 120  # seconds
 
 # ---------------------------------------------------------
 # Helper utilities
@@ -93,22 +94,34 @@ def get_traffmonetizer_balance():
 
     # Common TraffMonetizer log patterns
     patterns = [
-        r"balance\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
-        r"earned\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
-        r"total\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
-        r"([0-9]+(?:\.[0-9]+)?)\s*(?:USD|usd|\$)"
+        r"balance\s*[:=]?\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)",
+        r"earned\s*[:=]?\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)",
+        r"total\s*[:=]?\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)",
+        r"([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)\s*(?:USD|usd|\$)"
     ]
 
     for line in reversed(logs.splitlines()):
         for pattern in patterns:
             match = re.search(pattern, line, re.IGNORECASE)
             if match:
+                raw_value = match.group(1).replace(",", "")
                 try:
-                    value = float(match.group(1))
+                    value = float(raw_value)
                     print(f"DEBUG: TraffMonetizer parsed value {value} from line: {line}", flush=True)
                     return value
                 except ValueError:
                     continue
+
+    # Fallback: last numeric value in log output
+    matches = re.findall(r"([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)", logs)
+    if matches:
+        raw_value = matches[-1].replace(",", "")
+        try:
+            value = float(raw_value)
+            print(f"DEBUG: TraffMonetizer fallback parsed value {value}", flush=True)
+            return value
+        except ValueError:
+            pass
 
     print("DEBUG: TraffMonetizer pattern not found in logs", flush=True)
     return 0.0
@@ -125,17 +138,41 @@ def get_earnapp_balance():
         except Exception as e:
             print("DEBUG: Failed to read EarnApp status file:", e, flush=True)
 
+    if not output and os.path.isdir("/etc/earnapp"):
+        try:
+            for filename in os.listdir("/etc/earnapp"):
+                candidate = os.path.join("/etc/earnapp", filename)
+                if os.path.isfile(candidate) and os.path.getsize(candidate) < 100000:
+                    with open(candidate, "r", encoding="utf-8", errors="ignore") as f:
+                        text = f.read()
+                    if re.search(r"balance|wallet|earned|earnings", text, re.IGNORECASE):
+                        output = text
+                        print(f"DEBUG: EarnApp read status file {candidate}", flush=True)
+                        break
+        except Exception as e:
+            print("DEBUG: EarnApp status directory scan failed:", e, flush=True)
+
     if not output:
+        command = EARNAPP_COMMAND
+        if not os.path.isabs(command) or not os.path.exists(command):
+            lookup = shutil.which(command)
+            if lookup:
+                command = lookup
+            elif os.path.exists("/usr/bin/earnapp"):
+                command = "/usr/bin/earnapp"
+            elif os.path.exists("/usr/local/bin/earnapp"):
+                command = "/usr/local/bin/earnapp"
+
         try:
             proc = subprocess.run(
-                [EARNAPP_COMMAND, "status"],
+                [command, "status"],
                 capture_output=True,
                 text=True,
                 timeout=10
             )
             output = (proc.stdout or "") + "\n" + (proc.stderr or "")
         except FileNotFoundError:
-            print("DEBUG: earnapp command not found", flush=True)
+            print(f"DEBUG: earnapp command not found at {command}", flush=True)
         except Exception as e:
             print("DEBUG: EarnApp balance fetch error:", e, flush=True)
 
@@ -144,19 +181,21 @@ def get_earnapp_balance():
 
     for line in output.splitlines():
         if re.search(r"(balance|earned|earnings|total|wallet)", line, re.IGNORECASE):
-            match = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*(?:USD|usd|\$)?", line)
+            match = re.search(r"([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)\s*(?:USD|usd|\$)?", line)
             if match:
+                raw_value = match.group(1).replace(",", "")
                 try:
-                    value = float(match.group(1))
+                    value = float(raw_value)
                     print(f"DEBUG: EarnApp parsed value {value} from line: {line}", flush=True)
                     return value
                 except ValueError:
                     continue
 
-    matches = re.findall(r"([0-9]+(?:\.[0-9]+)?)\s*(?:USD|usd|\$)", output)
+    matches = re.findall(r"([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)\s*(?:USD|usd|\$)", output)
     if matches:
         try:
-            value = float(matches[-1])
+            raw_value = matches[-1].replace(",", "")
+            value = float(raw_value)
             print(f"DEBUG: EarnApp fallback parsed value {value} from output", flush=True)
             return value
         except ValueError:
