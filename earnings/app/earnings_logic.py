@@ -142,8 +142,6 @@ def get_honeygain_balance():
             timeout=10
         )
 
-        print("DEBUG: Honeygain RAW BALANCE RESPONSE:", bal_resp.text, flush=True)
-
         if bal_resp.status_code != 200:
             print("DEBUG: Honeygain balance error:", bal_resp.text[:200], flush=True)
             return 0.0

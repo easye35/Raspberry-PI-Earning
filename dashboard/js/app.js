@@ -1,7 +1,7 @@
 // -------------------------------------------------------------
 // API base URL (backend proxy)
 // -------------------------------------------------------------
-const API = `http://${window.location.hostname}:3001`;
+const API = `${window.location.protocol}//${window.location.hostname}:3001`;
 
 // -------------------------------------------------------------
 // Modal state

@@ -5,15 +5,61 @@
 const express = require("express");
 const fetch = require("node-fetch");
 const cors = require("cors");
-const { exec } = require("child_process");
+const { execFile } = require("child_process");
 const Docker = require("dockerode");
 const fs = require("fs");
 
 const docker = new Docker({ socketPath: "/var/run/docker.sock" });
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim())
+    : [];
+
+const CORS_METHODS = ["GET", "POST", "OPTIONS"];
+const CORS_HEADERS = ["Content-Type", "Authorization", "X-Admin-Token"];
+
+const corsOptions = {
+    origin: function (origin, callback) {
+        if (!origin || ALLOWED_ORIGINS.length === 0 || ALLOWED_ORIGINS.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error("CORS origin denied"));
+        }
+    },
+    credentials: true,
+    methods: CORS_METHODS,
+    allowedHeaders: CORS_HEADERS,
+    optionsSuccessStatus: 204,
+};
+
+function requireAdmin(req, res, next) {
+    if (!ADMIN_TOKEN) {
+        console.warn("WARNING: ADMIN_TOKEN is not set. Admin routes are unprotected.");
+        return next();
+    }
+
+    const authorization = req.headers["x-admin-token"] || req.headers.authorization || "";
+    const token = authorization.startsWith("Bearer ")
+        ? authorization.slice(7)
+        : authorization;
+
+    if (!token) {
+        return res.status(401).json({ error: "Admin token required" });
+    }
+    if (token !== ADMIN_TOKEN) {
+        return res.status(403).json({ error: "Invalid admin token" });
+    }
+    next();
+}
+
+function isValidContainerId(id) {
+    return /^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,255}$/.test(id);
+}
+
+app.use(cors(corsOptions));
+app.use(express.json({ limit: "10kb" }));
 
 /* ---------------------------------------------------------------------------
    Database Initialization (FIXED)
@@ -254,9 +300,9 @@ app.get("/api/system", async (req, res) => {
 /* ---------------------------------------------------------------------------
    Services
 --------------------------------------------------------------------------- */
-app.get("/api/services", async (req, res) => {
-    exec("systemctl is-active earnbox-reset.service", (err, stdout) => {
-        const status = stdout.trim() || "unknown";
+app.get("/api/services", requireAdmin, async (req, res) => {
+    execFile("systemctl", ["is-active", "earnbox-reset.service"], (err, stdout) => {
+        const status = stdout ? stdout.trim() : "unknown";
         res.json({ resetService: status });
     });
 });
@@ -264,7 +310,7 @@ app.get("/api/services", async (req, res) => {
 /* ---------------------------------------------------------------------------
    Docker Containers
 --------------------------------------------------------------------------- */
-app.get("/api/containers", async (req, res) => {
+app.get("/api/containers", requireAdmin, async (req, res) => {
     try {
         const containers = await docker.listContainers({ all: true });
         res.json(containers);
@@ -274,7 +320,11 @@ app.get("/api/containers", async (req, res) => {
     }
 });
 
-app.post("/api/containers/:id/start", async (req, res) => {
+app.post("/api/containers/:id/start", requireAdmin, async (req, res) => {
+    if (!isValidContainerId(req.params.id)) {
+        return res.status(400).json({ ok: false, error: "Invalid container id" });
+    }
+
     try {
         const container = docker.getContainer(req.params.id);
         await container.start();
@@ -285,7 +335,11 @@ app.post("/api/containers/:id/start", async (req, res) => {
     }
 });
 
-app.post("/api/containers/:id/stop", async (req, res) => {
+app.post("/api/containers/:id/stop", requireAdmin, async (req, res) => {
+    if (!isValidContainerId(req.params.id)) {
+        return res.status(400).json({ ok: false, error: "Invalid container id" });
+    }
+
     try {
         const container = docker.getContainer(req.params.id);
         await container.stop();
@@ -296,7 +350,11 @@ app.post("/api/containers/:id/stop", async (req, res) => {
     }
 });
 
-app.post("/api/containers/:id/restart", async (req, res) => {
+app.post("/api/containers/:id/restart", requireAdmin, async (req, res) => {
+    if (!isValidContainerId(req.params.id)) {
+        return res.status(400).json({ ok: false, error: "Invalid container id" });
+    }
+
     try {
         const container = docker.getContainer(req.params.id);
         await container.restart();
@@ -310,7 +368,11 @@ app.post("/api/containers/:id/restart", async (req, res) => {
 /* ---------------------------------------------------------------------------
    Container Logs
 --------------------------------------------------------------------------- */
-app.get("/api/containers/:id/logs", async (req, res) => {
+app.get("/api/containers/:id/logs", requireAdmin, async (req, res) => {
+    if (!isValidContainerId(req.params.id)) {
+        return res.status(400).json({ logs: [], error: "Invalid container id" });
+    }
+
     try {
         const c = docker.getContainer(req.params.id);
         const logs = await c.logs({
@@ -331,14 +393,22 @@ app.get("/api/containers/:id/logs", async (req, res) => {
 /* ---------------------------------------------------------------------------
    Admin: Reset + Daily Reset
 --------------------------------------------------------------------------- */
-app.post("/api/admin/reset", (req, res) => {
-    exec("systemctl restart earnbox-reset.service", () => {
+app.post("/api/admin/reset", requireAdmin, (req, res) => {
+    execFile("systemctl", ["restart", "earnbox-reset.service"], (err) => {
+        if (err) {
+            console.error("Reset service error:", err);
+            return res.status(500).json({ ok: false, error: err.message });
+        }
         res.json({ ok: true });
     });
 });
 
-app.post("/api/admin/enable-daily-reset", (req, res) => {
-    exec("systemctl enable --now earnbox-reset.timer", () => {
+app.post("/api/admin/enable-daily-reset", requireAdmin, (req, res) => {
+    execFile("systemctl", ["enable", "--now", "earnbox-reset.timer"], (err) => {
+        if (err) {
+            console.error("Enable daily reset error:", err);
+            return res.status(500).json({ ok: false, error: err.message });
+        }
         res.json({ ok: true });
     });
 });
