@@ -70,8 +70,6 @@ No Portainer.
 No manual host configuration.
 
 > EarnApp is not deployed as a Docker service. If you want EarnApp, install it natively on the Raspberry Pi and the repo can optionally detect it after install.
->
-> The dashboard can now report TraffMonetizer earnings directly, and it will also show EarnApp totals when the native host CLI/status is accessible to the earnings container.
 
 ### 📊 Your Dashboard
 After installation, you get a clean, modern dashboard:
@@ -120,15 +118,7 @@ Returns JSON with:
 • 	CPU / RAM / Disk  
 • 	Temperature  
 • 	Internet connectivity  
-The dashboard UI includes a Run Diagnostics button that fetches this live.  
-
-## 🛡 Self‑Healing Watchdog  
-The repository includes a watchdog helper script that can inspect and restart defined services:  
-• 	Monitors actual Docker services  
-• 	Restarts containers that stop  
-• 	Supports optional native EarnApp checks when `systemctl` is available  
-- Logs recovery events  
-- Helps keep the appliance running continuously  
+The dashboard UI includes a Run Diagnostics button that fetches this live.   
 
 ### 🌐 Remote Access (Optional)
 ## ⭐ Tailscale (Best Option)
@@ -159,8 +149,6 @@ Fully encrypted.
   <tbody>
     <tr><td><strong>Honeygain</strong></td><td>Passive income stream</td></tr>
     <tr><td><strong>Pawns</strong></td><td>Passive income stream</td></tr>
-    <tr><td><strong>Watchtower</strong></td><td>Auto‑updates containers</td></tr>
-    <tr><td><strong>Watchdog</strong></td><td>Self‑healing + restarts</td></tr>
     <tr><td><strong>Dozzle</strong></td><td>Real‑time logs</td></tr>
     <tr><td><strong>Glances</strong></td><td>System metrics</td></tr>
     <tr><td><strong>Dashboard</strong></td><td>Clean landing page</td></tr>
