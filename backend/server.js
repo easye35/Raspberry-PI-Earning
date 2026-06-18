@@ -55,73 +55,60 @@ function calculateToday() {
     return Number((last - first).toFixed(4));
 }
 
+const EARNINGS_SERVICE = process.env.EARNINGS_SERVICE_URL || "http://earnings:5000";
+
 /* ---------------------------------------------------------------------------
-   Earnings API (Honeygain + Pawns + DB)
+   Earnings API proxy to the earnings microservice
 --------------------------------------------------------------------------- */
-app.get("/earnings", (req, res) => {
+app.get("/earnings", async (req, res) => {
     try {
-        // Load Honeygain + Pawns JSON from /data
-        let honeygain = 0;
-        let pawns = 0;
-
-        try {
-            const raw = fs.readFileSync("/data/latest_earnings.json", "utf8");
-            const json = JSON.parse(raw);
-
-            honeygain = json.honeygain || 0;
-            pawns = json.pawns || 0;
-
-        } catch (err) {
-            console.log("No earnings JSON yet.");
+        const earningsRes = await fetch(`${EARNINGS_SERVICE}/earnings`);
+        if (!earningsRes.ok) {
+            const body = await earningsRes.text();
+            throw new Error(`Earnings service returned ${earningsRes.status}: ${body}`);
         }
 
-        /* -------------------------------------------------------------------
-           Compute rolling 7‑day average daily change
-        ------------------------------------------------------------------- */
-        const history = db.prepare(`
-            SELECT total 
-            FROM earnings 
-            ORDER BY timestamp DESC 
-            LIMIT 7
-        `).all();
-
-        let rollingDaily = 0;
-
-        if (history.length >= 2) {
-            const diffs = [];
-
-            for (let i = 0; i < history.length - 1; i++) {
-                diffs.push(history[i].total - history[i + 1].total);
-            }
-
-            rollingDaily = diffs.reduce((a, b) => a + b, 0) / diffs.length;
-        }
-
-        const total = history.length > 0 ? history[0].total : (honeygain + pawns);
-        const projected_30_day = rollingDaily * 30;
-
-        /* -------------------------------------------------------------------
-           Return API response
-        ------------------------------------------------------------------- */
-        res.json({
-            honeygain,
-            pawns,
-            today: calculateToday(),
-            daily_change: Number(rollingDaily.toFixed(4)),
-            projected_30_day: Number(projected_30_day.toFixed(2)),
-            total
-        });
-
+        const payload = await earningsRes.json();
+        res.json(payload);
     } catch (err) {
-        console.error("Earnings API error:", err);
-
-        res.json({
+        console.error("Earnings proxy error:", err);
+        res.status(502).json({
             honeygain: 0,
             pawns: 0,
-            today: 0,
+            traffmonetizer: 0,
+            earnapp: 0,
+            total: 0,
             daily_change: 0,
             projected_30_day: 0,
-            total: 0
+            error: err.message
+        });
+    }
+});
+
+app.post("/earnings/run-now", async (req, res) => {
+    try {
+        const earningsRes = await fetch(`${EARNINGS_SERVICE}/earnings/run-now`, {
+            method: "POST"
+        });
+
+        if (!earningsRes.ok) {
+            const body = await earningsRes.text();
+            throw new Error(`Earnings service returned ${earningsRes.status}: ${body}`);
+        }
+
+        const payload = await earningsRes.json();
+        res.json(payload);
+    } catch (err) {
+        console.error("Earnings run-now proxy error:", err);
+        res.status(502).json({
+            honeygain: 0,
+            pawns: 0,
+            traffmonetizer: 0,
+            earnapp: 0,
+            total: 0,
+            daily_change: 0,
+            projected_30_day: 0,
+            error: err.message
         });
     }
 });

@@ -1,8 +1,7 @@
 // -------------------------------------------------------------
-// Backend / Earnings API base URLs (dynamic, no static IP)
+// API base URL (backend proxy)
 // -------------------------------------------------------------
-const BACKEND_API = `http://${window.location.hostname}:3001`;
-const EARNINGS_API = `http://${window.location.hostname}:5000`;
+const API = `http://${window.location.hostname}:3001`;
 
 // -------------------------------------------------------------
 // Modal state
@@ -40,7 +39,7 @@ function safeAmount(value) {
 
 async function loadEarnings() {
     try {
-        const res = await fetch(`${EARNINGS_API}/earnings/run-now`, {
+        const res = await fetch(`${API}/earnings/run-now`, {
             method: "POST"
         });
         if (!res.ok) throw new Error("HTTP error");
@@ -73,7 +72,7 @@ async function loadEarnings() {
 // -------------------------------------------------------------
 async function loadSystemStats() {
     try {
-        const res = await fetch(`${BACKEND_API}/api/system`);
+        const res = await fetch(`${API}/api/system`);
         if (!res.ok) throw new Error("HTTP error");
 
         const data = await res.json();
@@ -113,7 +112,7 @@ async function loadSystemStats() {
 // -------------------------------------------------------------
 async function loadServiceStatus() {
     try {
-        const res = await fetch(`${BACKEND_API}/api/services`);
+        const res = await fetch(`${API}/api/services`);
         if (!res.ok) throw new Error("HTTP error");
 
         const data = await res.json();
@@ -132,7 +131,7 @@ async function loadContainers() {
     if (logsOpen) return;
 
     try {
-        const res = await fetch(`${BACKEND_API}/api/containers`);
+        const res = await fetch(`${API}/api/containers`);
         if (!res.ok) throw new Error("HTTP error");
 
         const containers = await res.json();
@@ -197,7 +196,7 @@ function attachContainerEvents() {
 // -------------------------------------------------------------
 async function containerAction(id, action) {
     try {
-        await fetch(`${BACKEND_API}/api/containers/${id}/${action}`, { method: "POST" });
+        await fetch(`${API}/api/containers/${id}/${action}`, { method: "POST" });
         loadContainers();
     } catch (err) {
         console.error(`Container ${action} error:`, err);
@@ -210,7 +209,7 @@ async function containerAction(id, action) {
 async function loadLogs(id) {
     logsOpen = true;
     try {
-        const res = await fetch(`${BACKEND_API}/api/containers/${id}/logs`);
+        const res = await fetch(`${API}/api/containers/${id}/logs`);
         if (!res.ok) throw new Error("HTTP error");
 
         const data = await res.json();

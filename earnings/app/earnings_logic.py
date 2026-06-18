@@ -88,6 +88,7 @@ def get_traffmonetizer_balance():
     """Attempts to extract a TraffMonetizer balance estimate from container logs."""
     logs = _get_container_logs("traffmonetizer", tail=1200)
     if not logs:
+        print("DEBUG: TraffMonetizer logs empty or container unavailable", flush=True)
         return 0.0
 
     # Common TraffMonetizer log patterns
@@ -103,10 +104,13 @@ def get_traffmonetizer_balance():
             match = re.search(pattern, line, re.IGNORECASE)
             if match:
                 try:
-                    return float(match.group(1))
+                    value = float(match.group(1))
+                    print(f"DEBUG: TraffMonetizer parsed value {value} from line: {line}", flush=True)
+                    return value
                 except ValueError:
                     continue
 
+    print("DEBUG: TraffMonetizer pattern not found in logs", flush=True)
     return 0.0
 
 
@@ -135,22 +139,30 @@ def get_earnapp_balance():
         except Exception as e:
             print("DEBUG: EarnApp balance fetch error:", e, flush=True)
 
+    if not output:
+        print("DEBUG: EarnApp output empty", flush=True)
+
     for line in output.splitlines():
         if re.search(r"(balance|earned|earnings|total|wallet)", line, re.IGNORECASE):
             match = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*(?:USD|usd|\$)?", line)
             if match:
                 try:
-                    return float(match.group(1))
+                    value = float(match.group(1))
+                    print(f"DEBUG: EarnApp parsed value {value} from line: {line}", flush=True)
+                    return value
                 except ValueError:
                     continue
 
     matches = re.findall(r"([0-9]+(?:\.[0-9]+)?)\s*(?:USD|usd|\$)", output)
     if matches:
         try:
-            return float(matches[-1])
+            value = float(matches[-1])
+            print(f"DEBUG: EarnApp fallback parsed value {value} from output", flush=True)
+            return value
         except ValueError:
             pass
 
+    print("DEBUG: EarnApp balance not found in output", flush=True)
     return 0.0
 
 # ---------------------------------------------------------
