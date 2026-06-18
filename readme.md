@@ -18,6 +18,7 @@ Everything is self‑healing.
 Everything is remote‑friendly.  
 
 ## ⚠️ Before You Install  
+**Only works with OS Bookworm**
 If you previously attempted an install or something failed halfway, you MUST clean the system first.  
 Run:  
 ```bash
