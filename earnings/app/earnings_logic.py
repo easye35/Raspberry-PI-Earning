@@ -8,6 +8,8 @@ import requests
 
 DB_PATH = os.getenv("EARNINGS_DB_PATH", "/data/earnings.db")
 JSON_PATH = os.getenv("EARNINGS_JSON_PATH", "/data/latest_earnings.json")
+EARNAPP_COMMAND = os.getenv("EARNAPP_COMMAND", "earnapp")
+EARNAPP_STATUS_PATH = os.getenv("EARNAPP_STATUS_PATH")
 
 
 # ---------------------------------------------------------
@@ -84,12 +86,57 @@ def _get_container_logs(container_name, tail=500):
 
 def get_traffmonetizer_balance():
     """Attempts to extract a TraffMonetizer balance estimate from container logs."""
-    logs = _get_container_logs("traffmonetizer", tail=800)
+    logs = _get_container_logs("traffmonetizer", tail=1200)
     if not logs:
         return 0.0
 
-    for line in logs.splitlines():
-        if any(keyword in line.lower() for keyword in ["balance", "earned", "earnings", "income", "total"]):
+    # Common TraffMonetizer log patterns
+    patterns = [
+        r"balance\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
+        r"earned\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
+        r"total\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)",
+        r"([0-9]+(?:\.[0-9]+)?)\s*(?:USD|usd|\$)"
+    ]
+
+    for line in reversed(logs.splitlines()):
+        for pattern in patterns:
+            match = re.search(pattern, line, re.IGNORECASE)
+            if match:
+                try:
+                    return float(match.group(1))
+                except ValueError:
+                    continue
+
+    return 0.0
+
+
+def get_earnapp_balance():
+    """Attempts to read native EarnApp balance from a local earnapp CLI or status output."""
+    output = ""
+
+    if EARNAPP_STATUS_PATH and os.path.isfile(EARNAPP_STATUS_PATH):
+        try:
+            with open(EARNAPP_STATUS_PATH, "r", encoding="utf-8") as f:
+                output = f.read()
+        except Exception as e:
+            print("DEBUG: Failed to read EarnApp status file:", e, flush=True)
+
+    if not output:
+        try:
+            proc = subprocess.run(
+                [EARNAPP_COMMAND, "status"],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            output = (proc.stdout or "") + "\n" + (proc.stderr or "")
+        except FileNotFoundError:
+            print("DEBUG: earnapp command not found", flush=True)
+        except Exception as e:
+            print("DEBUG: EarnApp balance fetch error:", e, flush=True)
+
+    for line in output.splitlines():
+        if re.search(r"(balance|earned|earnings|total|wallet)", line, re.IGNORECASE):
             match = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*(?:USD|usd|\$)?", line)
             if match:
                 try:
@@ -97,40 +144,12 @@ def get_traffmonetizer_balance():
                 except ValueError:
                     continue
 
-    matches = re.findall(r"([0-9]+(?:\.[0-9]+)?)\s*(?:USD|usd|\$)", logs)
+    matches = re.findall(r"([0-9]+(?:\.[0-9]+)?)\s*(?:USD|usd|\$)", output)
     if matches:
         try:
             return float(matches[-1])
         except ValueError:
             pass
-
-    return 0.0
-
-
-def get_earnapp_balance():
-    """Attempts to read native EarnApp balance from a local earnapp CLI or status output."""
-    try:
-        proc = subprocess.run(
-            ["earnapp", "status"],
-            capture_output=True,
-            text=True,
-            timeout=10
-        )
-        output = (proc.stdout or "") + "\n" + (proc.stderr or "")
-
-        for line in output.splitlines():
-            if re.search(r"(balance|earned|earnings|total|wallet)", line, re.IGNORECASE):
-                match = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*(?:USD|usd|\$)?", line)
-                if match:
-                    try:
-                        return float(match.group(1))
-                    except ValueError:
-                        continue
-
-    except FileNotFoundError:
-        print("DEBUG: earnapp command not found", flush=True)
-    except Exception as e:
-        print("DEBUG: EarnApp balance fetch error:", e, flush=True)
 
     return 0.0
 
