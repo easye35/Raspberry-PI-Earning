@@ -94,9 +94,8 @@ def get_traffmonetizer_balance():
 
     # Common TraffMonetizer log patterns
     patterns = [
-        r"balance\s*[:=]?\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)",
-        r"earned\s*[:=]?\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)",
-        r"total\s*[:=]?\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)",
+        r"(?:balance|earned|total|payout|income|wallet)\s*[:=]?\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)",
+        r"[\"'](?:balance|earned|total|payout|income|wallet)[\"']\s*[:=]\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)",
         r"([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)\s*(?:USD|usd|\$)"
     ]
 
@@ -112,18 +111,32 @@ def get_traffmonetizer_balance():
                 except ValueError:
                     continue
 
-    # Fallback: last numeric value in log output
+    # Fallback: numeric values on lines that likely mention earnings
+    for line in reversed(logs.splitlines()):
+        if re.search(r"balance|earned|total|payout|income|usd|\$", line, re.IGNORECASE):
+            numbers = re.findall(r"([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)", line)
+            if numbers:
+                raw_value = numbers[-1].replace(",", "")
+                try:
+                    value = float(raw_value)
+                    print(f"DEBUG: TraffMonetizer fallback parsed value {value} from line: {line}", flush=True)
+                    return value
+                except ValueError:
+                    continue
+
+    # General fallback: last numeric token in all logs
     matches = re.findall(r"([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)", logs)
     if matches:
         raw_value = matches[-1].replace(",", "")
         try:
             value = float(raw_value)
-            print(f"DEBUG: TraffMonetizer fallback parsed value {value}", flush=True)
+            print(f"DEBUG: TraffMonetizer final fallback parsed value {value}", flush=True)
             return value
         except ValueError:
             pass
 
-    print("DEBUG: TraffMonetizer pattern not found in logs", flush=True)
+    sample_lines = "\n".join(logs.splitlines()[-10:])
+    print("DEBUG: TraffMonetizer pattern not found in logs. Last log lines:\n" + sample_lines, flush=True)
     return 0.0
 
 
