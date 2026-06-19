@@ -113,6 +113,9 @@ async function loadServiceStatus() {
         const badge = document.getElementById("serviceBadge");
         if (badge) badge.textContent = `Reset Service: ${data.resetService}`;
 
+        const versionEl = document.getElementById("versionBadge");
+        if (versionEl) versionEl.textContent = data.version || "Unknown";
+
     } catch (err) {
         console.error("Service status error:", err);
     }

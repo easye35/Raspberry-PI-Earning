@@ -9,6 +9,14 @@ const { execFile } = require("child_process");
 const Docker = require("dockerode");
 const fs = require("fs");
 
+const VERSION = (() => {
+    try {
+        return fs.readFileSync("version.txt", "utf8").split("\n")[0].trim() || "Unknown";
+    } catch (err) {
+        return "Unknown";
+    }
+})();
+
 const docker = new Docker({ socketPath: "/var/run/docker.sock" });
 const app = express();
 
@@ -303,7 +311,10 @@ app.get("/api/system", async (req, res) => {
 app.get("/api/services", requireAdmin, async (req, res) => {
     execFile("systemctl", ["is-active", "earnbox-reset.service"], (err, stdout) => {
         const status = stdout ? stdout.trim() : "unknown";
-        res.json({ resetService: status });
+        res.json({
+            resetService: status,
+            version: VERSION
+        });
     });
 });
 

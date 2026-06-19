@@ -171,6 +171,11 @@ cd "$REPO_DIR" || exit 1
 git fetch --all
 git reset --hard origin/main
 
+# Update version.txt after pulling the latest code
+if [ -x "$REPO_DIR/scripts/update-version.sh" ]; then
+    bash "$REPO_DIR/scripts/update-version.sh"
+fi
+
 # Log version after update
 if [ -f "$REPO_DIR/version.txt" ]; then
     VERSION=$(head -n 1 "$REPO_DIR/version.txt")
@@ -182,6 +187,7 @@ docker compose up -d --build
 EOF
 
 sudo chmod +x $UPDATE_SCRIPT
+sudo chmod +x "$REPO_DIR/scripts/update-version.sh"
 
 # ---------------------------------------------------------
 # Monthly + reboot cron jobs
