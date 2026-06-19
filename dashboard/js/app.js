@@ -288,6 +288,7 @@ showLoading();
 loadSystemStats();
 loadServiceStatus();
 loadContainers();
+loadEarnings();
 setupModal();
 
 const diagnosticsBtn = document.getElementById("diagnosticsBtn");
