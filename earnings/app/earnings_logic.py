@@ -31,7 +31,8 @@ def init_db():
             pawns REAL NOT NULL,
             total REAL NOT NULL DEFAULT 0.0,
             daily_change REAL,
-            projected_30_day REAL
+            projected_30_day REAL,
+            daily_average_30_day REAL
         )
         """
     )
@@ -40,6 +41,14 @@ def init_db():
     if "total" not in existing_columns:
         cur.execute(
             "ALTER TABLE earnings ADD COLUMN total REAL NOT NULL DEFAULT 0.0"
+        )
+    if "projected_30_day" not in existing_columns:
+        cur.execute(
+            "ALTER TABLE earnings ADD COLUMN projected_30_day REAL"
+        )
+    if "daily_average_30_day" not in existing_columns:
+        cur.execute(
+            "ALTER TABLE earnings ADD COLUMN daily_average_30_day REAL"
         )
 
     conn.commit()
@@ -275,14 +284,13 @@ def update_earnings():
     conn.commit()
 
     projected_30_day = compute_projected_30_day_from_history()
+    daily_average_30_day = compute_daily_average_30_day()
     cur.execute(
-        "UPDATE earnings SET projected_30_day = ? WHERE id = ?",
-        (projected_30_day, current_id)
+        "UPDATE earnings SET projected_30_day = ?, daily_average_30_day = ? WHERE id = ?",
+        (projected_30_day, daily_average_30_day, current_id)
     )
     conn.commit()
     conn.close()
-
-    daily_average_30_day = compute_daily_average_30_day()
 
     snapshot = {
         "timestamp": now,
@@ -314,6 +322,10 @@ def get_latest_snapshot():
             "projected_30_day": 0.0,
         }
 
+    daily_average = row["daily_average_30_day"]
+    if daily_average is None:
+        daily_average = compute_daily_average_30_day()
+
     return {
         "id": row["id"],
         "timestamp": row["timestamp"],
@@ -322,7 +334,7 @@ def get_latest_snapshot():
         "total": row["total"],
         "daily_change": row["daily_change"],
         "projected_30_day": row["projected_30_day"],
-        "daily_average_30_day": compute_daily_average_30_day(),
+        "daily_average_30_day": daily_average,
     }
 
 
