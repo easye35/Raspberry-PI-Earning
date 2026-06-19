@@ -283,8 +283,8 @@ def update_earnings():
     current_id = cur.lastrowid
     conn.commit()
 
-    projected_30_day = compute_projected_30_day_from_history()
     daily_average_30_day = compute_daily_average_30_day()
+    projected_30_day = daily_average_30_day * 30
     cur.execute(
         "UPDATE earnings SET projected_30_day = ?, daily_average_30_day = ? WHERE id = ?",
         (projected_30_day, daily_average_30_day, current_id)
