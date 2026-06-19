@@ -199,6 +199,13 @@ def compute_projected_30_day_from_history():
     return avg * 30
 
 
+def compute_daily_average_30_day():
+    changes = get_recent_daily_changes(30)
+    if not changes:
+        return 0.0
+    return sum(changes) / len(changes)
+
+
 # ---------------------------------------------------------
 # CORE LOGIC
 # ---------------------------------------------------------
@@ -275,6 +282,8 @@ def update_earnings():
     conn.commit()
     conn.close()
 
+    daily_average_30_day = compute_daily_average_30_day()
+
     snapshot = {
         "timestamp": now,
         "honeygain": honeygain,
@@ -282,6 +291,7 @@ def update_earnings():
         "total": total,
         "daily_change": daily_change,
         "projected_30_day": projected_30_day,
+        "daily_average_30_day": daily_average_30_day,
     }
 
     os.makedirs(os.path.dirname(JSON_PATH), exist_ok=True)
@@ -312,6 +322,7 @@ def get_latest_snapshot():
         "total": row["total"],
         "daily_change": row["daily_change"],
         "projected_30_day": row["projected_30_day"],
+        "daily_average_30_day": compute_daily_average_30_day(),
     }
 
 

@@ -46,13 +46,13 @@ async function loadEarnings() {
 
         const honeygain = safeAmount(data.honeygain);
         const pawns = safeAmount(data.pawns);
-        const dailyChange = safeAmount(data.daily_change);
+        const dailyAverage = safeAmount(data.daily_average_30_day);
         const projected = safeAmount(data.projected_30_day);
         const total = safeAmount(data.total) || honeygain + pawns;
 
         smoothUpdate(document.getElementById("honeygain-balance"), `$${honeygain.toFixed(2)}`);
         smoothUpdate(document.getElementById("pawns-balance"), `$${pawns.toFixed(2)}`);
-        smoothUpdate(document.getElementById("today-earnings"), `$${dailyChange.toFixed(2)}`);
+        smoothUpdate(document.getElementById("today-earnings"), `$${dailyAverage.toFixed(2)}`);
         smoothUpdate(document.getElementById("projected-earnings"), `$${projected.toFixed(2)}`);
         smoothUpdate(document.getElementById("total-earnings"), `$${total.toFixed(2)}`);
 
