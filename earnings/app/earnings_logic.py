@@ -1,7 +1,7 @@
 import os
 import json
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import re
 import requests
 
@@ -43,6 +43,7 @@ def init_db():
         )
 
     conn.commit()
+    prune_history(max_days=90)
     conn.close()
 
 
@@ -53,6 +54,18 @@ def _get_last_row():
     row = cur.fetchone()
     conn.close()
     return row
+
+
+def prune_history(max_days: int = 90):
+    cutoff = datetime.now(timezone.utc) - timedelta(days=max_days)
+    conn = _get_connection()
+    cur = conn.cursor()
+    cur.execute(
+        "DELETE FROM earnings WHERE timestamp < ?",
+        (cutoff.isoformat(),)
+    )
+    conn.commit()
+    conn.close()
 
 # ---------------------------------------------------------
 # RATE LIMIT: Prevent refresh more than once every 120 seconds
@@ -165,7 +178,7 @@ def get_honeygain_balance():
         return 0.0
 
 
-def get_recent_daily_changes(limit=7):
+def get_recent_daily_changes(limit=30):
     init_db()
     conn = _get_connection()
     cur = conn.cursor()
@@ -179,7 +192,7 @@ def get_recent_daily_changes(limit=7):
 
 
 def compute_projected_30_day_from_history():
-    changes = get_recent_daily_changes(7)
+    changes = get_recent_daily_changes(30)
     if not changes:
         return 0.0
     avg = sum(changes) / len(changes)
@@ -282,7 +295,14 @@ def get_latest_snapshot():
     init_db()
     row = _get_last_row()
     if row is None:
-        return None
+        return {
+            "timestamp": None,
+            "honeygain": 0.0,
+            "pawns": 0.0,
+            "total": 0.0,
+            "daily_change": 0.0,
+            "projected_30_day": 0.0,
+        }
 
     return {
         "id": row["id"],

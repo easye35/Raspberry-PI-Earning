@@ -76,7 +76,7 @@ def create_app():
     # ---------------------------------------------------------
     @app.get("/earnings")
     def get_earnings():
-        snapshot = logic.update_earnings()
+        snapshot = logic.get_latest_snapshot()
         return jsonify(snapshot)
 
     @app.get("/earnings/history")
@@ -94,8 +94,9 @@ def create_app():
 
     @app.post("/earnings/run-now")
     def run_now():
-        snapshot = logic.update_earnings()
-        return jsonify(snapshot)
+        return jsonify({
+            "error": "Run-now is disabled. Earnings are served from stored database snapshots."
+        }), 404
 
     return app
 
