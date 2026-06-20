@@ -9,7 +9,6 @@ This project is completely free, open‑source, and the only way I earn anything
 If this appliance saves you time, simplifies your setup, or you just want to support ongoing development, using the links below genuinely helps.
 
 ⭐ My Referral Links
-Honeygain — https://join.honeygain.com/EASYE2EE
 
 Pawns.app — https://pawns.app/?r=19391092
 
