@@ -231,3 +231,8 @@ echo " Auto-update enabled:"
 echo " - Monthly (1st @ 3 AM)"
 echo " - On every reboot"
 echo "======================================="
+# Add updatepi alias for automatic rebuilds after git pull
+if ! grep -q "alias updatepi=" ~/.bashrc; then
+    echo "alias updatepi='git pull && docker compose down && docker compose up -d --build'" >> ~/.bashrc
+fi
+
