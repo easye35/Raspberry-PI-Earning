@@ -114,6 +114,70 @@ async function loadEarningsHistory() {
 }
 
 // -------------------------------------------------------------
+// Metric history persistence
+const HISTORY_KEY = "earnboxMetricHistory";
+const metricHistory = {
+    cpu: [],
+    ram: [],
+    disk: [],
+    netRx: [],
+    netTx: [],
+    temp: []
+};
+
+function loadMetricHistory() {
+    try {
+        const stored = JSON.parse(localStorage.getItem(HISTORY_KEY) || "{}");
+        Object.keys(metricHistory).forEach((key) => {
+            if (Array.isArray(stored[key])) {
+                metricHistory[key] = stored[key].slice(-24);
+            }
+        });
+    } catch (err) {
+        console.warn("Could not parse metric history:", err);
+    }
+}
+
+function saveMetricHistory() {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(metricHistory));
+}
+
+function addMetricHistoryPoint(key, value) {
+    const hour = Math.floor(Date.now() / 3600000);
+    const history = metricHistory[key];
+    if (!history.length || history[history.length - 1].hour !== hour) {
+        history.push({ hour, value });
+        if (history.length > 24) history.shift();
+    } else {
+        history[history.length - 1].value = (history[history.length - 1].value + value) / 2;
+    }
+    saveMetricHistory();
+}
+
+function renderMetricHistory(key, elementId, scaleMax, dataType = "cpu") {
+    const container = document.getElementById(elementId);
+    if (!container) return;
+    container.innerHTML = "";
+
+    const history = metricHistory[key] || [];
+    if (!history.length) {
+        container.innerHTML = `<div class="history-empty">No history yet</div>`;
+        return;
+    }
+
+    history.forEach((entry) => {
+        const bar = document.createElement("div");
+        const value = Number(entry.value) || 0;
+        const height = Math.max(Math.min((value / scaleMax) * 100, 100), 6);
+        bar.className = "metric-history-segment";
+        bar.dataset.type = dataType;
+        bar.dataset.value = dataType === "temp" ? `${value.toFixed(1)}°C` : `${value.toFixed(1)}${dataType === "netRx" || dataType === "netTx" ? " KB/s" : "%"}`;
+        bar.style.height = `${height}%`;
+        container.appendChild(bar);
+    });
+}
+
+// -------------------------------------------------------------
 // Fetch System Stats (with retry)
 // -------------------------------------------------------------
 async function loadSystemStats() {
@@ -174,6 +238,20 @@ async function loadSystemStats() {
         const hours = (data.uptime / 3600).toFixed(1);
         const uptimeEl = document.getElementById("uptimeBadge");
         if (uptimeEl) uptimeEl.textContent = `Uptime: ${hours} hrs`;
+
+        addMetricHistoryPoint("cpu", data.cpu);
+        addMetricHistoryPoint("ram", data.ram);
+        addMetricHistoryPoint("disk", data.disk);
+        addMetricHistoryPoint("temp", data.temp || 0);
+        addMetricHistoryPoint("netRx", data.network.rx);
+        addMetricHistoryPoint("netTx", data.network.tx);
+
+        renderMetricHistory("cpu", "cpuHistory", 100, "cpu");
+        renderMetricHistory("ram", "ramHistory", 100, "ram");
+        renderMetricHistory("disk", "diskHistory", 100, "disk");
+        renderMetricHistory("temp", "tempHistory", 80, "temp");
+        renderMetricHistory("netRx", "netRxHistory", 50, "netRx");
+        renderMetricHistory("netTx", "netTxHistory", 50, "netTx");
 
         setTimeout(loadSystemStats, 5000);
 
@@ -370,6 +448,7 @@ setInterval(loadContainers, 5000);
 setInterval(loadEarnings, 120000);
 
 // Initial load
+loadMetricHistory();
 showLoading();
 loadSystemStats();
 loadServiceStatus();

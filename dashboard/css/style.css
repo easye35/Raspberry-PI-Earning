@@ -305,6 +305,65 @@ button:focus {
     background: linear-gradient(135deg, rgba(143, 112, 255, 1), rgba(203, 123, 255, 0.9));
 }
 
+.metric-history {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    width: 100%;
+    min-height: 34px;
+    margin-top: 16px;
+}
+
+.metric-history.small {
+    min-height: 20px;
+}
+
+.metric-history-segment {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    position: relative;
+    transition: height 0.3s ease, background-color 0.3s ease;
+}
+
+.metric-history-segment:hover {
+    background-color: rgba(143, 112, 255, 0.5);
+}
+
+.metric-history-segment[data-type="rx"] {
+    background: rgba(79, 199, 255, 0.35);
+}
+
+.metric-history-segment[data-type="tx"] {
+    background: rgba(143, 112, 255, 0.35);
+}
+
+.metric-history-segment[data-type="temp"] {
+    background: rgba(255, 183, 77, 0.4);
+}
+
+.metric-history-segment[data-type="cpu"],
+.metric-history-segment[data-type="ram"],
+.metric-history-segment[data-type="disk"] {
+    background: rgba(139, 91, 255, 0.35);
+}
+
+.metric-history-segment:hover::after {
+    content: attr(data-value);
+    position: absolute;
+    top: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 8px;
+    border-radius: 10px;
+    background: rgba(10, 9, 21, 0.92);
+    color: #fff;
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
 .network-bar {
     margin-top: 8px;
 }
