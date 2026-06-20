@@ -124,13 +124,21 @@ const metricHistory = {
     netTx: [],
     temp: []
 };
+const metricHistoryConfig = {
+    cpu: 24,
+    ram: 24,
+    disk: 24,
+    temp: 24,
+    netRx: 720,
+    netTx: 720
+};
 
 function loadMetricHistory() {
     try {
         const stored = JSON.parse(localStorage.getItem(HISTORY_KEY) || "{}");
         Object.keys(metricHistory).forEach((key) => {
             if (Array.isArray(stored[key])) {
-                metricHistory[key] = stored[key].slice(-24);
+                metricHistory[key] = stored[key].slice(-metricHistoryConfig[key]);
             }
         });
     } catch (err) {
@@ -145,9 +153,10 @@ function saveMetricHistory() {
 function addMetricHistoryPoint(key, value) {
     const hour = Math.floor(Date.now() / 3600000);
     const history = metricHistory[key];
+    const maxLength = metricHistoryConfig[key] || 24;
     if (!history.length || history[history.length - 1].hour !== hour) {
         history.push({ hour, value });
-        if (history.length > 24) history.shift();
+        if (history.length > maxLength) history.shift();
     } else {
         history[history.length - 1].value = (history[history.length - 1].value + value) / 2;
     }
@@ -160,12 +169,13 @@ function renderMetricHistory(key, elementId, scaleMax, dataType = "cpu") {
     container.innerHTML = "";
 
     const history = metricHistory[key] || [];
-    if (!history.length) {
+    const display = history.slice(-24);
+    if (!display.length) {
         container.innerHTML = `<div class="history-empty">No history yet</div>`;
         return;
     }
 
-    history.forEach((entry) => {
+    display.forEach((entry) => {
         const bar = document.createElement("div");
         const value = Number(entry.value) || 0;
         const height = Math.max(Math.min((value / scaleMax) * 100, 100), 6);
@@ -224,6 +234,10 @@ async function loadSystemStats() {
         if (netRxLabel) netRxLabel.textContent = `RX ${rxKB}`;
         if (netTxLabel) netTxLabel.textContent = `TX ${txKB}`;
 
+        const network30DayValue = calculateNetwork30DayUsage();
+        const network30DayEl = document.getElementById("network30DayValue");
+        if (network30DayEl) network30DayEl.textContent = `30d usage: ${network30DayValue}`;
+
         smoothUpdate(
             document.getElementById("tempValue"),
             data.temp ? data.temp.toFixed(1) : "--",
@@ -259,6 +273,18 @@ async function loadSystemStats() {
         showLoading();
         setTimeout(loadSystemStats, 2000);
     }
+}
+
+function calculateNetwork30DayUsage() {
+    const toGB = (kb) => kb / 1024 / 1024;
+    const rxHistory = metricHistory.netRx || [];
+    const txHistory = metricHistory.netTx || [];
+
+    const rxTotalKB = rxHistory.reduce((sum, point) => sum + (Number(point.value) || 0) * 3600, 0);
+    const txTotalKB = txHistory.reduce((sum, point) => sum + (Number(point.value) || 0) * 3600, 0);
+
+    const totalGB = toGB(rxTotalKB + txTotalKB);
+    return `${totalGB.toFixed(2)} GB`;
 }
 
 // -------------------------------------------------------------
