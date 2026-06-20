@@ -4,3 +4,6 @@
 1.01
 -fixed earnings
 -added .env to gitignore
+
+1.1
+-redesign of dashboard page
