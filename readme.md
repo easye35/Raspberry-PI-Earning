@@ -2,6 +2,63 @@
 ## Honeygain • Pawns • TraffMonetizer • Dozzle • Netdata • Dashboard • Diagnostics
 ## A Docker‑based passive‑income appliance for Raspberry Pi.
 
+🤝 Support This Project (Referral Links)
+In full transparency:
+This project is completely free, open‑source, and the only way I earn anything from it is if people choose to use my referral links.
+
+If this appliance saves you time, simplifies your setup, or you just want to support ongoing development, using the links below genuinely helps.
+
+⭐ My Referral Links
+Honeygain — https://join.honeygain.com/EASYE2EE
+
+Pawns.app — https://pawns.app/?r=19391092
+
+EarnApp — https://earnapp.com/i/pKq8kLVd
+
+TraffMonetizer — https://traffmonetizer.com/?aff=2128486
+
+Using them costs you nothing extra, but it directly supports the project and helps me keep improving everything.
+
+❓ Why Use These Services?
+These platforms are the core earning components of this appliance. Each one provides a small, steady passive‑income stream by sharing unused network bandwidth. When combined, they turn a Raspberry Pi into a low‑maintenance earning device that runs quietly in the background.
+
+Honeygain — The most established bandwidth‑sharing platform with consistent payouts.
+
+Pawns.app — Simple, reliable, and works perfectly alongside Honeygain.
+
+TraffMonetizer — Lightweight and adds a bit of extra income with almost zero overhead.
+
+EarnApp — Higher earning potential and native ARM support, making it ideal for Raspberry Pi.
+
+Running all of them together maximizes your Pi’s earning potential while keeping resource usage low and stability high.
+
+❤️ How Referrals Help the Project
+This project takes a lot of time to build, test, maintain, and support — especially with Raspberry Pi quirks, Docker updates, and service changes.
+
+I don’t run ads.
+I don’t sell anything.
+I don’t lock features behind paywalls.
+
+Referral bonuses are the only way I earn anything from this project.
+
+When you sign up using my links:
+
+You pay nothing extra
+
+You get the same service and payouts
+
+I receive a small bonus that helps me:
+
+Keep the installer updated
+
+Add new services
+
+Improve the dashboard UI
+
+Maintain compatibility with new Raspberry Pi OS releases
+
+Build more tools like the diagnostics API and watchdog system
+
 ## 🚀 What This Appliance Does  
 This project turns any Raspberry Pi (ARM64 recommended) into a zero‑touch passive‑income appliance running:  
 • 	Honeygain — passive bandwidth sharing  
@@ -165,5 +222,3 @@ The repo now includes:
 - **`dashboard/index.html`** — dashboard UI
 - **`README.md`** — this file
 Everything is generated automatically on install.
-
-
