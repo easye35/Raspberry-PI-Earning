@@ -284,7 +284,8 @@ def update_earnings():
     conn.commit()
 
     daily_average_30_day = compute_daily_average_30_day()
-    projected_30_day = daily_average_30_day * 30
+    daily_average_30_day = round(daily_average_30_day, 2)
+    projected_30_day = round(daily_average_30_day * 30, 2)
     cur.execute(
         "UPDATE earnings SET projected_30_day = ?, daily_average_30_day = ? WHERE id = ?",
         (projected_30_day, daily_average_30_day, current_id)
