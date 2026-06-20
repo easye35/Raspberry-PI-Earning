@@ -254,11 +254,59 @@ button:focus {
 }
 
 .stat-card p {
-    margin: 0;
+    margin: 0 0 14px;
     font-size: 1.9rem;
     font-weight: 700;
     color: #fff;
     line-height: 1.1;
+}
+
+.metric-bar {
+    width: 100%;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.07);
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+}
+
+.metric-bar.small {
+    height: 8px;
+    margin-top: 6px;
+}
+
+.metric-bar-fill {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(135deg, #8b5bff 0%, #4fc7ff 100%);
+    border-radius: inherit;
+    transition: width 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.metric-bar-label {
+    display: inline-block;
+    white-space: nowrap;
+    opacity: 0.95;
+}
+
+.metric-bar-fill.rx {
+    background: linear-gradient(135deg, rgba(79, 199, 255, 1), rgba(99, 182, 255, 0.88));
+}
+
+.metric-bar-fill.tx {
+    background: linear-gradient(135deg, rgba(143, 112, 255, 1), rgba(203, 123, 255, 0.9));
+}
+
+.network-bar {
+    margin-top: 8px;
 }
 
 .container-section {

@@ -128,6 +128,20 @@ async function loadSystemStats() {
         smoothUpdate(document.getElementById("ramValue"), data.ram, "%");
         smoothUpdate(document.getElementById("diskValue"), data.disk, "%");
 
+        const cpuBar = document.getElementById("cpuBar");
+        const ramBar = document.getElementById("ramBar");
+        const diskBar = document.getElementById("diskBar");
+        if (cpuBar) cpuBar.style.width = `${Math.min(Math.max(data.cpu, 0), 100)}%`;
+        if (ramBar) ramBar.style.width = `${Math.min(Math.max(data.ram, 0), 100)}%`;
+        if (diskBar) diskBar.style.width = `${Math.min(Math.max(data.disk, 0), 100)}%`;
+
+        const cpuLabel = document.getElementById("cpuLabel");
+        const ramLabel = document.getElementById("ramLabel");
+        const diskLabel = document.getElementById("diskLabel");
+        if (cpuLabel) cpuLabel.textContent = `${data.cpu.toFixed(1)}%`;
+        if (ramLabel) ramLabel.textContent = `${data.ram.toFixed(1)}%`;
+        if (diskLabel) diskLabel.textContent = `${data.disk.toFixed(1)}%`;
+
         const rxKB = data.network.rx.toFixed(1);
         const txKB = data.network.tx.toFixed(1);
         const netEl = document.getElementById("netValue");
@@ -135,11 +149,27 @@ async function loadSystemStats() {
             netEl.innerHTML = `RX: ${rxKB} KB/s<br>TX: ${txKB} KB/s`;
         }
 
+        const netRxBar = document.getElementById("netRxBar");
+        const netTxBar = document.getElementById("netTxBar");
+        const netRxLabel = document.getElementById("netRxLabel");
+        const netTxLabel = document.getElementById("netTxLabel");
+        const rxPct = Math.min(Math.max((data.network.rx / 50) * 100, 0), 100);
+        const txPct = Math.min(Math.max((data.network.tx / 50) * 100, 0), 100);
+        if (netRxBar) netRxBar.style.width = `${rxPct}%`;
+        if (netTxBar) netTxBar.style.width = `${txPct}%`;
+        if (netRxLabel) netRxLabel.textContent = `RX ${rxKB}`;
+        if (netTxLabel) netTxLabel.textContent = `TX ${txKB}`;
+
         smoothUpdate(
             document.getElementById("tempValue"),
             data.temp ? data.temp.toFixed(1) : "--",
             "°C"
         );
+        const tempBar = document.getElementById("tempBar");
+        const tempLabel = document.getElementById("tempLabel");
+        const tempPct = data.temp ? Math.min(Math.max((data.temp / 80) * 100, 0), 100) : 0;
+        if (tempBar) tempBar.style.width = `${tempPct}%`;
+        if (tempLabel) tempLabel.textContent = data.temp ? `${data.temp.toFixed(1)}°C` : "--";
 
         const hours = (data.uptime / 3600).toFixed(1);
         const uptimeEl = document.getElementById("uptimeBadge");

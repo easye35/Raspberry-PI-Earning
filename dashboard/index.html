@@ -66,22 +66,32 @@
                     <div class="stat-card">
                         <span>CPU</span>
                         <p id="cpuValue">…</p>
+                        <div class="metric-bar"><div class="metric-bar-fill" id="cpuBar"><span class="metric-bar-label" id="cpuLabel">0%</span></div></div>
                     </div>
                     <div class="stat-card">
                         <span>RAM</span>
                         <p id="ramValue">…</p>
+                        <div class="metric-bar"><div class="metric-bar-fill" id="ramBar"><span class="metric-bar-label" id="ramLabel">0%</span></div></div>
                     </div>
                     <div class="stat-card">
                         <span>Disk</span>
                         <p id="diskValue">…</p>
+                        <div class="metric-bar"><div class="metric-bar-fill" id="diskBar"><span class="metric-bar-label" id="diskLabel">0%</span></div></div>
                     </div>
                     <div class="stat-card">
                         <span>Network</span>
                         <p id="netValue">RX: …<br>TX: …</p>
+                        <div class="metric-bar network-bar">
+                            <div class="metric-bar-fill rx" id="netRxBar"><span class="metric-bar-label" id="netRxLabel">RX 0.0</span></div>
+                        </div>
+                        <div class="metric-bar network-bar small">
+                            <div class="metric-bar-fill tx" id="netTxBar"><span class="metric-bar-label" id="netTxLabel">TX 0.0</span></div>
+                        </div>
                     </div>
                     <div class="stat-card">
                         <span>Temp</span>
                         <p id="tempValue">…</p>
+                        <div class="metric-bar"><div class="metric-bar-fill" id="tempBar"><span class="metric-bar-label" id="tempLabel">0°C</span></div></div>
                     </div>
                     <div class="stat-card">
                         <span>Uptime</span>
