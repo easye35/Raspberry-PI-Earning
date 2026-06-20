@@ -137,6 +137,27 @@ app.get("/earnings", async (req, res) => {
     }
 });
 
+app.get("/earnings/history", async (req, res) => {
+    const limit = parseInt(req.query.limit, 10) || 30;
+    try {
+        const earningsRes = await fetch(`${EARNINGS_SERVICE}/earnings/history?limit=${limit}`);
+        if (!earningsRes.ok) {
+            const body = await earningsRes.text();
+            throw new Error(`Earnings service returned ${earningsRes.status}: ${body}`);
+        }
+
+        const payload = await earningsRes.json();
+        res.json(payload);
+    } catch (err) {
+        console.error("Earnings history proxy error:", err);
+        res.status(502).json({
+            count: 0,
+            items: [],
+            error: err.message
+        });
+    }
+});
+
 app.post("/earnings/run-now", async (req, res) => {
     res.status(404).json({
         error: "Earnings run-now is no longer supported. Use GET /earnings instead."

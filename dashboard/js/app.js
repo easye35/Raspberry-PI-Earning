@@ -61,6 +61,58 @@ async function loadEarnings() {
     }
 }
 
+async function loadEarningsHistory() {
+    try {
+        const res = await fetch(`${API}/earnings/history?limit=14`);
+        if (!res.ok) throw new Error("HTTP error");
+
+        const data = await res.json();
+        const history = Array.isArray(data.items) ? data.items : [];
+        const container = document.getElementById("earningsHistory");
+        const summary = document.getElementById("historySummary");
+        const avgEl = document.getElementById("historyAvg");
+
+        if (!container) return;
+        container.innerHTML = "";
+
+        if (!history.length) {
+            summary.textContent = "No recorded history yet";
+            avgEl.textContent = "";
+            container.innerHTML = `<div class="empty-state">No history available</div>`;
+            return;
+        }
+
+        const values = history
+            .map(item => Number(item.daily_change) || 0)
+            .reverse();
+
+        const maxValue = Math.max(...values.map(Math.abs), 1);
+        const average = values.reduce((sum, value) => sum + value, 0) / values.length;
+
+        summary.textContent = `Last ${values.length} daily entries`;
+        avgEl.textContent = `$${average.toFixed(2)} avg`;
+
+        values.forEach((value, index) => {
+            const bar = document.createElement("div");
+            bar.className = "history-bar";
+            bar.dataset.value = `$${value.toFixed(2)}`;
+
+            const fill = document.createElement("div");
+            fill.className = "history-bar-fill";
+            fill.style.height = `${Math.max((value / maxValue) * 100, 4)}%`;
+            if (value < 0) {
+                fill.style.background = "linear-gradient(180deg, rgba(255, 96, 128, 0.95), rgba(255, 80, 170, 0.9))";
+            }
+
+            bar.appendChild(fill);
+            container.appendChild(bar);
+        });
+
+    } catch (err) {
+        console.error("Earnings history load error:", err);
+    }
+}
+
 // -------------------------------------------------------------
 // Fetch System Stats (with retry)
 // -------------------------------------------------------------
@@ -270,7 +322,8 @@ async function runDiagnostics() {
         loadSystemStats(),
         loadServiceStatus(),
         loadContainers(),
-        loadEarnings()
+        loadEarnings(),
+        loadEarningsHistory()
     ]);
 
     if (diagButton) {
@@ -292,6 +345,7 @@ loadSystemStats();
 loadServiceStatus();
 loadContainers();
 loadEarnings();
+loadEarningsHistory();
 setupModal();
 
 const diagnosticsBtn = document.getElementById("diagnosticsBtn");
@@ -306,5 +360,11 @@ if (refreshAllBtn) {
         loadServiceStatus();
         loadContainers();
         loadEarnings();
+        loadEarningsHistory();
     };
+}
+
+const refreshHistoryBtn = document.getElementById("refreshHistoryBtn");
+if (refreshHistoryBtn) {
+    refreshHistoryBtn.onclick = loadEarningsHistory;
 }
