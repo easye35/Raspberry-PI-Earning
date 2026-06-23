@@ -249,12 +249,22 @@ app.get("/api/system", async (req, res) => {
 
         // RAM
         const ramChart = await fetchWithRetry(
-            `${NETDATA}/api/v1/data?chart=system.ram&after=-1&points=1&format=json`
-        );
-        const ramRow = ramChart?.data?.[[0]] || [];
+          `${NETDATA}/api/v1/data?chart=system.ram&after=-1&points=1&format=json`
+          );
+
+        const ramRow = ramChart?.data?.[0] || [];
+
         const ramFree = ramRow[1] || 0;
         const ramUsed = ramRow[2] || 0;
-        const ramPercent = Math.round((ramUsed / (ramUsed + ramFree)) * 100);
+        const ramCached = ramRow[3] || 0;
+        const ramBuffers = ramRow[4] || 0;
+
+        const ramAvailable = ramFree + ramCached + ramBuffers;
+        const ramTotal = ramUsed + ramAvailable;
+
+        const ramActualUsed = ramTotal - ramAvailable;
+        const ramPercent = Math.round((ramActualUsed / ramTotal) * 100);
+
 
         // Disk
         const charts = await fetchWithRetry(`${NETDATA}/api/v1/charts`);
