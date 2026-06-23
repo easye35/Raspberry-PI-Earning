@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------------------------
-   EarnBox Backend API (Corrected + DB Auto‑Init)
+   EarnBox Backend API (Corrected + DB Auto‑Init + System History)
 --------------------------------------------------------------------------- */
 
 const express = require("express");
@@ -8,6 +8,14 @@ const cors = require("cors");
 const { execFile } = require("child_process");
 const Docker = require("dockerode");
 const fs = require("fs");
+
+const VERSION = (() => {
+    try {
+        return fs.readFileSync("version.txt", "utf8").split("\n")[0].trim() || "Unknown";
+    } catch (err) {
+        return "Unknown";
+    }
+})();
 
 const docker = new Docker({ socketPath: "/var/run/docker.sock" });
 const app = express();
@@ -72,13 +80,29 @@ fs.mkdirSync("/data", { recursive: true });
 // Open DB
 const db = new Database("/data/earnings.db");
 
-// Ensure table exists
+// Ensure earnings table exists
 db.prepare(`
     CREATE TABLE IF NOT EXISTS earnings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         timestamp INTEGER NOT NULL,
         total REAL,
         daily_change REAL
+    )
+`).run();
+
+/* ---------------------------------------------------------------------------
+   NEW: System History Table
+--------------------------------------------------------------------------- */
+db.prepare(`
+    CREATE TABLE IF NOT EXISTS system_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp INTEGER NOT NULL,
+        cpu REAL,
+        ram REAL,
+        disk REAL,
+        rx REAL,
+        tx REAL,
+        temp REAL
     )
 `).run();
 
@@ -241,8 +265,8 @@ app.get("/api/system", async (req, res) => {
 
         // RAM
         const ramChart = await fetchWithRetry(
-          `${NETDATA}/api/v1/data?chart=system.ram&after=-1&points=1&format=json`
-          );
+            `${NETDATA}/api/v1/data?chart=system.ram&after=-1&points=1&format=json`
+        );
 
         const ramRow = ramChart?.data?.[0] || [];
 
@@ -256,7 +280,6 @@ app.get("/api/system", async (req, res) => {
 
         const ramActualUsed = ramTotal - ramAvailable;
         const ramPercent = Math.round((ramActualUsed / ramTotal) * 100);
-
 
         // Disk
         const charts = await fetchWithRetry(`${NETDATA}/api/v1/charts`);
@@ -313,6 +336,29 @@ app.get("/api/system", async (req, res) => {
 
         const uptime = uptimeChart?.data?.[0]?.[1] || 0;
 
+        /* -------------------------------------------------------------------
+           INSERT: Save system stats history
+        ------------------------------------------------------------------- */
+        try {
+            db.prepare(`
+                INSERT INTO system_history (timestamp, cpu, ram, disk, rx, tx, temp)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            `).run(
+                Date.now(),
+                cpuTotal,
+                ramPercent,
+                diskPercent,
+                rx,
+                tx,
+                temp
+            );
+        } catch (err) {
+            console.error("History insert error:", err);
+        }
+
+        /* -------------------------------------------------------------------
+           Response
+        ------------------------------------------------------------------- */
         res.json({
             ok: true,
             cpu: cpuTotal,
@@ -326,6 +372,35 @@ app.get("/api/system", async (req, res) => {
     } catch (err) {
         res.json({ ok: false });
     }
+});
+
+/* ---------------------------------------------------------------------------
+   NEW: System History Endpoint
+--------------------------------------------------------------------------- */
+app.get("/api/system/history", (req, res) => {
+    const limit = parseInt(req.query.limit, 10) || 60;
+
+    const rows = db.prepare(`
+        SELECT timestamp, cpu, ram, disk, rx, tx, temp
+        FROM system_history
+        ORDER BY id DESC
+        LIMIT ?
+    `).all(limit);
+
+    res.json(rows.reverse());
+});
+
+/* ---------------------------------------------------------------------------
+   Services
+--------------------------------------------------------------------------- */
+app.get("/api/services", requireAdmin, async (req, res) => {
+    execFile("systemctl", ["is-active", "earnbox-reset.service"], (err, stdout) => {
+        const status = stdout ? stdout.trim() : "unknown";
+        res.json({
+            resetService: status,
+            version: VERSION
+        });
+    });
 });
 
 /* ---------------------------------------------------------------------------
