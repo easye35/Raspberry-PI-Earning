@@ -318,11 +318,6 @@ button:focus {
     min-height: 20px;
 }
 
-.metric-history-segment {
-    flex: 1 1 0;
-    width: 0;
-}
-
 .network-total {
     margin: 10px 0 0;
     color: #c2dafd;
@@ -570,6 +565,44 @@ button:focus {
     gap: 12px;
 }
 
+/* Sparkline bar segments for system metric history */
+.metric-history div {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border-radius: 999px;
+    background: rgba(139, 91, 255, 0.35);
+    transition: height 0.25s ease;
+}
+
+.metric-history.small div {
+    background: rgba(139, 91, 255, 0.25);
+}
+
+/* Color overrides by metric type */
+#cpuHistory div {
+    background: rgba(139, 91, 255, 0.45);
+}
+
+#ramHistory div {
+    background: rgba(79, 199, 255, 0.45);
+}
+
+#diskHistory div {
+    background: rgba(203, 123, 255, 0.45);
+}
+
+#netRxHistory div {
+    background: rgba(79, 199, 255, 0.55);
+}
+
+#netTxHistory div {
+    background: rgba(143, 112, 255, 0.55);
+}
+
+#tempHistory div {
+    background: rgba(255, 183, 77, 0.55);
+}
 @media (max-width: 1080px) {
     .overview-grid,
     .tile-grid,

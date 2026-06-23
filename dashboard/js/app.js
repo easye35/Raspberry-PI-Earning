@@ -16,6 +16,20 @@ function smoothUpdate(element, newValue, suffix = "") {
     element.textContent = `${newValue}${suffix}`;
 }
 
+function renderMiniGraph(elementId, values) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+
+    el.innerHTML = "";
+
+    const max = Math.max(...values, 1);
+
+    values.forEach(v => {
+        const bar = document.createElement("div");
+        bar.style.height = `${(v / max) * 100}%`;
+        el.appendChild(bar);
+    });
+}
 // -------------------------------------------------------------
 // Loading placeholders
 // -------------------------------------------------------------
@@ -113,6 +127,29 @@ async function loadEarningsHistory() {
     }
 }
 
+async function updateHistoryGraphs() {
+    try {
+        const res = await fetch(`${API}/api/system/history?limit=60`);
+        const data = await res.json();
+
+        const cpu = data.map(x => x.cpu);
+        const ram = data.map(x => x.ram);
+        const disk = data.map(x => x.disk);
+        const netRx = data.map(x => x.rx);
+        const netTx = data.map(x => x.tx);
+        const temp = data.map(x => x.temp);
+
+        renderMiniGraph("cpuHistory", cpu);
+        renderMiniGraph("ramHistory", ram);
+        renderMiniGraph("diskHistory", disk);
+        renderMiniGraph("netRxHistory", netRx);
+        renderMiniGraph("netTxHistory", netTx);
+        renderMiniGraph("tempHistory", temp);
+
+    } catch (err) {
+        console.error("History graph error:", err);
+    }
+}
 // -------------------------------------------------------------
 // Metric history persistence
 const HISTORY_KEY = "earnboxMetricHistory";
@@ -472,6 +509,11 @@ async function runDiagnostics() {
 setInterval(loadServiceStatus, 5000);
 setInterval(loadContainers, 5000);
 setInterval(loadEarnings, 120000);
+setInterval(() => {
+    loadSystemStats();
+    updateHistoryGraphs();
+}, 2000);
+
 
 // Initial load
 loadMetricHistory();
@@ -482,6 +524,8 @@ loadContainers();
 loadEarnings();
 loadEarningsHistory();
 setupModal();
+updateHistoryGraphs();
+
 
 const diagnosticsBtn = document.getElementById("diagnosticsBtn");
 if (diagnosticsBtn) {
