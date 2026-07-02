@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Repocket Setup Plugin
-# Configures Repocket with token from .env
+# Configures Repocket token from .env
 
 set -e
 
@@ -20,55 +20,36 @@ if [ -z "$REPOCKET_TOKEN" ]; then
     exit 0
 fi
 
-echo "🎯 Setting up Repocket..."
+echo "🎯 Configuring Repocket token..."
 
-# Check if Repocket is installed
-if ! command -v repocket &> /dev/null; then
-    echo "📦 Repocket not found. Installing..."
-    if command -v curl &> /dev/null; then
-        echo "Running: bash <(curl -s https://get.repocket.co/install.sh)"
-        bash <(curl -s https://get.repocket.co/install.sh) || {
-            EXIT_CODE=$?
-            echo "❌ Repocket installation failed with exit code $EXIT_CODE"
-            exit $EXIT_CODE
-        }
-    elif command -v wget &> /dev/null; then
-        echo "Running: bash <(wget -qO- https://get.repocket.co/install.sh)"
-        bash <(wget -qO- https://get.repocket.co/install.sh) || {
-            EXIT_CODE=$?
-            echo "❌ Repocket installation failed with exit code $EXIT_CODE"
-            exit $EXIT_CODE
-        }
-    else
-        echo "❌ Neither curl nor wget available. Please install Repocket manually."
-        exit 1
-    fi
-fi
-
-# Verify installation
-if ! command -v repocket &> /dev/null; then
-    echo "⚠️  Repocket still not found after running installer. Check the installer output above."
-    echo "   Installation may require manual steps or the installer may not work on this system."
-fi
-
-# Create config directory if needed
+# Create config directory
 CONFIG_DIR="$HOME/.repocket"
 mkdir -p "$CONFIG_DIR"
 
-# Write token to config (exact format depends on Repocket's config file)
-# This is a common pattern - adjust if Repocket uses a different format
+# Write token to config
 cat > "$CONFIG_DIR/config" <<EOF
 token=$REPOCKET_TOKEN
 EOF
 
 chmod 600 "$CONFIG_DIR/config"
 
-echo "✅ Repocket configured with token"
+echo "✅ Repocket token configured at $CONFIG_DIR/config"
 
-# Optionally restart Repocket if it's running as a systemd service
-if systemctl is-active --quiet repocket; then
-    echo "🔄 Restarting Repocket service..."
-    sudo systemctl restart repocket
+# Check if Repocket is installed
+if command -v repocket &> /dev/null; then
+    echo "✅ Repocket is installed"
+    
+    # Optionally restart if it's running as a systemd service
+    if systemctl is-active --quiet repocket 2>/dev/null; then
+        echo "🔄 Restarting Repocket service..."
+        sudo systemctl restart repocket || echo "⚠️  Could not restart Repocket service"
+    fi
+else
+    echo "ℹ️  Repocket is not installed yet."
+    echo "   Install Repocket using one of these methods:"
+    echo "   - npm: npm install -g repocket"
+    echo "   - Download from: https://repocket.co/"
+    echo "   - Or check Repocket's documentation for installation instructions"
 fi
 
 echo "✅ Repocket setup complete"
