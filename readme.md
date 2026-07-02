@@ -14,8 +14,6 @@ EarnApp — https://earnapp.com/i/pKq8kLVd
 
 TraffMonetizer — https://traffmonetizer.com/?aff=2128486
 
-Repocket — https://repocket.co/
-
 ❤️ Why Use Them?
 These services are the core earning components of this appliance.
 Using the referral links:
@@ -37,8 +35,6 @@ Pawns.app — passive bandwidth sharing
 
 TraffMonetizer — optional traffic monetization with dashboard reporting
 
-Repocket — passive bandwidth sharing
-
 Dozzle — real‑time logs
 
 Netdata — system performance dashboard
@@ -48,6 +44,8 @@ Dashboard UI — clean landing page
 Diagnostics API — one‑click system health report
 
 EarnApp — optional native host service (not containerized)
+
+Repocket — optional native host service (not containerized)
 
 Everything runs in Docker except optional native EarnApp support.
 Everything is monitored.
@@ -101,10 +99,7 @@ Password
 💰 TraffMonetizer
 Token
 
-🎯 Repocket
-Token
-
-🌐 Remote Access (Optional)
+ Remote Access (Optional)
 Install Tailscale? (y/N)
 
 If yes, authenticate later with:
