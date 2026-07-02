@@ -124,6 +124,13 @@ services:
       - PAWNS_EMAIL=${PAWNS_EMAIL}
       - PAWNS_PASSWORD=${PAWNS_PASSWORD}
       - EARNAPP_COMMAND=/usr/bin/earnapp
+      # Optional SMTP settings for daily notification (set in .env or environment)
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_TLS=${SMTP_TLS}
+      - NOTIFY_TO=${NOTIFY_TO}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./data:/data
@@ -132,6 +139,21 @@ services:
       - /usr/local/bin/earnapp:/usr/local/bin/earnapp:ro
     ports:
       - "5000:5000"
+    networks:
+      - earning_net
+
+  # ---------------------------------------------------------
+  # Self-heal service (runs repo-level self-heal script)
+  # Installs minimal dependencies at start, runs the script once, then sleeps daily.
+  selfheal:
+    build: ./selfheal
+    container_name: selfheal
+    restart: unless-stopped
+    volumes:
+      - ./:/workdir
+      - /var/run/docker.sock:/var/run/docker.sock
+    working_dir: /workdir
+    command: ["sh","-c","while true; do /workdir/scripts/self_heal.sh || true; sleep 86400; done"]
     networks:
       - earning_net
 

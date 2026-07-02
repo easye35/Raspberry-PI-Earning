@@ -107,7 +107,18 @@ def _start_scheduler(app):
     def job_wrapper():
         with app.app_context():
             app.logger.info("Running scheduled earnings update at %s", datetime.now())
-            logic.update_earnings()
+            try:
+                snapshot = logic.update_earnings()
+            except Exception:
+                snapshot = None
+
+            # Try sending daily notification if configured
+            try:
+                from . import notify
+                if snapshot:
+                    notify.send_snapshot_email(snapshot)
+            except Exception:
+                app.logger.exception("Notification failed")
 
     trigger = CronTrigger(hour=16, minute=0)
     scheduler.add_job(job_wrapper, trigger,

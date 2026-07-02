@@ -1,0 +1,20 @@
+
+[Unit]
+Description=EarnBox Self-Heal (runs scripts/self_heal.sh at boot)
+After=network.target docker.service
+Wants=docker.service
+
+[Service]
+# Allow override of REPO_DIR via /etc/default/selfheal (optional)
+EnvironmentFile=-/etc/default/selfheal
+# Fallback default if REPO_DIR not set in environment file
+Environment=REPO_DIR=/home/pi/Raspberry-PI-Earning
+Type=simple
+WorkingDirectory=${REPO_DIR}
+ExecStart=/usr/bin/env bash ${REPO_DIR}/scripts/self_heal.sh
+Restart=on-failure
+RestartSec=30
+User=pi
+
+[Install]
+WantedBy=multi-user.target
