@@ -43,6 +43,9 @@ echo ""
 read -p "TraffMonetizer Token: " TRAFFMONETIZER_TOKEN
 echo ""
 
+# Repocket
+read -p "Repocket Token: " REPOCKET_TOKEN
+echo ""
 echo "Saving credentials..."
 echo ""
 
@@ -59,6 +62,8 @@ PAWNS_PASSWORD="$PAWNS_PASSWORD"
 PAWNS_DEVICE="$PAWNS_DEVICE"
 
 TRAFFMONETIZER_TOKEN="$TRAFFMONETIZER_TOKEN"
+
+REPOCKET_TOKEN="$REPOCKET_TOKEN"
 
 TZ="$TZ_VALUE"
 EOF

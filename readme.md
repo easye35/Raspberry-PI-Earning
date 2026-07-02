@@ -1,5 +1,5 @@
 📘 Raspberry Pi Passive‑Income Appliance — Setup Guide
-Honeygain • Pawns • TraffMonetizer • Dozzle • Netdata • Dashboard • Diagnostics
+Honeygain • Pawns • TraffMonetizer • Repocket • Dozzle • Netdata • Dashboard • Diagnostics
 A Docker‑based passive‑income appliance for Raspberry Pi
 🤝 Support This Project (Referral Links)
 This project is completely free and open‑source.
@@ -13,6 +13,8 @@ Pawns.app — https://pawns.app/?r=19391092
 EarnApp — https://earnapp.com/i/pKq8kLVd
 
 TraffMonetizer — https://traffmonetizer.com/?aff=2128486
+
+Repocket — https://repocket.co/
 
 ❤️ Why Use Them?
 These services are the core earning components of this appliance.
@@ -34,6 +36,8 @@ Honeygain — passive bandwidth sharing
 Pawns.app — passive bandwidth sharing
 
 TraffMonetizer — optional traffic monetization with dashboard reporting
+
+Repocket — passive bandwidth sharing
 
 Dozzle — real‑time logs
 
@@ -93,6 +97,12 @@ Password
 Email
 
 Password
+
+💰 TraffMonetizer
+Token
+
+🎯 Repocket
+Token
 
 🌐 Remote Access (Optional)
 Install Tailscale? (y/N)

@@ -50,6 +50,10 @@ def init_db():
         cur.execute(
             "ALTER TABLE earnings ADD COLUMN daily_average_30_day REAL"
         )
+    if "repocket" not in existing_columns:
+        cur.execute(
+            "ALTER TABLE earnings ADD COLUMN repocket REAL NOT NULL DEFAULT 0.0"
+        )
 
     conn.commit()
     prune_history(max_days=90)

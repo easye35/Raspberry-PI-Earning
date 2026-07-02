@@ -72,6 +72,19 @@ services:
     command: start accept --token ${TRAFFMONETIZER_TOKEN}
     networks:
       - earning_net
+
+  # ---------------------------------------------------------
+  # Repocket
+  # ---------------------------------------------------------
+  repocket:
+    build: ./repocket
+    container_name: repocket
+    restart: unless-stopped
+    environment:
+      - REPOCKET_TOKEN=${REPOCKET_TOKEN}
+      - TZ=${TZ}
+    networks:
+      - earning_net
       
   # ---------------------------------------------------------
   # Netdata (System Stats)
