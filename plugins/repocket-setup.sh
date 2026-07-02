@@ -26,13 +26,29 @@ echo "🎯 Setting up Repocket..."
 if ! command -v repocket &> /dev/null; then
     echo "📦 Repocket not found. Installing..."
     if command -v curl &> /dev/null; then
-        bash <(curl -s https://get.repocket.co/install.sh)
+        echo "Running: bash <(curl -s https://get.repocket.co/install.sh)"
+        bash <(curl -s https://get.repocket.co/install.sh) || {
+            EXIT_CODE=$?
+            echo "❌ Repocket installation failed with exit code $EXIT_CODE"
+            exit $EXIT_CODE
+        }
     elif command -v wget &> /dev/null; then
-        bash <(wget -qO- https://get.repocket.co/install.sh)
+        echo "Running: bash <(wget -qO- https://get.repocket.co/install.sh)"
+        bash <(wget -qO- https://get.repocket.co/install.sh) || {
+            EXIT_CODE=$?
+            echo "❌ Repocket installation failed with exit code $EXIT_CODE"
+            exit $EXIT_CODE
+        }
     else
         echo "❌ Neither curl nor wget available. Please install Repocket manually."
         exit 1
     fi
+fi
+
+# Verify installation
+if ! command -v repocket &> /dev/null; then
+    echo "⚠️  Repocket still not found after running installer. Check the installer output above."
+    echo "   Installation may require manual steps or the installer may not work on this system."
 fi
 
 # Create config directory if needed
