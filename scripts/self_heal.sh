@@ -45,6 +45,35 @@ fi
 
 cd "$ROOT"
 
+# Recreate .env from example if missing so services have required env vars
+if [ ! -f "$ROOT/.env" ] && [ -f "$ROOT/.env.example" ]; then
+  log ".env missing — recreating from .env.example (please update secrets)"
+  cp "$ROOT/.env.example" "$ROOT/.env" || log "failed to copy .env.example to .env"
+  chmod 600 "$ROOT/.env" || true
+fi
+
+# Protected files to backup before destructive actions (can be overridden in /etc/default/selfheal)
+PROTECT_FILES=".env,.env.local"
+if [ -n "${PROTECT_FILES_OVERRIDE:-}" ]; then
+  PROTECT_FILES="$PROTECT_FILES_OVERRIDE"
+fi
+
+protect_and_backup() {
+  BKDIR="$ROOT/backups/protect/$(date -u +%Y%m%dT%H%M%SZ)"
+  mkdir -p "$BKDIR"
+  IFS=',' read -r -a pfiles <<<"$PROTECT_FILES"
+  for pf in "${pfiles[@]}"; do
+    pf_trim=$(echo "$pf" | xargs)
+    if [ -f "$ROOT/$pf_trim" ]; then
+      cp "$ROOT/$pf_trim" "$BKDIR/" || log "failed to backup $pf_trim"
+      log "Backed up protected file $pf_trim to $BKDIR/"
+    fi
+  done
+}
+
+# Backup protected files before potential destructive operations
+protect_and_backup
+
 # Ensure earnings container exists and is running
 if docker ps -a --format '{{.Names}}' | grep -q '^earnings$'; then
   RUNNING=$(docker inspect -f '{{.State.Running}}' earnings 2>/dev/null || echo "false")
