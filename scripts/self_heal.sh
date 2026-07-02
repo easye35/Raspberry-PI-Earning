@@ -45,11 +45,11 @@ fi
 
 cd "$ROOT"
 
-# Recreate .env from example if missing so services have required env vars
-if [ ! -f "$ROOT/.env" ] && [ -f "$ROOT/.env.example" ]; then
-  log ".env missing — recreating from .env.example (please update secrets)"
-  cp "$ROOT/.env.example" "$ROOT/.env" || log "failed to copy .env.example to .env"
-  chmod 600 "$ROOT/.env" || true
+# Conservative mode: never create or overwrite .env
+if [ ! -f "$ROOT/.env" ]; then
+  log ".env missing — conservative mode prevents creating or overwriting it. Aborting self-heal."
+  log "Restore your .env from backup or .env.example and re-run self-heal"
+  exit 1
 fi
 
 # Protected files to backup before destructive actions (can be overridden in /etc/default/selfheal)
