@@ -220,6 +220,10 @@ def compute_daily_average_30_day():
 # ---------------------------------------------------------
 
 import time
+import shutil
+
+# Backup settings
+BACKUP_RETENTION_DAYS = int(os.getenv("EARNINGS_DB_BACKUP_RETENTION_DAYS", "7"))
 
 def update_earnings():
     global LAST_REFRESH
@@ -236,6 +240,37 @@ def update_earnings():
 
     # Otherwise → fetch fresh
     LAST_REFRESH = now
+
+    # --- Backup existing DB before modifying (daily backup handled by scheduler)
+    try:
+        db_dir = os.path.dirname(DB_PATH)
+        if db_dir and not os.path.exists(db_dir):
+            os.makedirs(db_dir, exist_ok=True)
+
+        if os.path.exists(DB_PATH):
+            ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+            backup_name = f"{DB_PATH}.bak.{ts}"
+            try:
+                shutil.copy2(DB_PATH, backup_name)
+            except Exception as e:
+                print("DEBUG: DB backup failed:", e, flush=True)
+
+            # prune old backups
+            try:
+                cutoff = datetime.now(timezone.utc) - timedelta(days=BACKUP_RETENTION_DAYS)
+                for fn in os.listdir(db_dir):
+                    if fn.startswith(os.path.basename(DB_PATH) + ".bak."):
+                        full = os.path.join(db_dir, fn)
+                        mtime = datetime.fromtimestamp(os.path.getmtime(full), timezone.utc)
+                        if mtime < cutoff:
+                            try:
+                                os.remove(full)
+                            except Exception:
+                                pass
+            except Exception:
+                pass
+    except Exception:
+        pass
 
     """
     Fetches balances, computes daily change + projection,

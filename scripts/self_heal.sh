@@ -11,6 +11,31 @@ DATA_DIR="$ROOT/data"
 FALLBACK_JSON="$ROOT/earnings/data/latest_earnings.json"
 DC_COMMAND="docker compose"
 
+# Load optional overrides (ALLOW_DESTROY=csv list, REPO_DIR etc.)
+if [ -f /etc/default/selfheal ]; then
+  # shellcheck disable=SC1090
+  . /etc/default/selfheal
+fi
+
+# Default: allow destructive recovery for ALL compose services so self-heal
+# can fully recover after a power failure without user interaction.
+# Can still be overridden by setting `ALLOW_DESTROY` in /etc/default/selfheal.
+svc_list=$($DC_COMMAND config --services 2>/dev/null || true)
+if [ -z "${ALLOW_DESTROY:-}" ]; then
+  if [ -n "$svc_list" ]; then
+    ALLOW_DESTROY=$(echo "$svc_list" | tr '\n' ',' | sed 's/,$//')
+  else
+    ALLOW_DESTROY="netdata,selfheal,dozzle"
+  fi
+fi
+
+# If user explicitly sets ALLOW_DESTROY_ALL=1, rebuild ALLOW_DESTROY from compose services
+if [ "${ALLOW_DESTROY_ALL:-0}" = "1" ]; then
+  if [ -n "$svc_list" ]; then
+    ALLOW_DESTROY=$(echo "$svc_list" | tr '\n' ',' | sed 's/,$//')
+  fi
+fi
+
 log() { echo "[$(date -u +'%Y-%m-%dT%H:%M:%SZ')] $*"; }
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -119,6 +144,132 @@ log "Restarting earnings container"
 if ! docker restart earnings >/dev/null 2>&1; then
   log "docker restart failed — attempting docker compose up"
   $DC_COMMAND up -d --build earnings
+fi
+
+#########################
+#+ Generic service self-heal for all compose services
+#########################
+
+in_allowlist() {
+  # returns 0 if first arg is in comma-separated ALLOW_DESTROY
+  svc="$1"
+  [ -z "${ALLOW_DESTROY:-}" ] && return 1
+  IFS=',' read -r -a arr <<<"${ALLOW_DESTROY}"
+  for v in "${arr[@]}"; do
+    if [ "${v}" = "$svc" ]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+heal_service() {
+  svc="$1"
+  log "Starting heal for service: $svc"
+
+  # ignore the selfheal service itself
+  if [ "$svc" = "selfheal" ]; then
+    log "Skipping selfheal service"
+    return 0
+  fi
+
+  exists=$(docker ps -a --format '{{.Names}}' | grep -E "^${svc}$" || true)
+  if [ -n "$exists" ]; then
+    state=$(docker inspect -f '{{.State.Status}}' "$svc" 2>/dev/null || echo "unknown")
+    if [ "$state" = "running" ]; then
+      log "$svc is running; skipping"
+      return 0
+    else
+      log "$svc exists but state=$state — attempting restart"
+      docker restart "$svc" >/dev/null 2>&1 || log "docker restart $svc failed"
+      sleep 2
+      state=$(docker inspect -f '{{.State.Status}}' "$svc" 2>/dev/null || echo "unknown")
+      if [ "$state" = "running" ]; then
+        log "$svc restarted successfully"
+        return 0
+      fi
+    fi
+  else
+    log "$svc container missing — will create via docker compose"
+  fi
+
+  # Try recreate via compose
+  log "Attempting docker compose recreate for $svc"
+  $DC_COMMAND up -d --no-deps --force-recreate "$svc" || log "compose up failed for $svc"
+  sleep 3
+  state=$(docker inspect -f '{{.State.Status}}' "$svc" 2>/dev/null || echo "missing")
+  if [ "$state" = "running" ]; then
+    log "$svc is running after compose recreate"
+    return 0
+  fi
+
+  # Remove container and recreate
+  log "Removing $svc container and recreating"
+  docker rm -f "$svc" >/dev/null 2>&1 || true
+  $DC_COMMAND up -d --no-deps "$svc" || log "compose up after rm failed for $svc"
+  sleep 3
+  state=$(docker inspect -f '{{.State.Status}}' "$svc" 2>/dev/null || echo "missing")
+  if [ "$state" = "running" ]; then
+    log "$svc running after remove+create"
+    return 0
+  fi
+
+  # Destructive steps only if allowed
+  if in_allowlist "$svc"; then
+    log "$svc allowed for destructive recovery — attempting volume removal"
+    volumes=$(docker volume ls --format '{{.Name}}' | grep -i "$svc" || true)
+    if [ -n "$volumes" ]; then
+      for v in $volumes; do
+        log "Removing volume $v"
+        docker volume rm -f "$v" >/dev/null 2>&1 || log "failed removing volume $v"
+      done
+      log "Recreating $svc after volume removal"
+      $DC_COMMAND up -d --no-deps "$svc" || log "compose up failed after removing volumes for $svc"
+      sleep 3
+      state=$(docker inspect -f '{{.State.Status}}' "$svc" 2>/dev/null || echo "missing")
+      if [ "$state" = "running" ]; then
+        log "$svc running after volume removal"
+        return 0
+      fi
+    else
+      log "No volumes found for $svc to remove"
+    fi
+
+    log "Attempting to remove images for $svc and rebuild"
+    imgs=$(docker image ls --format '{{.Repository}}:{{.Tag}} {{.ID}}' | grep -i "$svc" || true)
+    if [ -n "$imgs" ]; then
+      echo "$imgs" | while read -r line; do
+        id=$(echo "$line" | awk '{print $2}')
+        log "Removing image $id"
+        docker rmi -f "$id" >/dev/null 2>&1 || log "failed removing image $id"
+      done
+      log "Rebuilding $svc via compose"
+      $DC_COMMAND up -d --build "$svc" || log "compose build up failed for $svc"
+      sleep 4
+      state=$(docker inspect -f '{{.State.Status}}' "$svc" 2>/dev/null || echo "missing")
+      if [ "$state" = "running" ]; then
+        log "$svc running after image rebuild"
+        return 0
+      fi
+    else
+      log "No images found for $svc to remove"
+    fi
+  else
+    log "$svc not in ALLOW_DESTROY; skipping destructive steps"
+  fi
+
+  log "Heal attempts for $svc exhausted — manual intervention required"
+  return 1
+}
+
+# Iterate all services from docker compose
+services=$($DC_COMMAND config --services 2>/dev/null || true)
+if [ -n "$services" ]; then
+  for s in $services; do
+    heal_service "$s" || log "Service $s failed to heal"
+  done
+else
+  log "No services found from 'docker compose config --services'"
 fi
 
 log "Self-heal complete"
