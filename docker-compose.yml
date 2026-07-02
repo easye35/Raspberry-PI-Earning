@@ -73,9 +73,6 @@ services:
     networks:
       - earning_net
 
-  # ---------------------------------------------------------
-  # Repocket
-  # ---------------------------------------------------------
   repocket:
     build: ./repocket
     container_name: repocket
@@ -83,9 +80,10 @@ services:
     environment:
       - REPOCKET_TOKEN=${REPOCKET_TOKEN}
       - TZ=${TZ}
+    command: /opt/repocket/repocket --token ${REPOCKET_TOKEN}
     networks:
       - earning_net
-      
+
   # ---------------------------------------------------------
   # Netdata (System Stats)
   # ---------------------------------------------------------
