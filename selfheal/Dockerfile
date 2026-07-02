@@ -8,12 +8,8 @@ RUN apt-get update && \
 WORKDIR /workdir
 
 # Copy a fallback snapshot into the image so the container can restore even if host file missing
-RUN mkdir -p /workdir/earnings/data
-COPY earnings/data/latest_earnings.json /workdir/earnings/data/latest_earnings.json
-
-# Copy the self-heal script as a convenience (host mount may override it)
-COPY scripts/self_heal.sh /usr/local/bin/self_heal.sh
-RUN chmod +x /usr/local/bin/self_heal.sh
+# Create expected directories; actual files are mounted from the repo at runtime
+RUN mkdir -p /workdir/earnings/data /workdir/scripts
 
 # Run the self-heal script every 24 hours
 CMD ["sh","-c","while true; do /workdir/scripts/self_heal.sh || true; sleep 86400; done"]

@@ -146,7 +146,9 @@ services:
   # Self-heal service (runs repo-level self-heal script)
   # Installs minimal dependencies at start, runs the script once, then sleeps daily.
   selfheal:
-    build: ./selfheal
+    build:
+      context: .
+      dockerfile: selfheal/Dockerfile
     container_name: selfheal
     restart: unless-stopped
     volumes:
