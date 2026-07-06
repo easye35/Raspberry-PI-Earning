@@ -73,6 +73,18 @@ services:
     networks:
       - earning_net
 
+  # ---------------------------------------------------------
+  # Repocket
+  # ---------------------------------------------------------
+  repocket:
+    image: repocket/repocket:latest
+    container_name: repocket
+    restart: always
+    environment:
+      - RP_EMAIL=${RP_EMAIL}
+      - RP_API_KEY=${RP_API_KEY}
+    networks:
+      - earning_net
 
   # ---------------------------------------------------------
   # Netdata (System Stats)

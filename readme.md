@@ -35,6 +35,8 @@ Pawns.app — passive bandwidth sharing
 
 TraffMonetizer — optional traffic monetization with dashboard reporting
 
+Repocket — passive bandwidth sharing
+
 Dozzle — real‑time logs
 
 Netdata — system performance dashboard
@@ -45,9 +47,7 @@ Diagnostics API — one‑click system health report
 
 EarnApp — optional native host service (not containerized)
 
-Repocket — optional native host service (not containerized)
-
-Everything runs in Docker except optional native EarnApp support.
+Everything runs in Docker including Repocket.
 Everything is monitored.
 Everything is self‑healing.
 Everything is remote‑friendly.
@@ -99,7 +99,12 @@ Password
 💰 TraffMonetizer
 Token
 
- Remote Access (Optional)
+🎯 Repocket
+Email
+
+API Key
+
+🌐 Remote Access (Optional)
 Install Tailscale? (y/N)
 
 If yes, authenticate later with:
@@ -123,7 +128,8 @@ EarnApp is not deployed as a Docker service.
 If you want EarnApp, install it natively on the Raspberry Pi.
 The repo can detect it after install.
 
-🖥️ Your Dashboard
+
+�🖥️ Your Dashboard
 After installation, open:
 
 ```Code
@@ -175,6 +181,7 @@ Component	Purpose
 Honeygain	Passive income stream
 Pawns	Passive income stream
 TraffMonetizer	Extra passive income
+Repocket	Passive bandwidth sharing
 Dozzle	Real‑time logs
 Netdata	System metrics
 Dashboard	Clean landing page
