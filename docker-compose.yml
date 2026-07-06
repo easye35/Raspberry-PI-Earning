@@ -62,7 +62,21 @@ services:
     networks:
       - earning_net
 
-  #--------------------------------------------------------
+  lotteryminer:
+    build: .
+    container_name: pi_lottery_miner
+    restart: unless-stopped
+    command: [
+      "-a", "sha256d",
+      "-o", "http://127.0.0.1:8332",
+      "-u", "rpcuser",
+      "-p", "rpcpass",
+      "--coinbase-addr=YOUR_BTC_ADDRESS",
+      "--no-longpoll",
+      "--no-getwork",
+      "--quiet"
+    ]
+#--------------------------------------------------------
   # Traffmonetizer
   #--------------------------------------------------------
   traffmonetizer:
