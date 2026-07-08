@@ -226,6 +226,46 @@ button:focus {
     color: #fff;
 }
 
+.manual-balance-form {
+    margin-top: 20px;
+    padding: 20px;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(124, 88, 255, 0.16);
+}
+
+.manual-balance-form h3 {
+    margin: 0 0 14px;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #c9c2ff;
+}
+
+.manual-balance-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.manual-balance-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: #eae6ff;
+    font-size: 0.95rem;
+}
+
+.manual-balance-form input {
+    width: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(7, 7, 24, 0.75);
+    color: #fff;
+    border-radius: 14px;
+    padding: 12px 14px;
+}
+
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

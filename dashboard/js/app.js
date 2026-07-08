@@ -60,15 +60,28 @@ async function loadEarnings() {
 
         const honeygain = safeAmount(data.honeygain);
         const pawns = safeAmount(data.pawns);
+        const repocket = safeAmount(data.repocket);
+        const trafficmonetizer = safeAmount(data.trafficmonetizer);
         const dailyAverage = safeAmount(data.daily_average_30_day);
         const projected = safeAmount(data.projected_30_day);
-        const total = safeAmount(data.total) || honeygain + pawns;
+        const total = safeAmount(data.total) || honeygain + pawns + repocket + trafficmonetizer;
 
         smoothUpdate(document.getElementById("honeygain-balance"), `$${honeygain.toFixed(2)}`);
         smoothUpdate(document.getElementById("pawns-balance"), `$${pawns.toFixed(2)}`);
+        smoothUpdate(document.getElementById("repocket-balance"), `$${repocket.toFixed(2)}`);
+        smoothUpdate(document.getElementById("trafficmonetizer-balance"), `$${trafficmonetizer.toFixed(2)}`);
         smoothUpdate(document.getElementById("today-earnings"), `$${dailyAverage.toFixed(2)}`);
         smoothUpdate(document.getElementById("projected-earnings"), `$${projected.toFixed(2)}`);
         smoothUpdate(document.getElementById("total-earnings"), `$${total.toFixed(2)}`);
+
+        const repocketInput = document.getElementById("repocketInput");
+        const trafficmonetizerInput = document.getElementById("trafficmonetizerInput");
+        if (repocketInput && !repocketInput.value) {
+            repocketInput.value = repocket.toFixed(2);
+        }
+        if (trafficmonetizerInput && !trafficmonetizerInput.value) {
+            trafficmonetizerInput.value = trafficmonetizer.toFixed(2);
+        }
 
     } catch (err) {
         console.error("Earnings load error:", err);
@@ -124,6 +137,50 @@ async function loadEarningsHistory() {
 
     } catch (err) {
         console.error("Earnings history load error:", err);
+    }
+}
+
+async function saveManualBalances() {
+    const services = [
+        { key: "repocket", elementId: "repocketInput" },
+        { key: "trafficmonetizer", elementId: "trafficmonetizerInput" },
+    ];
+
+    const payload = services.reduce((acc, item) => {
+        const input = document.getElementById(item.elementId);
+        if (!input) return acc;
+        const value = input.value;
+        if (value !== "") {
+            acc[item.key] = Number(value);
+        }
+        return acc;
+    }, {});
+
+    if (!Object.keys(payload).length) return;
+
+    const saveBtn = document.getElementById("saveManualBalancesBtn");
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = "Saving...";
+    }
+
+    try {
+        await Promise.all(Object.entries(payload).map(([service, amount]) =>
+            fetch(`${API}/earnings/manual-balance`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ service, amount })
+            })
+        ));
+
+        await loadEarnings();
+    } catch (err) {
+        console.error("Manual balance save error:", err);
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = "Save balances";
+        }
     }
 }
 
@@ -546,4 +603,9 @@ if (refreshAllBtn) {
 const refreshHistoryBtn = document.getElementById("refreshHistoryBtn");
 if (refreshHistoryBtn) {
     refreshHistoryBtn.onclick = loadEarningsHistory;
+}
+
+const saveManualBalancesBtn = document.getElementById("saveManualBalancesBtn");
+if (saveManualBalancesBtn) {
+    saveManualBalancesBtn.onclick = saveManualBalances;
 }

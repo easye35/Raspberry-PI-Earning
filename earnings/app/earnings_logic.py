@@ -7,6 +7,115 @@ import requests
 
 DB_PATH = os.getenv("EARNINGS_DB_PATH", "/data/earnings.db")
 JSON_PATH = os.getenv("EARNINGS_JSON_PATH", "/data/latest_earnings.json")
+MANUAL_BALANCES_PATH = os.getenv("EARNINGS_MANUAL_BALANCES_PATH", "/data/manual_balances.json")
+
+SERVICE_ALIASES = {
+    "repocket": "repocket",
+    "trafficmonetizer": "trafficmonetizer",
+    "trafficmonatizer": "trafficmonetizer",
+    "traffmonetizer": "trafficmonetizer",
+}
+
+
+def normalize_service_name(service_name):
+    if not service_name:
+        return None
+
+    value = str(service_name).strip().lower().replace(" ", "").replace("-", "")
+    return SERVICE_ALIASES.get(value)
+
+
+def _parse_timestamp(value):
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _load_manual_balances():
+    if not os.path.exists(MANUAL_BALANCES_PATH):
+        return {}
+
+    try:
+        with open(MANUAL_BALANCES_PATH, "r", encoding="utf-8") as handle:
+            data = json.load(handle)
+            if isinstance(data, dict):
+                return data
+    except Exception:
+        pass
+
+    return {}
+
+
+def _save_manual_balances(data):
+    os.makedirs(os.path.dirname(MANUAL_BALANCES_PATH), exist_ok=True)
+    with open(MANUAL_BALANCES_PATH, "w", encoding="utf-8") as handle:
+        json.dump(data, handle, indent=2)
+
+
+def get_manual_balance_history(service_name):
+    service = normalize_service_name(service_name)
+    if not service:
+        return []
+
+    balances = _load_manual_balances()
+    entries = balances.get(service, [])
+    if not isinstance(entries, list):
+        return []
+    return entries
+
+
+def get_manual_balance(service_name, default=0.0):
+    entries = get_manual_balance_history(service_name)
+    if not entries:
+        return float(default)
+
+    latest = entries[-1]
+    if isinstance(latest, dict):
+        return float(latest.get("amount", default))
+    return float(default)
+
+
+def set_manual_balance(service_name, balance, timestamp=None):
+    service = normalize_service_name(service_name)
+    if not service:
+        raise ValueError("Unsupported service")
+
+    if timestamp is None:
+        timestamp = datetime.now(timezone.utc).isoformat()
+
+    balances = _load_manual_balances()
+    entries = balances.setdefault(service, [])
+    entries.append({
+        "amount": round(float(balance), 2),
+        "timestamp": timestamp,
+    })
+    _save_manual_balances(balances)
+    return {"service": service, "amount": round(float(balance), 2), "timestamp": timestamp}
+
+
+def compute_manual_daily_average(service_name):
+    entries = sorted(get_manual_balance_history(service_name), key=lambda item: item.get("timestamp", ""))
+    if len(entries) < 2:
+        return 0.0
+
+    total_change = float(entries[-1].get("amount", 0.0)) - float(entries[0].get("amount", 0.0))
+    total_days = 0.0
+
+    for previous, current in zip(entries, entries[1:]):
+        prev_time = _parse_timestamp(previous.get("timestamp"))
+        curr_time = _parse_timestamp(current.get("timestamp"))
+        if prev_time and curr_time:
+            delta_days = (curr_time - prev_time).total_seconds() / 86400.0
+            if delta_days > 0:
+                total_days += delta_days
+
+    if total_days <= 0:
+        return 0.0
+
+    return round(total_change / total_days, 2)
 
 
 # ---------------------------------------------------------
@@ -53,6 +162,10 @@ def init_db():
     if "repocket" not in existing_columns:
         cur.execute(
             "ALTER TABLE earnings ADD COLUMN repocket REAL NOT NULL DEFAULT 0.0"
+        )
+    if "trafficmonetizer" not in existing_columns:
+        cur.execute(
+            "ALTER TABLE earnings ADD COLUMN trafficmonetizer REAL NOT NULL DEFAULT 0.0"
         )
 
     conn.commit()
@@ -229,13 +342,13 @@ import shutil
 # Backup settings
 BACKUP_RETENTION_DAYS = int(os.getenv("EARNINGS_DB_BACKUP_RETENTION_DAYS", "7"))
 
-def update_earnings():
+def update_earnings(force=False):
     global LAST_REFRESH
 
     now = time.time()
 
     # If called too soon → return cached JSON
-    if now - LAST_REFRESH < MIN_REFRESH_INTERVAL:
+    if not force and now - LAST_REFRESH < MIN_REFRESH_INTERVAL:
         try:
             with open(JSON_PATH, "r") as f:
                 return json.load(f)
@@ -286,12 +399,22 @@ def update_earnings():
 
     honeygain = float(get_honeygain_balance())
     pawns = float(get_pawns_balance())
-    total = honeygain + pawns
+    repocket = float(get_manual_balance("repocket"))
+    trafficmonetizer = float(get_manual_balance("trafficmonetizer"))
+    total = honeygain + pawns + repocket + trafficmonetizer
 
     last_row = _get_last_row()
     if last_row is not None:
-        previous_total = float(last_row["honeygain"]) + float(last_row["pawns"])
-        daily_change = total - previous_total
+        previous_total = (
+            float(last_row["honeygain"])
+            + float(last_row["pawns"])
+            + float(last_row.get("repocket", 0.0))
+            + float(last_row.get("trafficmonetizer", 0.0))
+        )
+        previous_ts = _parse_timestamp(last_row["timestamp"])
+        current_ts = datetime.now(timezone.utc)
+        elapsed_days = max((current_ts - previous_ts).total_seconds() / 86400.0, 1.0) if previous_ts else 1.0
+        daily_change = round((total - previous_total) / elapsed_days, 2)
     else:
         daily_change = 0.0
 
@@ -304,15 +427,19 @@ def update_earnings():
             timestamp,
             honeygain,
             pawns,
+            repocket,
+            trafficmonetizer,
             total,
             daily_change,
             projected_30_day
-        ) VALUES (?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             now,
             honeygain,
             pawns,
+            repocket,
+            trafficmonetizer,
             total,
             daily_change,
             0.0,
@@ -336,6 +463,8 @@ def update_earnings():
         "timestamp": now,
         "honeygain": honeygain,
         "pawns": pawns,
+        "repocket": repocket,
+        "trafficmonetizer": trafficmonetizer,
         "total": total,
         "daily_change": daily_change,
         "projected_30_day": projected_30_day,
@@ -357,6 +486,8 @@ def get_latest_snapshot():
             "timestamp": None,
             "honeygain": 0.0,
             "pawns": 0.0,
+            "repocket": 0.0,
+            "trafficmonetizer": 0.0,
             "total": 0.0,
             "daily_change": 0.0,
             "projected_30_day": 0.0,
@@ -371,6 +502,8 @@ def get_latest_snapshot():
         "timestamp": row["timestamp"],
         "honeygain": row["honeygain"],
         "pawns": row["pawns"],
+        "repocket": row.get("repocket", 0.0),
+        "trafficmonetizer": row.get("trafficmonetizer", 0.0),
         "total": row["total"],
         "daily_change": row["daily_change"],
         "projected_30_day": row["projected_30_day"],
@@ -397,6 +530,8 @@ def get_history(limit: int = 30):
                 "timestamp": row["timestamp"],
                 "honeygain": row["honeygain"],
                 "pawns": row["pawns"],
+                "repocket": row.get("repocket", 0.0),
+                "trafficmonetizer": row.get("trafficmonetizer", 0.0),
                 "total": row["total"],
                 "daily_change": row["daily_change"],
                 "projected_30_day": row["projected_30_day"],

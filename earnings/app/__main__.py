@@ -92,6 +92,25 @@ def create_app():
             "items": history
         })
 
+    @app.post("/earnings/manual-balance")
+    def set_manual_balance():
+        payload = request.get_json(silent=True) or {}
+        service = payload.get("service")
+        amount = payload.get("amount")
+        timestamp = payload.get("timestamp")
+
+        try:
+            amount_value = float(amount)
+        except (TypeError, ValueError):
+            return jsonify({"error": "amount must be a number"}), 400
+
+        try:
+            result = logic.set_manual_balance(service, amount_value, timestamp=timestamp)
+            logic.update_earnings(force=True)
+            return jsonify(result)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
     @app.post("/earnings/run-now")
     def run_now():
         return jsonify({
