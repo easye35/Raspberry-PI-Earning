@@ -1,7 +1,10 @@
 // -------------------------------------------------------------
 // API base URL (backend proxy)
 // -------------------------------------------------------------
-const API = `${window.location.protocol}//${window.location.hostname}:3001`;
+const API_HOST = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.hostname === "::1"
+    ? "127.0.0.1"
+    : window.location.hostname;
+const API = `${window.location.protocol}//${API_HOST}:3001`;
 
 // -------------------------------------------------------------
 // Modal state
