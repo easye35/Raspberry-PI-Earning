@@ -140,6 +140,13 @@ async function loadEarningsHistory() {
     }
 }
 
+function setManualBalanceStatus(message, isError = false) {
+    const statusEl = document.getElementById("manualBalanceStatus");
+    if (!statusEl) return;
+    statusEl.textContent = message;
+    statusEl.className = `manual-balance-status${isError ? " error" : ""}`;
+}
+
 async function saveManualBalances() {
     const services = [
         { key: "repocket", elementId: "repocketInput" },
@@ -156,8 +163,12 @@ async function saveManualBalances() {
         return acc;
     }, {});
 
-    if (!Object.keys(payload).length) return;
+    if (!Object.keys(payload).length) {
+        setManualBalanceStatus("Enter at least one balance to save.", true);
+        return;
+    }
 
+    setManualBalanceStatus("Saving...");
     const saveBtn = document.getElementById("saveManualBalancesBtn");
     if (saveBtn) {
         saveBtn.disabled = true;
@@ -165,17 +176,26 @@ async function saveManualBalances() {
     }
 
     try {
-        await Promise.all(Object.entries(payload).map(([service, amount]) =>
-            fetch(`${API}/earnings/manual-balance`, {
+        const responses = await Promise.all(Object.entries(payload).map(async ([service, amount]) => {
+            const response = await fetch(`${API}/earnings/manual-balance`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ service, amount })
-            })
-        ));
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || "Save failed");
+            }
+            return response;
+        }));
 
+        if (responses.length) {
+            setManualBalanceStatus("Balances saved.");
+        }
         await loadEarnings();
     } catch (err) {
         console.error("Manual balance save error:", err);
+        setManualBalanceStatus("Save failed. Please try again.", true);
     } finally {
         if (saveBtn) {
             saveBtn.disabled = false;
