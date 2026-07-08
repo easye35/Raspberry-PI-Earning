@@ -408,8 +408,8 @@ def update_earnings(force=False):
         previous_total = (
             float(last_row["honeygain"])
             + float(last_row["pawns"])
-            + float(last_row.get("repocket", 0.0))
-            + float(last_row.get("trafficmonetizer", 0.0))
+            + float(last_row["repocket"] if "repocket" in last_row.keys() else 0.0)
+            + float(last_row["trafficmonetizer"] if "trafficmonetizer" in last_row.keys() else 0.0)
         )
         previous_ts = _parse_timestamp(last_row["timestamp"])
         current_ts = datetime.now(timezone.utc)
