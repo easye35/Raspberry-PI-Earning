@@ -89,7 +89,6 @@
             <div class="dashboard-card stats-overview">
                 <h2>System Metrics</h2>
                 <div class="stats-grid">
-
                     <!-- CPU -->
                     <div class="stat-card">
                         <span>CPU</span>
@@ -127,26 +126,46 @@
                     </div>
 
                     <!-- Network -->
-                    <div class="stat-card">
-                        <span>Network</span>
-                        <p id="netValue">RX: …<br>TX: …</p>
-                        <p class="network-total" id="network30DayValue">30d usage: …</p>
-
-                        <div class="metric-bar network-bar">
-                            <div class="metric-bar-fill rx" id="netRxBar">
-                                <span class="metric-bar-label" id="netRxLabel">RX 0.0</span>
-                            </div>
-                        </div>
-
-                        <div class="metric-bar network-bar small">
-                            <div class="metric-bar-fill tx" id="netTxBar">
-                                <span class="metric-bar-label" id="netTxLabel">TX 0.0</span>
-                            </div>
-                        </div>
-
-                        <div class="metric-history" id="netRxHistory"></div>
-                        <div class="metric-history small" id="netTxHistory"></div>
+                    <div id="bandwidth-card" style="background:#1a1030; border-radius:12px; padding:20px; margin-top:16px;">
+                        <h3 style="color:#c9b8f5; letter-spacing:1px; font-size:13px; margin-bottom:16px;">BANDWIDTH (LAST 30 DAYS)</h3>
+                        <div id="bandwidth-chart" style="display:flex; align-items:flex-end; gap:4px; height:150px;"></div>
                     </div>
+
+                    <script>
+                        async function loadBandwidthChart() {
+                            try {
+                                const res = await fetch('/api/bandwidth');
+                                const data = await res.json();
+                                const chart = document.getElementById('bandwidth-chart');
+                                chart.innerHTML = '';
+
+                                if (!data.ok || data.days.length === 0) {
+                                    chart.innerHTML = '<p style="color:#888;">No data yet</p>';
+                                    return;
+                                }
+
+                                const max = Math.max(...data.days.map(d => d.total_mib), 1);
+
+                                data.days.forEach(d => {
+                                    const barWrap = document.createElement('div');
+                                    barWrap.style.cssText = 'flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;';
+
+                                    const bar = document.createElement('div');
+                                    const heightPct = (d.total_mib / max) * 100;
+                                    bar.style.cssText = `width:100%; background:linear-gradient(180deg,#a855f7,#6366f1); border-radius:3px 3px 0 0; height:${heightPct}%; min-height:2px;`;
+                                    bar.title = `${d.date}: ${d.total_mib} MiB`;
+
+                                    barWrap.appendChild(bar);
+                                    chart.appendChild(barWrap);
+                                });
+                            } catch (err) {
+                                console.error('Bandwidth chart error:', err);
+                            }
+                        }
+
+                        loadBandwidthChart();
+                        setInterval(loadBandwidthChart, 5 * 60 * 1000); // refresh every 5 min
+                    </script>
 
                     <!-- Temp -->
                     <div class="stat-card">
@@ -165,53 +184,3 @@
                         <span>Uptime</span>
                         <p id="uptimeBadge">…</p>
                     </div>
-
-                </div>
-            </div>
-        </section>
-
-        <section class="history-section">
-            <div class="section-header">
-                <div>
-                    <p class="eyebrow">History</p>
-                    <h2>Recent Daily Earnings</h2>
-                </div>
-                <button id="refreshHistoryBtn" class="btn secondary">Refresh</button>
-            </div>
-            <div class="dashboard-card history-card">
-                <div class="history-meta">
-                    <span id="historySummary">Last 14 daily changes</span>
-                    <strong id="historyAvg">$0.00 avg</strong>
-                </div>
-                <div id="earningsHistory" class="history-chart"></div>
-            </div>
-        </section>
-
-        <section class="container-section">
-            <div class="section-header">
-                <div>
-                    <p class="eyebrow">Containers</p>
-                    <h2>Running Services</h2>
-                </div>
-                <button class="btn">Reload Containers</button>
-            </div>
-            <div id="containerGrid" class="container-grid"></div>
-        </section>
-    </div>
-
-    <div id="logsModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-title">
-                <h2>Container Logs</h2>
-                <button id="closeLogs" class="icon-close">×</button>
-            </div>
-            <pre id="logsContent"></pre>
-            <div class="modal-actions">
-                <button id="refreshLogs" class="btn secondary">Refresh</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="js/app.js?v=202607081"></script>
-</body>
-</html>

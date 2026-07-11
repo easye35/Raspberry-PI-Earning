@@ -203,6 +203,29 @@ app.post("/earnings/run-now", async (req, res) => {
     });
 });
 
+/* ---------------------------------------------------------------------------
+   Bandwidth History (vnstat)
+--------------------------------------------------------------------------- */
+app.get("/api/bandwidth", (req, res) => {
+    try {
+        const raw = fs.readFileSync("/data/vnstat.json", "utf8");
+        const parsed = JSON.parse(raw);
+        const iface = parsed.interfaces?.[0];
+        const days = iface?.traffic?.day || [];
+
+        const result = days.map(d => ({
+            date: `${d.date.year}-${String(d.date.month).padStart(2, "0")}-${String(d.date.day).padStart(2, "0")}`,
+            rx_mib: Number((d.rx / 1024 / 1024).toFixed(2)),
+            tx_mib: Number((d.tx / 1024 / 1024).toFixed(2)),
+            total_mib: Number(((d.rx + d.tx) / 1024 / 1024).toFixed(2))
+        }));
+
+        res.json({ ok: true, days: result });
+    } catch (err) {
+        console.error("Bandwidth read error:", err);
+        res.json({ ok: false, days: [], error: err.message });
+    }
+});
 /*---------------------------------------------------------------------
  Utility: Fetch with Retry
 --------------------------------------------------------------------------- */
