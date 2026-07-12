@@ -118,7 +118,7 @@
                     </div>
 
                     <!-- Network -->
-                    <div id="bandwidth-card" style="background:#1a1030; border-radius:12px; padding:20px; margin-top:16px;">
+                    <div id="bandwidth-card" style="background:#1a1030; border-radius:12px; padding:20px; margin-top:16px; grid-column: 1 / -1;">
                         <h3 style="color:#c9b8f5; letter-spacing:1px; font-size:13px; margin-bottom:16px;">BANDWIDTH (LAST 30 DAYS)</h3>
                         <div id="bandwidth-chart" style="display:flex; align-items:flex-end; gap:4px; height:150px;"></div>
                     </div>
@@ -126,7 +126,7 @@
                     <script>
                         async function loadBandwidthChart() {
                             try {
-                                const res = await fetch('/api/bandwidth');
+                                const res = await fetch(`http://${window.location.hostname}:3001/api/bandwidth`);
                                 const data = await res.json();
                                 const chart = document.getElementById('bandwidth-chart');
                                 chart.innerHTML = '';
@@ -176,3 +176,48 @@
                         <span>Uptime</span>
                         <p id="uptimeBadge">ΓÇª</p>
                     </div>
+                </div>
+            </div>
+        </section>
+        <section class="history-section">
+            <div class="section-header">
+                <div>
+                    <p class="eyebrow">History</p>
+                    <h2>Recent Daily Earnings</h2>
+                </div>
+                <button id="refreshHistoryBtn" class="btn secondary">Refresh</button>
+            </div>
+            <div class="dashboard-card history-card">
+                <div class="history-meta">
+                    <span id="historySummary">Last 14 daily changes</span>
+                    <strong id="historyAvg">$0.00 avg</strong>
+                </div>
+                <div id="earningsHistory" class="history-chart"></div>
+            </div>
+        </section>
+        <section class="container-section">
+            <div class="section-header">
+                <div>
+                    <p class="eyebrow">Containers</p>
+                    <h2>Running Services</h2>
+                </div>
+                <button class="btn">Reload Containers</button>
+            </div>
+            <div id="containerGrid" class="container-grid"></div>
+        </section>
+    </div>
+    <div id="logsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-title">
+                <h2>Container Logs</h2>
+                <button id="closeLogs" class="icon-close">×</button>
+            </div>
+            <pre id="logsContent"></pre>
+            <div class="modal-actions">
+                <button id="refreshLogs" class="btn secondary">Refresh</button>
+            </div>
+        </div>
+    </div>
+    <script src="js/app.js"></script>
+</body>
+</html>
