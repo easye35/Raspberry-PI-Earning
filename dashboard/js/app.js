@@ -179,7 +179,14 @@ async function saveManualBalances() {
     }
 
     try {
-        const responses = await Promise.all(Object.entries(payload).map(async ([service, amount]) => {
+        // IMPORTANT: save one at a time, not with Promise.all.
+        // The backend does a read-modify-write on manual_balances.json with
+        // no locking, so two concurrent saves can race: the second request
+        // reads the file before the first request's write lands, then
+        // overwrites it, silently dropping one of the two values (it comes
+        // back as 0 on the next load). Sequential awaits avoid that race.
+        let savedCount = 0;
+        for (const [service, amount] of Object.entries(payload)) {
             const response = await fetch(`${API}/earnings/manual-balance`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -189,10 +196,10 @@ async function saveManualBalances() {
                 const errorText = await response.text();
                 throw new Error(errorText || "Save failed");
             }
-            return response;
-        }));
+            savedCount += 1;
+        }
 
-        if (responses.length) {
+        if (savedCount) {
             setManualBalanceStatus("Balances saved.");
         }
         await loadEarnings();

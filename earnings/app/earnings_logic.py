@@ -4,10 +4,30 @@ import sqlite3
 from datetime import datetime, timezone, timedelta
 import re
 import requests
+import fcntl
+from contextlib import contextmanager
 
 DB_PATH = os.getenv("EARNINGS_DB_PATH", "/data/earnings.db")
 JSON_PATH = os.getenv("EARNINGS_JSON_PATH", "/data/latest_earnings.json")
 MANUAL_BALANCES_PATH = os.getenv("EARNINGS_MANUAL_BALANCES_PATH", "/data/manual_balances.json")
+MANUAL_BALANCES_LOCK_PATH = MANUAL_BALANCES_PATH + ".lock"
+
+
+@contextmanager
+def _manual_balances_lock():
+    """
+    Exclusive file lock guarding the manual_balances.json read-modify-write.
+    Without this, two near-simultaneous saves (e.g. repocket + trafficmonetizer
+    submitted together) can race: one request reads the file before the other's
+    write lands, then overwrites it, silently dropping the other value.
+    """
+    os.makedirs(os.path.dirname(MANUAL_BALANCES_LOCK_PATH), exist_ok=True)
+    with open(MANUAL_BALANCES_LOCK_PATH, "w") as lock_handle:
+        fcntl.flock(lock_handle, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_handle, fcntl.LOCK_UN)
 
 SERVICE_ALIASES = {
     "repocket": "repocket",
@@ -86,13 +106,14 @@ def set_manual_balance(service_name, balance, timestamp=None):
     if timestamp is None:
         timestamp = datetime.now(timezone.utc).isoformat()
 
-    balances = _load_manual_balances()
-    entries = balances.setdefault(service, [])
-    entries.append({
-        "amount": round(float(balance), 2),
-        "timestamp": timestamp,
-    })
-    _save_manual_balances(balances)
+    with _manual_balances_lock():
+        balances = _load_manual_balances()
+        entries = balances.setdefault(service, [])
+        entries.append({
+            "amount": round(float(balance), 2),
+            "timestamp": timestamp,
+        })
+        _save_manual_balances(balances)
     return {"service": service, "amount": round(float(balance), 2), "timestamp": timestamp}
 
 
