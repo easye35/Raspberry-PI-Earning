@@ -336,25 +336,6 @@ body {
     transition: height 0.2s ease;
 }
 
-.network-card {
-    grid-column: span 2;
-}
-
-.network-row {
-    display: grid;
-    gap: 6px;
-    margin-bottom: 8px;
-}
-
-.network-row small {
-    color: var(--muted);
-}
-
-.network-total {
-    margin: 8px 0 10px;
-    color: var(--muted);
-}
-
 .bandwidth-card {
     grid-column: span 2;
 }
@@ -371,6 +352,7 @@ body {
     display: flex;
     align-items: flex-end;
     height: 100%;
+    position: relative;
 }
 
 .bandwidth-bar {
@@ -378,6 +360,24 @@ body {
     min-height: 2px;
     border-radius: 4px 4px 0 0;
     background: linear-gradient(180deg, #4fe8ce, #62a0ff);
+}
+
+.bandwidth-column[data-tooltip]:hover::before,
+.history-bar[data-tooltip]:hover::before {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(4, 9, 20, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 5px 8px;
+    color: #e8f0ff;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    z-index: 3;
+    pointer-events: none;
 }
 
 .history-section,
@@ -543,7 +543,6 @@ body {
         grid-template-columns: 1fr;
     }
 
-    .network-card,
     .bandwidth-card {
         grid-column: span 1;
     }

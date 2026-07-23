@@ -65,6 +65,7 @@ async function loadBandwidthChart() {
         data.days.forEach((day) => {
             const col = document.createElement("div");
             col.className = "bandwidth-column";
+            col.dataset.tooltip = `${day.date}: ${day.total_mib.toFixed(2)} MiB`;
 
             const bar = document.createElement("div");
             bar.className = "bandwidth-bar";
@@ -145,9 +146,16 @@ async function loadEarningsHistory() {
             return;
         }
 
-        const values = history
-            .map(item => Number(item.daily_change) || 0)
-            .reverse();
+        const points = history
+            .slice()
+            .reverse()
+            .map((item, index) => {
+                const value = Number(item.daily_change) || 0;
+                const dateValue = item.date || item.day || item.timestamp || `Entry ${index + 1}`;
+                return { value, label: String(dateValue) };
+            });
+
+        const values = points.map((point) => point.value);
 
         const maxValue = Math.max(...values.map(Math.abs), 0.01);
         const average = values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -155,10 +163,12 @@ async function loadEarningsHistory() {
         summary.textContent = `Last ${values.length} daily entries`;
         avgEl.textContent = `$${average.toFixed(2)} avg`;
 
-        values.forEach((value, index) => {
+        points.forEach((point) => {
+            const value = point.value;
             const bar = document.createElement("div");
             bar.className = "history-bar";
             bar.dataset.value = `$${value.toFixed(2)}`;
+            bar.dataset.tooltip = `${point.label}: $${value.toFixed(2)}`;
 
             const fill = document.createElement("div");
             fill.className = "history-bar-fill";
