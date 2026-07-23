@@ -27,6 +27,18 @@ const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
 
 const CORS_METHODS = ["GET", "POST", "OPTIONS"];
 const CORS_HEADERS = ["Content-Type", "Authorization", "X-Admin-Token"];
+const DASHBOARD_CONTAINER_NAMES = new Set([
+    "earnbox",
+    "backend",
+    "honeygain",
+    "pawns",
+    "traffmonetizer",
+    "repocket",
+    "netdata",
+    "dozzle",
+    "earnings",
+    "selfheal",
+]);
 
 const corsOptions = {
     origin: function (origin, callback) {
@@ -478,7 +490,13 @@ app.get("/api/services", requireAdmin, async (req, res) => {
 app.get("/api/containers", requireAdmin, async (req, res) => {
     try {
         const containers = await docker.listContainers({ all: true });
-        res.json(containers);
+        const filtered = containers.filter((container) => {
+            const names = Array.isArray(container.Names)
+                ? container.Names.map((name) => name.replace(/^\//, ""))
+                : [];
+            return names.some((name) => DASHBOARD_CONTAINER_NAMES.has(name));
+        });
+        res.json(filtered);
     } catch (err) {
         console.error("Dockerode error:", err);
         res.json([]);

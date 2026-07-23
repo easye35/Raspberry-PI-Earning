@@ -41,11 +41,7 @@ function showLoading() {
     smoothUpdate(document.getElementById("cpuValue"), "...");
     smoothUpdate(document.getElementById("ramValue"), "...");
     smoothUpdate(document.getElementById("diskValue"), "...");
-    const netEl = document.getElementById("netValue");
-    if (netEl) netEl.innerHTML = "RX: ...<br>TX: ...";
     smoothUpdate(document.getElementById("tempValue"), "...", "°C");
-    const uptimeEl = document.getElementById("uptimeBadge");
-    if (uptimeEl) uptimeEl.textContent = "Uptime: ...";
 }
 
 async function loadBandwidthChart() {
@@ -375,10 +371,6 @@ async function loadSystemStats() {
 
         const rxKB = data.network.rx.toFixed(1);
         const txKB = data.network.tx.toFixed(1);
-        const netEl = document.getElementById("netValue");
-        if (netEl) {
-            netEl.innerHTML = `RX: ${rxKB} KB/s<br>TX: ${txKB} KB/s`;
-        }
 
         const netRxBar = document.getElementById("netRxBar");
         const netTxBar = document.getElementById("netTxBar");
@@ -405,10 +397,6 @@ async function loadSystemStats() {
         const tempPct = data.temp ? Math.min(Math.max((data.temp / 80) * 100, 0), 100) : 0;
         if (tempBar) tempBar.style.width = `${tempPct}%`;
         if (tempLabel) tempLabel.textContent = data.temp ? `${data.temp.toFixed(1)}°C` : "--";
-
-        const hours = (data.uptime / 3600).toFixed(1);
-        const uptimeEl = document.getElementById("uptimeBadge");
-        if (uptimeEl) uptimeEl.textContent = `Uptime: ${hours} hrs`;
 
         addMetricHistoryPoint("cpu", data.cpu);
         addMetricHistoryPoint("ram", data.ram);
