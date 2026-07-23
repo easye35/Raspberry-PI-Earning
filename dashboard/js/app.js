@@ -408,26 +408,6 @@ function calculateNetwork30DayUsage() {
 }
 
 // -------------------------------------------------------------
-// Fetch Service Status
-// -------------------------------------------------------------
-async function loadServiceStatus() {
-    try {
-        const res = await fetch(`${API}/api/services`);
-        if (!res.ok) throw new Error("HTTP error");
-
-        const data = await res.json();
-        const badge = document.getElementById("serviceBadge");
-        if (badge) badge.textContent = `Reset Service: ${data.resetService}`;
-
-        const versionEl = document.getElementById("versionBadge");
-        if (versionEl) versionEl.textContent = data.version || "Unknown";
-
-    } catch (err) {
-        console.error("Service status error:", err);
-    }
-}
-
-// -------------------------------------------------------------
 // Fetch Containers
 // -------------------------------------------------------------
 async function loadContainers() {
@@ -574,7 +554,6 @@ async function runDiagnostics() {
 
     await Promise.allSettled([
         loadSystemStats(),
-        loadServiceStatus(),
         loadContainers(),
         loadEarnings(),
         loadEarningsHistory()
@@ -589,7 +568,6 @@ async function runDiagnostics() {
 // -------------------------------------------------------------
 // Auto-refresh loops
 // -------------------------------------------------------------
-setInterval(loadServiceStatus, 5000);
 setInterval(loadContainers, 5000);
 setInterval(loadEarnings, 120000);
 setInterval(() => {
@@ -602,7 +580,6 @@ setInterval(() => {
 loadMetricHistory();
 showLoading();
 loadSystemStats();
-loadServiceStatus();
 loadContainers();
 loadEarnings();
 loadEarningsHistory();
@@ -619,16 +596,15 @@ const refreshAllBtn = document.getElementById("refreshAllBtn");
 if (refreshAllBtn) {
     refreshAllBtn.onclick = () => {
         loadSystemStats();
-        loadServiceStatus();
         loadContainers();
         loadEarnings();
         loadEarningsHistory();
     };
 }
 
-const refreshHistoryBtn = document.getElementById("refreshHistoryBtn");
-if (refreshHistoryBtn) {
-    refreshHistoryBtn.onclick = loadEarningsHistory;
+const reloadContainersBtn = document.getElementById("reloadContainersBtn");
+if (reloadContainersBtn) {
+    reloadContainersBtn.onclick = loadContainers;
 }
 
 const saveManualBalancesBtn = document.getElementById("saveManualBalancesBtn");

@@ -1,637 +1,762 @@
-// -------------------------------------------------------------
-// API base URL (backend proxy)
-// -------------------------------------------------------------
-const API_HOST = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || window.location.hostname === "::1"
-    ? "127.0.0.1"
-    : window.location.hostname;
-const API = `${window.location.protocol}//${API_HOST}:3001`;
-
-// -------------------------------------------------------------
-// Modal state
-// -------------------------------------------------------------
-let logsOpen = false;
-
-// -------------------------------------------------------------
-// Utility: Smooth number update
-// -------------------------------------------------------------
-function smoothUpdate(element, newValue, suffix = "") {
-    if (!element) return;
-    element.textContent = `${newValue}${suffix}`;
+/* --------------------------------------------------------------------------
+   GLOBAL LAYOUT + RESET
+-------------------------------------------------------------------------- */
+:root {
+    --surface: rgba(16, 12, 38, 0.88);
+    --surface-strong: rgba(12, 8, 30, 0.96);
+    --border: rgba(255, 255, 255, 0.12);
+    --shadow: rgba(16, 10, 60, 0.35);
+    --accent-1: #8b5bff;
+    --accent-2: #4fc7ff;
+    --text: #f4f4ff;
+    --muted: #c8bfff;
 }
 
-function renderMiniGraph(elementId, values) {
-    const el = document.getElementById(elementId);
-    if (!el) return;
-
-    el.innerHTML = "";
-
-    const max = Math.max(...values, 1);
-
-    values.forEach(v => {
-        const bar = document.createElement("div");
-        bar.style.height = `${(v / max) * 100}%`;
-        el.appendChild(bar);
-    });
-}
-// -------------------------------------------------------------
-// Loading placeholders
-// -------------------------------------------------------------
-function showLoading() {
-    smoothUpdate(document.getElementById("cpuValue"), "…");
-    smoothUpdate(document.getElementById("ramValue"), "…");
-    smoothUpdate(document.getElementById("diskValue"), "…");
-    const netEl = document.getElementById("netValue");
-    if (netEl) netEl.innerHTML = "RX: …<br>TX: …";
-    smoothUpdate(document.getElementById("tempValue"), "…", "°C");
-    const uptimeEl = document.getElementById("uptimeBadge");
-    if (uptimeEl) uptimeEl.textContent = "Uptime: …";
+body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    font-family: "Inter", sans-serif;
+    background: radial-gradient(circle at top, rgba(111, 66, 255, 0.22), transparent 25%),
+                linear-gradient(180deg, #05050c 0%, #0b0c18 40%, #11131f 100%);
+    color: var(--text);
+    overflow-x: hidden;
+    background-attachment: fixed;
 }
 
-// -------------------------------------------------------------
-// Fetch Earnings (Honeygain + Pawns + Today + Projected + Total)
-// -------------------------------------------------------------
-function safeAmount(value) {
-    return typeof value === "number" && !isNaN(value) ? value : 0.0;
+* {
+    box-sizing: border-box;
 }
 
-async function loadEarnings() {
-    try {
-        const res = await fetch(`${API}/earnings`);
-        if (!res.ok) throw new Error("HTTP error");
+button,
+button:focus {
+    outline: none;
+}
 
-        const data = await res.json();
+.dashboard-shell {
+    width: min(1320px, 100%);
+    margin: 0 auto;
+    padding: 32px 24px 48px;
+}
 
-        const honeygain = safeAmount(data.honeygain);
-        const pawns = safeAmount(data.pawns);
-        const repocket = safeAmount(data.repocket);
-        const trafficmonetizer = safeAmount(data.trafficmonetizer);
-        const dailyAverage = safeAmount(data.daily_average_30_day);
-        const projected = safeAmount(data.projected_30_day);
-        const total = safeAmount(data.total) || honeygain + pawns + repocket + trafficmonetizer;
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 32px;
+    align-items: flex-start;
+    padding: 44px 42px;
+    background: linear-gradient(135deg, rgba(36, 15, 80, 0.95), rgba(18, 9, 34, 0.85));
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 32px;
+    box-shadow: 0 40px 110px rgba(8, 8, 30, 0.45);
+    backdrop-filter: blur(24px);
+    margin-bottom: 36px;
+}
 
-        smoothUpdate(document.getElementById("honeygain-balance"), `$${honeygain.toFixed(2)}`);
-        smoothUpdate(document.getElementById("pawns-balance"), `$${pawns.toFixed(2)}`);
-        smoothUpdate(document.getElementById("repocket-balance"), `$${repocket.toFixed(2)}`);
-        smoothUpdate(document.getElementById("trafficmonetizer-balance"), `$${trafficmonetizer.toFixed(2)}`);
-        smoothUpdate(document.getElementById("today-earnings"), `$${dailyAverage.toFixed(2)}`);
-        smoothUpdate(document.getElementById("projected-earnings"), `$${projected.toFixed(2)}`);
-        smoothUpdate(document.getElementById("total-earnings"), `$${total.toFixed(2)}`);
+.dashboard-header h1 {
+    margin: 18px 0 20px;
+    font-size: clamp(2.4rem, 3vw, 4rem);
+    letter-spacing: -0.06em;
+    line-height: 1.02;
+}
 
-        const repocketInput = document.getElementById("repocketInput");
-        const trafficmonetizerInput = document.getElementById("trafficmonetizerInput");
-        if (repocketInput && !repocketInput.value) {
-            repocketInput.value = repocket.toFixed(2);
-        }
-        if (trafficmonetizerInput && !trafficmonetizerInput.value) {
-            trafficmonetizerInput.value = trafficmonetizer.toFixed(2);
-        }
+.eyebrow {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: #c9b7ff;
+}
 
-    } catch (err) {
-        console.error("Earnings load error:", err);
+.hero-copy {
+    margin: 0;
+    max-width: 600px;
+    line-height: 1.85;
+    color: #dcd6ff;
+    font-size: 1rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 20px;
+    padding: 14px 26px;
+    color: #fff;
+    background: linear-gradient(135deg, #8f70ff, #4fa8ff);
+    cursor: pointer;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, background 0.3s ease;
+    box-shadow: 0 18px 55px rgba(79, 112, 255, 0.18);
+}
+
+.btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 26px 70px rgba(79, 112, 255, 0.28);
+    background: linear-gradient(135deg, #985dff, #5bc2ff);
+}
+
+.btn.secondary {
+    background: rgba(255, 255, 255, 0.08);
+    color: #f7f4ff;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.overview-grid,
+.tile-grid,
+.container-grid {
+    display: grid;
+    gap: 20px;
+}
+
+.overview-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-bottom: 24px;
+}
+
+.hero-card,
+.mini-card,
+.dashboard-card {
+    background: rgba(22, 16, 52, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 28px;
+    padding: 28px;
+    box-shadow: 0 45px 100px rgba(12, 10, 34, 0.28);
+    backdrop-filter: blur(24px);
+}
+
+.hero-card {
+    grid-column: span 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 320px;
+}
+
+.hero-card .hero-label,
+.mini-card span,
+.dashboard-card h2 {
+    display: block;
+    margin-bottom: 18px;
+    color: #c7bfff;
+    font-size: 0.95rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.hero-card h2 {
+    font-size: clamp(2.8rem, 4.5vw, 3.8rem);
+    margin: 0;
+    letter-spacing: -0.08em;
+    line-height: 0.9;
+    color: #fff;
+}
+
+.hero-card .hero-subtitle {
+    margin-top: 22px;
+    color: #dcd6ff;
+    max-width: 520px;
+    font-size: 1rem;
+}
+
+.mini-card {
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+}
+
+.mini-card h3 {
+    margin: 0;
+    font-size: 2.2rem;
+    color: #fff;
+}
+
+.mini-card.accent {
+    background: linear-gradient(180deg, rgba(98, 78, 255, 0.22), rgba(30, 21, 66, 0.78));
+}
+
+.tile-grid {
+    grid-template-columns: 1.5fr 1fr;
+}
+
+.dashboard-card h2 {
+    margin: 0 0 20px;
+    font-size: 1.3rem;
+}
+
+.earnings-banner {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.earn-block {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(124, 88, 255, 0.22);
+    border-radius: 22px;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.earn-block span {
+    color: #c9c2ff;
+    font-size: 0.95rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.earn-block p {
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #fff;
+}
+
+.manual-balance-form {
+    margin-top: 20px;
+    padding: 20px;
+    border-radius: 22px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(124, 88, 255, 0.16);
+}
+
+.manual-balance-form h3 {
+    margin: 0 0 14px;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #c9c2ff;
+}
+
+.manual-balance-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.manual-balance-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: #eae6ff;
+    font-size: 0.95rem;
+}
+
+.manual-balance-form input {
+    width: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(7, 7, 24, 0.75);
+    color: #fff;
+    border-radius: 14px;
+    padding: 12px 14px;
+}
+
+.manual-balance-status {
+    margin: 12px 0 0;
+    color: #c9c2ff;
+    min-height: 1.2em;
+}
+
+.manual-balance-status.error {
+    color: #ff7b97;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(124, 88, 255, 0.16);
+    border-radius: 22px;
+    padding: 22px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+}
+
+.stat-card span {
+    display: block;
+    margin-bottom: 12px;
+    color: #b9b1ff;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.83rem;
+}
+
+.stat-card p {
+    margin: 0 0 14px;
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.1;
+}
+
+.metric-bar {
+    width: 100%;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.07);
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+}
+
+.metric-bar.small {
+    height: 8px;
+    margin-top: 6px;
+}
+
+.metric-bar-fill {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(135deg, #8b5bff 0%, #4fc7ff 100%);
+    border-radius: inherit;
+    transition: width 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.metric-bar-label {
+    display: inline-block;
+    white-space: nowrap;
+    opacity: 0.95;
+}
+
+.metric-bar-fill.rx {
+    background: linear-gradient(135deg, rgba(79, 199, 255, 1), rgba(99, 182, 255, 0.88));
+}
+
+.metric-bar-fill.tx {
+    background: linear-gradient(135deg, rgba(143, 112, 255, 1), rgba(203, 123, 255, 0.9));
+}
+
+.metric-history {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    width: 100%;
+    min-height: 34px;
+    margin-top: 16px;
+}
+
+.metric-history.small {
+    min-height: 20px;
+}
+
+.network-total {
+    margin: 10px 0 0;
+    color: #c2dafd;
+    font-size: 0.92rem;
+    letter-spacing: 0.01em;
+}
+
+.metric-history-segment {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.05);
+    position: relative;
+    transition: height 0.3s ease, background-color 0.3s ease;
+}
+
+.metric-history-segment:hover {
+    background-color: rgba(143, 112, 255, 0.5);
+}
+
+.metric-history-segment[data-type="rx"] {
+    background: rgba(79, 199, 255, 0.35);
+}
+
+.metric-history-segment[data-type="tx"] {
+    background: rgba(143, 112, 255, 0.35);
+}
+
+.metric-history-segment[data-type="temp"] {
+    background: rgba(255, 183, 77, 0.4);
+}
+
+.metric-history-segment[data-type="cpu"],
+.metric-history-segment[data-type="ram"],
+.metric-history-segment[data-type="disk"] {
+    background: rgba(139, 91, 255, 0.35);
+}
+
+.metric-history-segment:hover::after {
+    content: attr(data-value);
+    position: absolute;
+    top: -28px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 8px;
+    border-radius: 10px;
+    background: rgba(10, 9, 21, 0.92);
+    color: #fff;
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.network-bar {
+    margin-top: 8px;
+}
+
+.container-section {
+    margin-top: 42px;
+}
+
+.history-section {
+    margin-top: 42px;
+}
+
+.history-card .history-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.history-card .history-meta span {
+    color: #c9b7ff;
+    font-size: 0.95rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.history-card .history-meta strong {
+    color: #fff;
+    font-size: 1.1rem;
+}
+
+.history-chart {
+    display: grid;
+    grid-template-columns: repeat(14, minmax(0, 1fr));
+    gap: 10px;
+    align-items: end;
+    min-height: 150px;
+    padding-top: 10px;
+}
+
+.history-bar {
+    position: relative;
+    width: 100%;
+    min-height: 32px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.history-bar-fill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    border-radius: 14px 14px 0 0;
+    background: linear-gradient(180deg, rgba(143, 112, 255, 1), rgba(79, 199, 255, 0.9));
+}
+
+.history-bar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.12), transparent 55%);
+    opacity: 0.28;
+    pointer-events: none;
+}
+
+.history-bar[data-value]:hover::before {
+    content: attr(data-value);
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 4px 8px;
+    border-radius: 12px;
+    background: rgba(12, 9, 34, 0.94);
+    color: #fff;
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 32px;
+}
+
+.container-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.container-card {
+    background: rgba(20, 16, 40, 0.82);
+    border: 1px solid rgba(152, 121, 255, 0.2);
+    border-radius: 24px;
+    padding: 22px;
+    color: #f7f5ff;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 230px;
+}
+
+.container-card h3 {
+    margin: 0;
+    font-size: 1.15rem;
+}
+
+.container-info {
+    display: grid;
+    gap: 8px;
+    font-size: 0.97rem;
+    color: #c9c3ff;
+}
+
+.container-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.container-controls button {
+    flex: 1;
+    min-width: 90px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 6, 15, 0.78);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal-content {
+    width: min(960px, 100%);
+    background: rgba(18, 15, 45, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 28px;
+    padding: 28px;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.modal-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.modal-title h2 {
+    margin: 0;
+}
+
+.icon-close {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 2rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+#logsContent {
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    padding: 18px;
+    color: #e6e6ff;
+    overflow: auto;
+    min-height: 320px;
+    white-space: pre-wrap;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+/* Sparkline bar segments for system metric history */
+.metric-history div {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border-radius: 999px;
+    background: rgba(139, 91, 255, 0.35);
+    transition: height 0.25s ease;
+}
+
+.metric-history.small div {
+    background: rgba(139, 91, 255, 0.25);
+}
+
+/* Color overrides by metric type */
+#cpuHistory div {
+    background: rgba(139, 91, 255, 0.45);
+}
+
+#ramHistory div {
+    background: rgba(79, 199, 255, 0.45);
+}
+
+#diskHistory div {
+    background: rgba(203, 123, 255, 0.45);
+}
+
+#netRxHistory div {
+    background: rgba(79, 199, 255, 0.55);
+}
+
+#netTxHistory div {
+    background: rgba(143, 112, 255, 0.55);
+}
+
+#tempHistory div {
+    background: rgba(255, 183, 77, 0.55);
+}
+@media (max-width: 1080px) {
+    .overview-grid,
+    .tile-grid,
+    .container-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-card {
+        grid-column: span 1;
     }
 }
 
-async function loadEarningsHistory() {
-    try {
-        const res = await fetch(`${API}/earnings/history?limit=14`);
-        if (!res.ok) throw new Error("HTTP error");
-
-        const data = await res.json();
-        const history = Array.isArray(data.items) ? data.items : [];
-        const container = document.getElementById("earningsHistory");
-        const summary = document.getElementById("historySummary");
-        const avgEl = document.getElementById("historyAvg");
-
-        if (!container) return;
-        container.innerHTML = "";
-
-        if (!history.length) {
-            summary.textContent = "No recorded history yet";
-            avgEl.textContent = "";
-            container.innerHTML = `<div class="empty-state">No history available</div>`;
-            return;
-        }
-
-        const values = history
-            .map(item => Number(item.daily_change) || 0)
-            .reverse();
-
-        const maxValue = Math.max(...values.map(Math.abs), 0.01);
-        const average = values.reduce((sum, value) => sum + value, 0) / values.length;
-
-        summary.textContent = `Last ${values.length} daily entries`;
-        avgEl.textContent = `$${average.toFixed(2)} avg`;
-
-        values.forEach((value, index) => {
-            const bar = document.createElement("div");
-            bar.className = "history-bar";
-            bar.dataset.value = `$${value.toFixed(2)}`;
-
-            const fill = document.createElement("div");
-            fill.className = "history-bar-fill";
-            fill.style.height = `${Math.max((Math.abs(value) / maxValue) * 100, 4)}%`;
-            if (value < 0) {
-                fill.style.background = "linear-gradient(180deg, rgba(255, 96, 128, 0.95), rgba(255, 80, 170, 0.9))";
-            }
-
-            const label = document.createElement("div");
-            label.className = "history-bar-label";
-            label.textContent = `$${value.toFixed(2)}`;
-
-            bar.appendChild(fill);
-            bar.appendChild(label);
-            container.appendChild(bar);
-        });
-
-    } catch (err) {
-        console.error("Earnings history load error:", err);
-    }
-}
-
-function setManualBalanceStatus(message, isError = false) {
-    const statusEl = document.getElementById("manualBalanceStatus");
-    if (!statusEl) return;
-    statusEl.textContent = message;
-    statusEl.className = `manual-balance-status${isError ? " error" : ""}`;
-}
-
-async function saveManualBalances() {
-    const services = [
-        { key: "repocket", elementId: "repocketInput" },
-        { key: "trafficmonetizer", elementId: "trafficmonetizerInput" },
-    ];
-
-    const payload = services.reduce((acc, item) => {
-        const input = document.getElementById(item.elementId);
-        if (!input) return acc;
-        const value = input.value;
-        if (value !== "") {
-            acc[item.key] = Number(value);
-        }
-        return acc;
-    }, {});
-
-    if (!Object.keys(payload).length) {
-        setManualBalanceStatus("Enter at least one balance to save.", true);
-        return;
+@media (max-width: 680px) {
+    .dashboard-header {
+        flex-direction: column;
+        align-items: stretch;
     }
 
-    setManualBalanceStatus("Saving...");
-    const saveBtn = document.getElementById("saveManualBalancesBtn");
-    if (saveBtn) {
-        saveBtn.disabled = true;
-        saveBtn.textContent = "Saving...";
+    .header-actions {
+        justify-content: stretch;
     }
 
-    try {
-        // Single batched request: saves all balances and triggers exactly
-        // one live Honeygain/Pawns refetch, instead of one full refetch per
-        // service (which is what made saving two balances take ~2x as long).
-        const response = await fetch(`${API}/earnings/manual-balances`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ balances: payload })
-        });
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || "Save failed");
-        }
-
-        setManualBalanceStatus("Balances saved.");
-        await loadEarnings();
-    } catch (err) {
-        console.error("Manual balance save error:", err);
-        setManualBalanceStatus("Save failed. Please try again.", true);
-    } finally {
-        if (saveBtn) {
-            saveBtn.disabled = false;
-            saveBtn.textContent = "Save balances";
-        }
+    .btn {
+        width: 100%;
     }
 }
+/* --------------------------------------------------------------------------
+   SYSTEM STATS GRID — NEON CARD LAYOUT
+-------------------------------------------------------------------------- */
 
-async function updateHistoryGraphs() {
-    try {
-        const res = await fetch(`${API}/api/system/history?limit=60`);
-        const data = await res.json();
-
-        const cpu = data.map(x => x.cpu);
-        const ram = data.map(x => x.ram);
-        const disk = data.map(x => x.disk);
-        const netRx = data.map(x => x.rx);
-        const netTx = data.map(x => x.tx);
-        const temp = data.map(x => x.temp);
-
-        renderMiniGraph("cpuHistory", cpu);
-        renderMiniGraph("ramHistory", ram);
-        renderMiniGraph("diskHistory", disk);
-        renderMiniGraph("netRxHistory", netRx);
-        renderMiniGraph("netTxHistory", netTx);
-        renderMiniGraph("tempHistory", temp);
-
-    } catch (err) {
-        console.error("History graph error:", err);
-    }
-}
-// -------------------------------------------------------------
-// Metric history persistence
-const HISTORY_KEY = "earnboxMetricHistory";
-const metricHistory = {
-    cpu: [],
-    ram: [],
-    disk: [],
-    netRx: [],
-    netTx: [],
-    temp: []
-};
-const metricHistoryConfig = {
-    cpu: 24,
-    ram: 24,
-    disk: 24,
-    temp: 24,
-    netRx: 720,
-    netTx: 720
-};
-
-function loadMetricHistory() {
-    try {
-        const stored = JSON.parse(localStorage.getItem(HISTORY_KEY) || "{}");
-        Object.keys(metricHistory).forEach((key) => {
-            if (Array.isArray(stored[key])) {
-                metricHistory[key] = stored[key].slice(-metricHistoryConfig[key]);
-            }
-        });
-    } catch (err) {
-        console.warn("Could not parse metric history:", err);
-    }
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 22px;
+    margin-top: 25px;
 }
 
-function saveMetricHistory() {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(metricHistory));
+.stat-card {
+    background: rgba(30, 20, 50, 0.55);
+    border: 1px solid rgba(180, 0, 255, 0.35);
+    border-radius: 14px;
+    padding: 18px 20px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 0 14px rgba(180, 0, 255, 0.35);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
-function addMetricHistoryPoint(key, value) {
-    const hour = Math.floor(Date.now() / 3600000);
-    const history = metricHistory[key];
-    const maxLength = metricHistoryConfig[key] || 24;
-    if (!history.length || history[history.length - 1].hour !== hour) {
-        history.push({ hour, value });
-        if (history.length > maxLength) history.shift();
-    } else {
-        history[history.length - 1].value = (history[history.length - 1].value + value) / 2;
-    }
-    saveMetricHistory();
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0 20px rgba(200, 0, 255, 0.55);
 }
 
-function renderMetricHistory(key, elementId, scaleMax, dataType = "cpu") {
-    const container = document.getElementById(elementId);
-    if (!container) return;
-    container.innerHTML = "";
-
-    const history = metricHistory[key] || [];
-    const display = history.slice(-24);
-    if (!display.length) {
-        container.innerHTML = `<div class="history-empty">No history yet</div>`;
-        return;
-    }
-
-    display.forEach((entry) => {
-        const bar = document.createElement("div");
-        const value = Number(entry.value) || 0;
-        const height = Math.max(Math.min((value / scaleMax) * 100, 100), 6);
-        bar.className = "metric-history-segment";
-        bar.dataset.type = dataType;
-        bar.dataset.value = dataType === "temp" ? `${value.toFixed(1)}°C` : `${value.toFixed(1)}${dataType === "netRx" || dataType === "netTx" ? " KB/s" : "%"}`;
-        bar.style.height = `${height}%`;
-        container.appendChild(bar);
-    });
+.stat-card h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #d8b4ff;
+    margin-bottom: 10px;
+    letter-spacing: 0.4px;
 }
 
-// -------------------------------------------------------------
-// Fetch System Stats (with retry)
-// -------------------------------------------------------------
-async function loadSystemStats() {
-    try {
-        const res = await fetch(`${API}/api/system`);
-        if (!res.ok) throw new Error("HTTP error");
+.stat-card p {
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0;
+}
+/* --------------------------------------------------------------------------
+   EARNINGS BANNER — NEON CARD GRID
+-------------------------------------------------------------------------- */
 
-        const data = await res.json();
-        if (!data.ok) throw new Error("Backend not ready");
-
-        smoothUpdate(document.getElementById("cpuValue"), data.cpu.toFixed(1), "%");
-        smoothUpdate(document.getElementById("ramValue"), data.ram, "%");
-        smoothUpdate(document.getElementById("diskValue"), data.disk, "%");
-
-        const cpuBar = document.getElementById("cpuBar");
-        const ramBar = document.getElementById("ramBar");
-        const diskBar = document.getElementById("diskBar");
-        if (cpuBar) cpuBar.style.width = `${Math.min(Math.max(data.cpu, 0), 100)}%`;
-        if (ramBar) ramBar.style.width = `${Math.min(Math.max(data.ram, 0), 100)}%`;
-        if (diskBar) diskBar.style.width = `${Math.min(Math.max(data.disk, 0), 100)}%`;
-
-        const cpuLabel = document.getElementById("cpuLabel");
-        const ramLabel = document.getElementById("ramLabel");
-        const diskLabel = document.getElementById("diskLabel");
-        if (cpuLabel) cpuLabel.textContent = `${data.cpu.toFixed(1)}%`;
-        if (ramLabel) ramLabel.textContent = `${data.ram.toFixed(1)}%`;
-        if (diskLabel) diskLabel.textContent = `${data.disk.toFixed(1)}%`;
-
-        const rxKB = data.network.rx.toFixed(1);
-        const txKB = data.network.tx.toFixed(1);
-        const netEl = document.getElementById("netValue");
-        if (netEl) {
-            netEl.innerHTML = `RX: ${rxKB} KB/s<br>TX: ${txKB} KB/s`;
-        }
-
-        const netRxBar = document.getElementById("netRxBar");
-        const netTxBar = document.getElementById("netTxBar");
-        const netRxLabel = document.getElementById("netRxLabel");
-        const netTxLabel = document.getElementById("netTxLabel");
-        const rxPct = Math.min(Math.max((data.network.rx / 50) * 100, 0), 100);
-        const txPct = Math.min(Math.max((data.network.tx / 50) * 100, 0), 100);
-        if (netRxBar) netRxBar.style.width = `${rxPct}%`;
-        if (netTxBar) netTxBar.style.width = `${txPct}%`;
-        if (netRxLabel) netRxLabel.textContent = `RX ${rxKB}`;
-        if (netTxLabel) netTxLabel.textContent = `TX ${txKB}`;
-
-        const network30DayValue = calculateNetwork30DayUsage();
-        const network30DayEl = document.getElementById("network30DayValue");
-        if (network30DayEl) network30DayEl.textContent = `30d usage: ${network30DayValue}`;
-
-        smoothUpdate(
-            document.getElementById("tempValue"),
-            data.temp ? data.temp.toFixed(1) : "--",
-            "°C"
-        );
-        const tempBar = document.getElementById("tempBar");
-        const tempLabel = document.getElementById("tempLabel");
-        const tempPct = data.temp ? Math.min(Math.max((data.temp / 80) * 100, 0), 100) : 0;
-        if (tempBar) tempBar.style.width = `${tempPct}%`;
-        if (tempLabel) tempLabel.textContent = data.temp ? `${data.temp.toFixed(1)}°C` : "--";
-
-        const hours = (data.uptime / 3600).toFixed(1);
-        const uptimeEl = document.getElementById("uptimeBadge");
-        if (uptimeEl) uptimeEl.textContent = `Uptime: ${hours} hrs`;
-
-        addMetricHistoryPoint("cpu", data.cpu);
-        addMetricHistoryPoint("ram", data.ram);
-        addMetricHistoryPoint("disk", data.disk);
-        addMetricHistoryPoint("temp", data.temp || 0);
-        addMetricHistoryPoint("netRx", data.network.rx);
-        addMetricHistoryPoint("netTx", data.network.tx);
-
-        renderMetricHistory("cpu", "cpuHistory", 100, "cpu");
-        renderMetricHistory("ram", "ramHistory", 100, "ram");
-        renderMetricHistory("disk", "diskHistory", 100, "disk");
-        renderMetricHistory("temp", "tempHistory", 80, "temp");
-        renderMetricHistory("netRx", "netRxHistory", 50, "netRx");
-        renderMetricHistory("netTx", "netTxHistory", 50, "netTx");
-
-        setTimeout(loadSystemStats, 5000);
-
-    } catch (err) {
-        showLoading();
-        setTimeout(loadSystemStats, 2000);
-    }
+.earnings-banner {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 20px;
+    margin: 25px 0;
 }
 
-function calculateNetwork30DayUsage() {
-    const toGB = (kb) => kb / 1024 / 1024;
-    const rxHistory = metricHistory.netRx || [];
-    const txHistory = metricHistory.netTx || [];
-
-    const rxTotalKB = rxHistory.reduce((sum, point) => sum + (Number(point.value) || 0) * 3600, 0);
-    const txTotalKB = txHistory.reduce((sum, point) => sum + (Number(point.value) || 0) * 3600, 0);
-
-    const totalGB = toGB(rxTotalKB + txTotalKB);
-    return `${totalGB.toFixed(2)} GB`;
+.earn-block {
+    background: rgba(30, 20, 50, 0.55);
+    border: 1px solid rgba(180, 0, 255, 0.35);
+    border-radius: 14px;
+    padding: 18px 20px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 0 14px rgba(180, 0, 255, 0.35);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    text-align: center;
 }
 
-// -------------------------------------------------------------
-// Fetch Service Status
-// -------------------------------------------------------------
-async function loadServiceStatus() {
-    try {
-        const res = await fetch(`${API}/api/services`);
-        if (!res.ok) throw new Error("HTTP error");
-
-        const data = await res.json();
-        const badge = document.getElementById("serviceBadge");
-        if (badge) badge.textContent = `Reset Service: ${data.resetService}`;
-
-        const versionEl = document.getElementById("versionBadge");
-        if (versionEl) versionEl.textContent = data.version || "Unknown";
-
-    } catch (err) {
-        console.error("Service status error:", err);
-    }
+.earn-block:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0 20px rgba(200, 0, 255, 0.55);
 }
 
-// -------------------------------------------------------------
-// Fetch Containers
-// -------------------------------------------------------------
-async function loadContainers() {
-    if (logsOpen) return;
-
-    try {
-        const res = await fetch(`${API}/api/containers`);
-        if (!res.ok) throw new Error("HTTP error");
-
-        const containers = await res.json();
-
-        const grid = document.getElementById("containerGrid");
-        if (!grid) return;
-        grid.innerHTML = "";
-
-        containers.forEach(c => {
-            const card = document.createElement("div");
-            card.className = "container-card";
-
-            card.innerHTML = `
-                <h3>${c.Names[0].replace("/", "")}</h3>
-                <div class="container-info">
-                    <strong>Image:</strong> ${c.Image}<br>
-                    <strong>ID:</strong> ${c.Id.substring(0, 12)}<br>
-                    <strong>Status:</strong> ${c.State}
-                </div>
-
-                <div class="container-controls">
-                    <button class="startBtn" data-id="${c.Id}">▶ Start</button>
-                    <button class="stopBtn" data-id="${c.Id}">■ Stop</button>
-                    <button class="restartBtn" data-id="${c.Id}">↻ Restart</button>
-                    <button class="logsBtn" data-id="${c.Id}">📄 Logs</button>
-                </div>
-            `;
-
-            grid.appendChild(card);
-        });
-
-        attachContainerEvents();
-
-    } catch (err) {
-        console.error("Container load error:", err);
-    }
+.earn-block h4 {
+    margin: 0 0 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #d8b4ff;
+    letter-spacing: 0.4px;
 }
 
-// -------------------------------------------------------------
-// Container Control Events
-// -------------------------------------------------------------
-function attachContainerEvents() {
-    document.querySelectorAll(".startBtn").forEach(btn => {
-        btn.onclick = () => containerAction(btn.dataset.id, "start");
-    });
-
-    document.querySelectorAll(".stopBtn").forEach(btn => {
-        btn.onclick = () => containerAction(btn.dataset.id, "stop");
-    });
-
-    document.querySelectorAll(".restartBtn").forEach(btn => {
-        btn.onclick = () => containerAction(btn.dataset.id, "restart");
-    });
-
-    document.querySelectorAll(".logsBtn").forEach(btn => {
-        btn.onclick = () => loadLogs(btn.dataset.id);
-    });
-}
-
-// -------------------------------------------------------------
-// Container Actions
-// -------------------------------------------------------------
-async function containerAction(id, action) {
-    try {
-        await fetch(`${API}/api/containers/${id}/${action}`, { method: "POST" });
-        loadContainers();
-    } catch (err) {
-        console.error(`Container ${action} error:`, err);
-    }
-}
-
-// -------------------------------------------------------------
-// Load Logs
-// -------------------------------------------------------------
-async function loadLogs(id) {
-    logsOpen = true;
-    try {
-        const res = await fetch(`${API}/api/containers/${id}/logs`);
-        if (!res.ok) throw new Error("HTTP error");
-
-        const data = await res.json();
-
-        const modal = document.getElementById("logsModal");
-        const content = document.getElementById("logsContent");
-
-        if (modal && content) {
-            content.textContent = data.logs.join("\n");
-            modal.style.display = "block";
-        }
-
-    } catch (err) {
-        console.error("Logs error:", err);
-    }
-}
-
-// -------------------------------------------------------------
-// Modal wiring
-// -------------------------------------------------------------
-function setupModal() {
-    const modal = document.getElementById("logsModal");
-    const closeBtn = document.getElementById("closeLogs");
-    const refreshBtn = document.getElementById("refreshLogs");
-
-    if (closeBtn && modal) {
-        closeBtn.onclick = () => {
-            logsOpen = false;
-            modal.style.display = "none";
-        };
-    }
-
-    window.addEventListener("click", (e) => {
-        if (logsOpen && e.target === modal) {
-            logsOpen = false;
-            modal.style.display = "none";
-        }
-    });
-
-    if (refreshBtn) {
-        refreshBtn.onclick = () => {
-            const openLogBtn = document.querySelector(".logsBtn[data-id]");
-            if (openLogBtn) {
-                loadLogs(openLogBtn.dataset.id);
-            }
-        };
-    }
-}
-
-// -------------------------------------------------------------
-// Diagnostics button
-// -------------------------------------------------------------
-async function runDiagnostics() {
-    const diagButton = document.getElementById("diagnosticsBtn");
-    if (diagButton) {
-        diagButton.textContent = "Checking...";
-        diagButton.disabled = true;
-    }
-
-    await Promise.allSettled([
-        loadSystemStats(),
-        loadServiceStatus(),
-        loadContainers(),
-        loadEarnings(),
-        loadEarningsHistory()
-    ]);
-
-    if (diagButton) {
-        diagButton.textContent = "Diagnostics";
-        diagButton.disabled = false;
-    }
-}
-
-// -------------------------------------------------------------
-// Auto-refresh loops
-// -------------------------------------------------------------
-setInterval(loadServiceStatus, 5000);
-setInterval(loadContainers, 5000);
-setInterval(loadEarnings, 120000);
-setInterval(() => {
-    loadSystemStats();
-    updateHistoryGraphs();
-}, 2000);
-
-
-// Initial load
-loadMetricHistory();
-showLoading();
-loadSystemStats();
-loadServiceStatus();
-loadContainers();
-loadEarnings();
-loadEarningsHistory();
-setupModal();
-updateHistoryGraphs();
-
-
-const diagnosticsBtn = document.getElementById("diagnosticsBtn");
-if (diagnosticsBtn) {
-    diagnosticsBtn.onclick = runDiagnostics;
-}
-
-const refreshAllBtn = document.getElementById("refreshAllBtn");
-if (refreshAllBtn) {
-    refreshAllBtn.onclick = () => {
-        loadSystemStats();
-        loadServiceStatus();
-        loadContainers();
-        loadEarnings();
-        loadEarningsHistory();
-    };
-}
-
-const refreshHistoryBtn = document.getElementById("refreshHistoryBtn");
-if (refreshHistoryBtn) {
-    refreshHistoryBtn.onclick = loadEarningsHistory;
-}
-
-const saveManualBalancesBtn = document.getElementById("saveManualBalancesBtn");
-if (saveManualBalancesBtn) {
-    saveManualBalancesBtn.onclick = saveManualBalances;
+.earn-block p {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #ffffff;
 }
