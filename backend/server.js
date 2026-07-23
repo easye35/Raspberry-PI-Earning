@@ -197,6 +197,29 @@ app.post("/earnings/manual-balance", async (req, res) => {
     }
 });
 
+app.post("/earnings/manual-balances", async (req, res) => {
+    try {
+        const earningsRes = await fetch(`${EARNINGS_SERVICE}/earnings/manual-balances`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(req.body || {})
+        });
+
+        const text = await earningsRes.text();
+        let payload;
+        try {
+            payload = JSON.parse(text);
+        } catch {
+            payload = { message: text };
+        }
+
+        res.status(earningsRes.status).json(payload);
+    } catch (err) {
+        console.error("Manual balances batch proxy error:", err);
+        res.status(502).json({ error: err.message });
+    }
+});
+
 app.post("/earnings/run-now", async (req, res) => {
     res.status(404).json({
         error: "Earnings run-now is no longer supported. Use GET /earnings instead."
