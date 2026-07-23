@@ -7,16 +7,15 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>EarnBox Dashboard</title>
-    <link rel="stylesheet" href="css/style.css?v=202607081">
+    <link rel="stylesheet" href="css/style.css?v=202607082">
 </head>
-
 <body>
     <div class="dashboard-shell">
         <header class="dashboard-header">
-            <div>
+            <div class="header-copy">
                 <p class="eyebrow">EarnBox</p>
                 <h1>Raspberry Pi Income Monitor</h1>
-                <p class="hero-copy">Live earnings, system health, and container control in one sleek dashboard.</p>
+                <p class="hero-copy">Live earnings, system health, and container control in one clear dashboard.</p>
             </div>
             <div class="header-actions">
                 <button id="refreshAllBtn" class="btn secondary">Refresh All</button>
@@ -28,7 +27,7 @@
             <article class="hero-card">
                 <span class="hero-label">Total Earned</span>
                 <h2 id="total-earnings">$0.00</h2>
-                <p class="hero-subtitle">Current total from Honeygain and Pawns.</p>
+                <p class="hero-subtitle">Combined earnings across all connected services.</p>
             </article>
             <article class="mini-card">
                 <span>Daily Avg (30d)</span>
@@ -41,7 +40,7 @@
         </section>
 
         <section class="tile-grid">
-            <div class="dashboard-card earnings-card">
+            <article class="dashboard-card earnings-card">
                 <h2>Income Breakdown</h2>
                 <div class="earnings-banner">
                     <div class="earn-block">
@@ -61,8 +60,9 @@
                         <p id="trafficmonetizer-balance">$0.00</p>
                     </div>
                 </div>
+
                 <div class="manual-balance-form">
-                    <h3>Manual balance entry</h3>
+                    <h3>Manual Balance Entry</h3>
                     <div class="manual-balance-grid">
                         <label>
                             <span>Repocket</span>
@@ -76,15 +76,14 @@
                     <button id="saveManualBalancesBtn" class="btn secondary">Save balances</button>
                     <p id="manualBalanceStatus" class="manual-balance-status" aria-live="polite"></p>
                 </div>
-            </div>
+            </article>
 
-            <div class="dashboard-card stats-overview">
+            <article class="dashboard-card stats-overview">
                 <h2>System Metrics</h2>
                 <div class="stats-grid">
-                    <!-- CPU -->
                     <div class="stat-card">
                         <span>CPU</span>
-                        <p id="cpuValue">ΓÇª</p>
+                        <p id="cpuValue">...</p>
                         <div class="metric-bar">
                             <div class="metric-bar-fill" id="cpuBar">
                                 <span class="metric-bar-label" id="cpuLabel">0%</span>
@@ -93,10 +92,9 @@
                         <div class="metric-history" id="cpuHistory"></div>
                     </div>
 
-                    <!-- RAM -->
                     <div class="stat-card">
                         <span>RAM</span>
-                        <p id="ramValue">ΓÇª</p>
+                        <p id="ramValue">...</p>
                         <div class="metric-bar">
                             <div class="metric-bar-fill" id="ramBar">
                                 <span class="metric-bar-label" id="ramLabel">0%</span>
@@ -105,10 +103,9 @@
                         <div class="metric-history" id="ramHistory"></div>
                     </div>
 
-                    <!-- Disk -->
                     <div class="stat-card">
                         <span>Disk</span>
-                        <p id="diskValue">ΓÇª</p>
+                        <p id="diskValue">...</p>
                         <div class="metric-bar">
                             <div class="metric-bar-fill" id="diskBar">
                                 <span class="metric-bar-label" id="diskLabel">0%</span>
@@ -117,68 +114,74 @@
                         <div class="metric-history" id="diskHistory"></div>
                     </div>
 
-                    <!-- Network -->
-                    <div id="bandwidth-card" style="background:#1a1030; border-radius:12px; padding:20px; margin-top:16px; grid-column: 1 / -1;">
-                        <h3 style="color:#c9b8f5; letter-spacing:1px; font-size:13px; margin-bottom:16px;">BANDWIDTH (LAST 30 DAYS)</h3>
-                        <div id="bandwidth-chart" style="display:flex; align-items:flex-end; gap:4px; height:150px;"></div>
-                    </div>
-
-                    <script>
-                        async function loadBandwidthChart() {
-                            try {
-                                const res = await fetch(`http://${window.location.hostname}:3001/api/bandwidth`);
-                                const data = await res.json();
-                                const chart = document.getElementById('bandwidth-chart');
-                                chart.innerHTML = '';
-
-                                if (!data.ok || data.days.length === 0) {
-                                    chart.innerHTML = '<p style="color:#888;">No data yet</p>';
-                                    return;
-                                }
-
-                                const max = Math.max(...data.days.map(d => d.total_mib), 1);
-
-                                data.days.forEach(d => {
-                                    const barWrap = document.createElement('div');
-                                    barWrap.style.cssText = 'flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;';
-
-                                    const bar = document.createElement('div');
-                                    const heightPct = (d.total_mib / max) * 100;
-                                    bar.style.cssText = `width:100%; background:linear-gradient(180deg,#a855f7,#6366f1); border-radius:3px 3px 0 0; height:${heightPct}%; min-height:2px;`;
-                                    bar.title = `${d.date}: ${d.total_mib} MiB`;
-
-                                    barWrap.appendChild(bar);
-                                    chart.appendChild(barWrap);
-                                });
-                            } catch (err) {
-                                console.error('Bandwidth chart error:', err);
-                            }
-                        }
-
-                        loadBandwidthChart();
-                        setInterval(loadBandwidthChart, 5 * 60 * 1000); // refresh every 5 min
-                    </script>
-
-                    <!-- Temp -->
                     <div class="stat-card">
                         <span>Temp</span>
-                        <p id="tempValue">ΓÇª</p>
+                        <p id="tempValue">...</p>
                         <div class="metric-bar">
                             <div class="metric-bar-fill" id="tempBar">
-                                <span class="metric-bar-label" id="tempLabel">0┬░C</span>
+                                <span class="metric-bar-label" id="tempLabel">0 C</span>
                             </div>
                         </div>
                         <div class="metric-history" id="tempHistory"></div>
                     </div>
 
-                    <!-- Uptime -->
-                    <div class="stat-card">
+                    <div class="stat-card uptime-card">
                         <span>Uptime</span>
-                        <p id="uptimeBadge">ΓÇª</p>
+                        <p id="uptimeBadge">...</p>
+                    </div>
+
+                    <div class="stat-card network-card">
+                        <span>Network</span>
+                        <p id="netValue">RX: ...<br>TX: ...</p>
+
+                        <div class="network-row">
+                            <small>RX</small>
+                            <div class="metric-bar small">
+                                <div class="metric-bar-fill rx" id="netRxBar">
+                                    <span class="metric-bar-label" id="netRxLabel">RX 0.0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="network-row">
+                            <small>TX</small>
+                            <div class="metric-bar small">
+                                <div class="metric-bar-fill tx" id="netTxBar">
+                                    <span class="metric-bar-label" id="netTxLabel">TX 0.0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p class="network-total" id="network30DayValue">30d usage: 0.00 GB</p>
+                        <div class="metric-history small" id="netRxHistory"></div>
+                        <div class="metric-history small" id="netTxHistory"></div>
+                    </div>
+
+                    <div class="stat-card bandwidth-card">
+                        <span>Bandwidth (Last 30 Days)</span>
+                        <div id="bandwidth-chart" class="bandwidth-chart"></div>
                     </div>
                 </div>
-            </div>
+            </article>
         </section>
+
+        <section class="history-section">
+            <article class="dashboard-card history-card">
+                <div class="section-header compact">
+                    <div>
+                        <p class="eyebrow">History</p>
+                        <h2>Daily Earnings Trend</h2>
+                    </div>
+                    <button id="refreshHistoryBtn" class="btn secondary">Refresh History</button>
+                </div>
+                <div class="history-meta">
+                    <span id="historySummary">Loading history...</span>
+                    <strong id="historyAvg"></strong>
+                </div>
+                <div id="earningsHistory" class="history-chart"></div>
+            </article>
+        </section>
+
         <section class="container-section">
             <div class="section-header">
                 <div>
@@ -190,11 +193,12 @@
             <div id="containerGrid" class="container-grid"></div>
         </section>
     </div>
+
     <div id="logsModal" class="modal">
         <div class="modal-content">
             <div class="modal-title">
                 <h2>Container Logs</h2>
-                <button id="closeLogs" class="icon-close">×</button>
+                <button id="closeLogs" class="icon-close" aria-label="Close logs">x</button>
             </div>
             <pre id="logsContent"></pre>
             <div class="modal-actions">
@@ -202,6 +206,7 @@
             </div>
         </div>
     </div>
+
     <script src="js/app.js"></script>
 </body>
 </html>

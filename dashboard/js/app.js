@@ -10,6 +10,7 @@ const API = `${window.location.protocol}//${API_HOST}:3001`;
 // Modal state
 // -------------------------------------------------------------
 let logsOpen = false;
+let activeLogContainerId = null;
 
 // -------------------------------------------------------------
 // Utility: Smooth number update
@@ -37,14 +38,50 @@ function renderMiniGraph(elementId, values) {
 // Loading placeholders
 // -------------------------------------------------------------
 function showLoading() {
-    smoothUpdate(document.getElementById("cpuValue"), "…");
-    smoothUpdate(document.getElementById("ramValue"), "…");
-    smoothUpdate(document.getElementById("diskValue"), "…");
+    smoothUpdate(document.getElementById("cpuValue"), "...");
+    smoothUpdate(document.getElementById("ramValue"), "...");
+    smoothUpdate(document.getElementById("diskValue"), "...");
     const netEl = document.getElementById("netValue");
-    if (netEl) netEl.innerHTML = "RX: …<br>TX: …";
-    smoothUpdate(document.getElementById("tempValue"), "…", "°C");
+    if (netEl) netEl.innerHTML = "RX: ...<br>TX: ...";
+    smoothUpdate(document.getElementById("tempValue"), "...", "°C");
     const uptimeEl = document.getElementById("uptimeBadge");
-    if (uptimeEl) uptimeEl.textContent = "Uptime: …";
+    if (uptimeEl) uptimeEl.textContent = "Uptime: ...";
+}
+
+async function loadBandwidthChart() {
+    const chart = document.getElementById("bandwidth-chart");
+    if (!chart) return;
+
+    try {
+        const res = await fetch(`${API}/api/bandwidth`);
+        if (!res.ok) throw new Error("HTTP error");
+
+        const data = await res.json();
+        chart.innerHTML = "";
+
+        if (!data.ok || !Array.isArray(data.days) || data.days.length === 0) {
+            chart.innerHTML = '<p class="empty-state">No data yet</p>';
+            return;
+        }
+
+        const max = Math.max(...data.days.map((day) => day.total_mib), 1);
+
+        data.days.forEach((day) => {
+            const col = document.createElement("div");
+            col.className = "bandwidth-column";
+
+            const bar = document.createElement("div");
+            bar.className = "bandwidth-bar";
+            bar.style.height = `${Math.max((day.total_mib / max) * 100, 2)}%`;
+            bar.title = `${day.date}: ${day.total_mib} MiB`;
+
+            col.appendChild(bar);
+            chart.appendChild(col);
+        });
+    } catch (err) {
+        console.error("Bandwidth chart error:", err);
+        chart.innerHTML = '<p class="empty-state">Bandwidth unavailable</p>';
+    }
 }
 
 // -------------------------------------------------------------
@@ -491,6 +528,7 @@ async function containerAction(id, action) {
 // -------------------------------------------------------------
 async function loadLogs(id) {
     logsOpen = true;
+    activeLogContainerId = id;
     try {
         const res = await fetch(`${API}/api/containers/${id}/logs`);
         if (!res.ok) throw new Error("HTTP error");
@@ -534,10 +572,7 @@ function setupModal() {
 
     if (refreshBtn) {
         refreshBtn.onclick = () => {
-            const openLogBtn = document.querySelector(".logsBtn[data-id]");
-            if (openLogBtn) {
-                loadLogs(openLogBtn.dataset.id);
-            }
+            if (activeLogContainerId) loadLogs(activeLogContainerId);
         };
     }
 }
@@ -570,6 +605,8 @@ async function runDiagnostics() {
 // -------------------------------------------------------------
 setInterval(loadContainers, 5000);
 setInterval(loadEarnings, 120000);
+setInterval(loadEarningsHistory, 300000);
+setInterval(loadBandwidthChart, 300000);
 setInterval(() => {
     loadSystemStats();
     updateHistoryGraphs();
@@ -585,6 +622,7 @@ loadEarnings();
 loadEarningsHistory();
 setupModal();
 updateHistoryGraphs();
+loadBandwidthChart();
 
 
 const diagnosticsBtn = document.getElementById("diagnosticsBtn");
@@ -605,6 +643,11 @@ if (refreshAllBtn) {
 const reloadContainersBtn = document.getElementById("reloadContainersBtn");
 if (reloadContainersBtn) {
     reloadContainersBtn.onclick = loadContainers;
+}
+
+const refreshHistoryBtn = document.getElementById("refreshHistoryBtn");
+if (refreshHistoryBtn) {
+    refreshHistoryBtn.onclick = loadEarningsHistory;
 }
 
 const saveManualBalancesBtn = document.getElementById("saveManualBalancesBtn");
