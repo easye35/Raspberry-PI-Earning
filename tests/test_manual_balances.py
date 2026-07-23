@@ -37,6 +37,13 @@ class ManualBalancesTests(unittest.TestCase):
 
         self.assertAlmostEqual(average, 0.02, places=6)
 
+    def test_compute_rolling_daily_average_ignores_single_outlier(self):
+        changes = [1.0, 1.2, 1.1, 0.9, 0.8, 100.0]
+
+        average = logic.compute_rolling_daily_average(changes)
+
+        self.assertAlmostEqual(average, 1.0, places=6)
+
 
 if __name__ == "__main__":
     unittest.main()

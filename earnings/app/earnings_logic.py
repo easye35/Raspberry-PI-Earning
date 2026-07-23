@@ -1,11 +1,16 @@
 import os
 import json
 import sqlite3
+import statistics
 from datetime import datetime, timezone, timedelta
 import re
 import requests
-import fcntl
 from contextlib import contextmanager
+
+try:
+    import fcntl
+except ImportError:  # Windows / non-Unix environments
+    fcntl = None
 
 DB_PATH = os.getenv("EARNINGS_DB_PATH", "/data/earnings.db")
 JSON_PATH = os.getenv("EARNINGS_JSON_PATH", "/data/latest_earnings.json")
@@ -23,11 +28,13 @@ def _manual_balances_lock():
     """
     os.makedirs(os.path.dirname(MANUAL_BALANCES_LOCK_PATH), exist_ok=True)
     with open(MANUAL_BALANCES_LOCK_PATH, "w") as lock_handle:
-        fcntl.flock(lock_handle, fcntl.LOCK_EX)
+        if fcntl is not None:
+            fcntl.flock(lock_handle, fcntl.LOCK_EX)
         try:
             yield
         finally:
-            fcntl.flock(lock_handle, fcntl.LOCK_UN)
+            if fcntl is not None:
+                fcntl.flock(lock_handle, fcntl.LOCK_UN)
 
 SERVICE_ALIASES = {
     "repocket": "repocket",
@@ -338,11 +345,33 @@ def get_recent_daily_changes(limit=30):
     return [float(row["daily_change"]) for row in rows if row["daily_change"] is not None]
 
 
+def compute_rolling_daily_average(changes, max_outlier_z=2.5):
+    if not changes:
+        return 0.0
+
+    values = [float(change) for change in changes if change is not None]
+    if not values:
+        return 0.0
+    if len(values) < 3:
+        return round(sum(values) / len(values), 2)
+
+    median = statistics.median(values)
+    mad = statistics.median([abs(value - median) for value in values])
+    if mad == 0:
+        return round(sum(values) / len(values), 2)
+
+    filtered = [value for value in values if abs(value - median) <= max_outlier_z * mad]
+    if len(filtered) >= 3:
+        return round(sum(filtered) / len(filtered), 2)
+
+    return round(sum(values) / len(values), 2)
+
+
 def compute_projected_30_day_from_history():
     changes = get_recent_daily_changes(30)
     if not changes:
         return 0.0
-    avg = sum(changes) / len(changes)
+    avg = compute_rolling_daily_average(changes)
     return avg * 30
 
 
@@ -350,7 +379,7 @@ def compute_daily_average_30_day():
     changes = get_recent_daily_changes(30)
     if not changes:
         return 0.0
-    return sum(changes) / len(changes)
+    return compute_rolling_daily_average(changes)
 
 
 # ---------------------------------------------------------

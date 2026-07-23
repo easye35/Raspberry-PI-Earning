@@ -52,15 +52,19 @@ def find_outliers(rows, z_threshold=2.5):
     changes = [r["daily_change"] for r in rows if r["daily_change"] is not None]
     if len(changes) < 3:
         return []
-    mean = statistics.mean(changes)
-    stdev = statistics.pstdev(changes) or 1.0
+
+    median = statistics.median(changes)
+    mad = statistics.median([abs(change - median) for change in changes]) or 1.0
+    if mad <= 0:
+        return []
+
     outliers = []
     for r in rows:
         dc = r["daily_change"]
         if dc is None:
             continue
-        z = abs((dc - mean) / stdev)
-        if z >= z_threshold:
+        robust_z = abs((dc - median) / mad)
+        if robust_z >= z_threshold:
             outliers.append(r["id"])
     return outliers
 
