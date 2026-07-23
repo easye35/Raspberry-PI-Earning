@@ -111,6 +111,33 @@ def create_app():
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 400
 
+    @app.post("/earnings/manual-balances")
+    def set_manual_balances_batch():
+        """
+        Save multiple manual balances (e.g. repocket + trafficmonetizer) in a
+        single request. Unlike hitting /earnings/manual-balance once per
+        service, this only triggers one live Honeygain/Pawns refetch instead
+        of one per service, so saving multiple balances at once isn't
+        multiples slower than saving one.
+        """
+        payload = request.get_json(silent=True) or {}
+        balances = payload.get("balances")
+        if not isinstance(balances, dict) or not balances:
+            return jsonify({"error": "balances must be a non-empty object of {service: amount}"}), 400
+
+        results = []
+        try:
+            for service, amount in balances.items():
+                try:
+                    amount_value = float(amount)
+                except (TypeError, ValueError):
+                    return jsonify({"error": f"amount for {service} must be a number"}), 400
+                results.append(logic.set_manual_balance(service, amount_value))
+            logic.update_earnings(force=True)
+            return jsonify({"results": results})
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
     @app.post("/earnings/run-now")
     def run_now():
         return jsonify({

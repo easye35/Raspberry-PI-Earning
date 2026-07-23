@@ -116,7 +116,7 @@ async function loadEarningsHistory() {
             .map(item => Number(item.daily_change) || 0)
             .reverse();
 
-        const maxValue = Math.max(...values.map(Math.abs), 1);
+        const maxValue = Math.max(...values.map(Math.abs), 0.01);
         const average = values.reduce((sum, value) => sum + value, 0) / values.length;
 
         summary.textContent = `Last ${values.length} daily entries`;
@@ -129,12 +129,17 @@ async function loadEarningsHistory() {
 
             const fill = document.createElement("div");
             fill.className = "history-bar-fill";
-            fill.style.height = `${Math.max((value / maxValue) * 100, 4)}%`;
+            fill.style.height = `${Math.max((Math.abs(value) / maxValue) * 100, 4)}%`;
             if (value < 0) {
                 fill.style.background = "linear-gradient(180deg, rgba(255, 96, 128, 0.95), rgba(255, 80, 170, 0.9))";
             }
 
+            const label = document.createElement("div");
+            label.className = "history-bar-label";
+            label.textContent = `$${value.toFixed(2)}`;
+
             bar.appendChild(fill);
+            bar.appendChild(label);
             container.appendChild(bar);
         });
 
@@ -179,29 +184,20 @@ async function saveManualBalances() {
     }
 
     try {
-        // IMPORTANT: save one at a time, not with Promise.all.
-        // The backend does a read-modify-write on manual_balances.json with
-        // no locking, so two concurrent saves can race: the second request
-        // reads the file before the first request's write lands, then
-        // overwrites it, silently dropping one of the two values (it comes
-        // back as 0 on the next load). Sequential awaits avoid that race.
-        let savedCount = 0;
-        for (const [service, amount] of Object.entries(payload)) {
-            const response = await fetch(`${API}/earnings/manual-balance`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ service, amount })
-            });
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || "Save failed");
-            }
-            savedCount += 1;
+        // Single batched request: saves all balances and triggers exactly
+        // one live Honeygain/Pawns refetch, instead of one full refetch per
+        // service (which is what made saving two balances take ~2x as long).
+        const response = await fetch(`${API}/earnings/manual-balances`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ balances: payload })
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || "Save failed");
         }
 
-        if (savedCount) {
-            setManualBalanceStatus("Balances saved.");
-        }
+        setManualBalanceStatus("Balances saved.");
         await loadEarnings();
     } catch (err) {
         console.error("Manual balance save error:", err);
