@@ -127,6 +127,7 @@ No manual host configuration.
 EarnApp is not deployed as a Docker service.
 If you want EarnApp, install it natively on the Raspberry Pi.
 The repo can detect it after install.
+The dashboard reports whether the native EarnApp process is running. EarnApp does not expose account earnings through its local client, so those amounts are not included in the dashboard total.
 
 
 �🖥️ Your Dashboard

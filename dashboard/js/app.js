@@ -125,6 +125,29 @@ async function loadEarnings() {
     }
 }
 
+async function loadEarnAppStatus() {
+    const statusEl = document.getElementById("earnappStatus");
+    const detailEl = document.getElementById("earnappStatusDetail");
+    if (!statusEl || !detailEl) return;
+
+    try {
+        const response = await fetch(`${API}/api/earnapp/status`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+        if (!data.installed) {
+            statusEl.textContent = "Not installed";
+        } else {
+            statusEl.textContent = data.running ? "Running" : "Not running";
+        }
+        detailEl.textContent = "Process status only; EarnApp earnings are not available locally.";
+    } catch (err) {
+        console.error("EarnApp status load error:", err);
+        statusEl.textContent = "Unavailable";
+        detailEl.textContent = "Could not read native EarnApp status.";
+    }
+}
+
 async function loadEarningsHistory() {
     try {
         const res = await fetch(`${API}/earnings/history?limit=14`);
@@ -589,6 +612,7 @@ async function runDiagnostics() {
         loadSystemStats(),
         loadContainers(),
         loadEarnings(),
+        loadEarnAppStatus(),
         loadEarningsHistory()
     ]);
 
@@ -603,6 +627,7 @@ async function runDiagnostics() {
 // -------------------------------------------------------------
 setInterval(loadContainers, 5000);
 setInterval(loadEarnings, 120000);
+setInterval(loadEarnAppStatus, 30000);
 setInterval(loadEarningsHistory, 300000);
 setInterval(loadBandwidthChart, 300000);
 setInterval(() => {
@@ -617,6 +642,7 @@ showLoading();
 loadSystemStats();
 loadContainers();
 loadEarnings();
+loadEarnAppStatus();
 loadEarningsHistory();
 setupModal();
 updateHistoryGraphs();
@@ -634,6 +660,7 @@ if (refreshAllBtn) {
         loadSystemStats();
         loadContainers();
         loadEarnings();
+        loadEarnAppStatus();
         loadEarningsHistory();
     };
 }

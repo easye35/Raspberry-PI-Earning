@@ -165,6 +165,17 @@ app.get("/earnings", async (req, res) => {
     }
 });
 
+app.get("/api/earnapp/status", async (req, res) => {
+    try {
+        const statusRes = await fetch(`${EARNINGS_SERVICE}/earnapp/status`);
+        const payload = await statusRes.json();
+        res.status(statusRes.status).json(payload);
+    } catch (err) {
+        console.error("EarnApp status proxy error:", err);
+        res.status(502).json({ error: "Native EarnApp status is unavailable" });
+    }
+});
+
 app.get("/earnings/history", async (req, res) => {
     const limit = parseInt(req.query.limit, 10) || 30;
     try {

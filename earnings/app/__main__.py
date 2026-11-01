@@ -79,6 +79,14 @@ def create_app():
         snapshot = logic.get_latest_snapshot()
         return jsonify(snapshot)
 
+    @app.get("/earnapp/status")
+    def get_earnapp_status():
+        try:
+            return jsonify(logic.get_earnapp_status())
+        except OSError:
+            app.logger.exception("Could not read native EarnApp status")
+            return jsonify({"error": "Native EarnApp status is unavailable"}), 503
+
     @app.get("/earnings/history")
     def get_earnings_history():
         try:

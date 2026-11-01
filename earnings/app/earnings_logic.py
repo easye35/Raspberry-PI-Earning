@@ -16,6 +16,8 @@ DB_PATH = os.getenv("EARNINGS_DB_PATH", "/data/earnings.db")
 JSON_PATH = os.getenv("EARNINGS_JSON_PATH", "/data/latest_earnings.json")
 MANUAL_BALANCES_PATH = os.getenv("EARNINGS_MANUAL_BALANCES_PATH", "/data/manual_balances.json")
 MANUAL_BALANCES_LOCK_PATH = MANUAL_BALANCES_PATH + ".lock"
+EARNAPP_DIR = os.getenv("EARNAPP_DIR", "/etc/earnapp")
+HOST_PROC_PATH = os.getenv("EARNAPP_HOST_PROC_PATH", "/host/proc")
 
 
 @contextmanager
@@ -330,6 +332,28 @@ def get_honeygain_balance():
     except Exception as e:
         print("DEBUG: Honeygain balance exception:", e, flush=True)
         return 0.0
+
+
+def get_earnapp_status(earnapp_dir=EARNAPP_DIR, host_proc_path=HOST_PROC_PATH):
+    installed = os.path.isfile(os.path.join(earnapp_dir, "uuid"))
+    if not installed:
+        return {"installed": False, "running": False}
+
+    if not os.path.isdir(host_proc_path):
+        raise FileNotFoundError(f"Host process directory is unavailable: {host_proc_path}")
+
+    for process in os.scandir(host_proc_path):
+        if not process.name.isdigit():
+            continue
+
+        try:
+            with open(os.path.join(process.path, "comm"), encoding="utf-8") as handle:
+                if handle.read().strip() == "earnapp":
+                    return {"installed": True, "running": True}
+        except (FileNotFoundError, ProcessLookupError, PermissionError):
+            continue
+
+    return {"installed": True, "running": False}
 
 
 def get_recent_daily_changes(limit=30):

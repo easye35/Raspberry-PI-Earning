@@ -198,6 +198,37 @@ body {
     font-weight: 700;
 }
 
+.earnapp-status-card {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+    padding: 14px;
+    border: 1px solid rgba(143, 130, 255, 0.33);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.earnapp-status-label {
+    color: var(--muted);
+    font-size: 0.8rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.earnapp-status-card p {
+    margin: 6px 0 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.earnapp-status-card small {
+    color: var(--muted);
+    text-align: left;
+}
+
 .manual-balance-form {
     margin-top: 14px;
     padding: 14px;

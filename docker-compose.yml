@@ -146,6 +146,7 @@ services:
       - NOTIFY_TO=${NOTIFY_TO}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /proc:/host/proc:ro
       - ./data:/data
       - /etc/earnapp:/etc/earnapp:ro
       - /usr/bin/earnapp:/usr/bin/earnapp:ro
